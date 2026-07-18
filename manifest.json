@@ -1,0 +1,14 @@
+{
+  "name": "UEC — Ultimate Entrepreneur Challenge",
+  "short_name": "UEC",
+  "description": "Founders fight. Valuations fall. A browser arcade fighter with Pitch Deck Strikes, Hostile Takeovers and Unicorn Mode.",
+  "start_url": ".",
+  "display": "standalone",
+  "orientation": "landscape",
+  "background_color": "#0b0e1a",
+  "theme_color": "#0b0e1a",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}

@@ -5,7 +5,7 @@ import { FIGHTERS, SPECIALS, UNICORN_META, getFighter, buildCustomFighter } from
 import { ARENAS, getArena, randomArena } from '../data/arenas.js';
 import { Save, buildChallengeLink } from '../state.js';
 import { rankFor } from '../config.js';
-import { drawPortrait } from '../engine/drawFighter.js';
+import { drawPortrait, setPhotoReadyCallback } from '../engine/drawFighter.js';
 import { audio } from '../engine/audio.js';
 import { KEY_LABELS } from '../engine/input.js';
 import { renderResultCard } from './resultCard.js';
@@ -597,6 +597,15 @@ export function initScreens(actions) {
       url: $('inviteLink').value,
     }).catch(() => {});
   };
+
+  // once an uploaded photo finishes decoding, refresh any portraits drawn without it
+  setPhotoReadyCallback(() => {
+    updateTitleChip();
+    if (document.getElementById('scr-profile').classList.contains('active') && draft) {
+      renderStyleGrid();
+      renderAvatarPreview();
+    }
+  });
 
   updateTitleChip();
 }

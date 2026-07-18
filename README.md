@@ -1,5 +1,7 @@
 # UEC — Ultimate Entrepreneur Challenge 🥊
 
+![UEC — Ultimate Entrepreneur Challenge](og-image.jpg)
+
 **Founders fight. Valuations fall.** A launch-ready browser arcade fighter where entrepreneurs battle 1-v-1 with Pitch Deck Strikes, Hostile Takeovers and full-meter **UNICORN MODE** — inspired by the pacing of 1990s arcade fighters, built with a fully original cast, art, and sound.
 
 Playable in seconds: no account, no install, no build step. **100% vanilla JavaScript + Canvas + Web Audio — zero dependencies, zero asset files.** Every sprite is drawn and every sound is synthesized in code, so there is nothing to license and nothing to download.
@@ -67,6 +69,10 @@ Touch pads appear automatically on phones/tablets (or force them with `?touch=1`
 | **Zara Okafor** · The Growth Hacker | Hypervine | 📈 **Growth Hack** — viral rush that locks in a 4-hit flurry |
 | **Eleanor Voss** · The Shark | Apex Capital | 💰 **Funding Round** — gold rains down and refunds her energy |
 | **Dex Kruger** · The Raider | OmniCorp Holdings | 🦈 **Hostile Takeover** — unblockable command grab |
+
+| Unicorn Mode in The Unicorn Club | Pitch Deck Strike on The Stock Exchange |
+|---|---|
+| ![Unicorn Mode brawl](shots/unicorn-brawl.jpg) | ![Pitch Deck Strike volley](shots/pitch-deck.jpg) |
 
 Everyone shares 🦄 **Unicorn Mode** at full meter. Fighters have distinct speed/power/HP stats and AI personalities (aggression, jumpiness, preferred range) across three difficulties: **Intern / Founder / Mogul**.
 

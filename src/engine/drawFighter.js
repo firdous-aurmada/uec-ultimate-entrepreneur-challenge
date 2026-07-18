@@ -7,11 +7,15 @@ const FILTER_OK = typeof CanvasRenderingContext2D !== 'undefined' && 'filter' in
 
 // dataURL → Image cache for photo faces
 const photoCache = new Map();
+let onPhotoReady = null;
+// UI registers a callback so portraits re-render once an async photo decodes.
+export function setPhotoReadyCallback(cb) { onPhotoReady = cb; }
 export function getPhoto(dataUrl) {
   if (!dataUrl) return null;
   let img = photoCache.get(dataUrl);
   if (!img) {
     img = new Image();
+    img.onload = () => { if (onPhotoReady) onPhotoReady(); };
     img.src = dataUrl;
     photoCache.set(dataUrl, img);
   }
