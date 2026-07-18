@@ -2,6 +2,8 @@
 // hairstyles, faces (or an uploaded photo as the face), and comic outlines.
 // Also renders the portrait busts used across the UI.
 
+import { shade } from '../data/fighters.js';
+
 const OUTLINE = '#0a0c16';
 const FILTER_OK = typeof CanvasRenderingContext2D !== 'undefined' && 'filter' in CanvasRenderingContext2D.prototype;
 
@@ -250,11 +252,16 @@ function drawAccessory(ctx, cx, cy, r, def) {
   const c = def.c;
   const a = def.accessory;
   if (a === 'visor') {
-    ctx.fillStyle = 'rgba(41,217,255,0.75)';
-    ctx.strokeStyle = OUTLINE; ctx.lineWidth = 2.5;
+    // translucent AR visor — eyes stay visible through the tint
+    ctx.fillStyle = 'rgba(41,217,255,0.32)';
+    ctx.strokeStyle = 'rgba(41,217,255,0.95)';
+    ctx.lineWidth = 2.5;
     ctx.beginPath();
-    ctx.roundRect(cx - r * 0.15, cy - r * 0.28, r * 1.25, r * 0.5, 4);
+    ctx.roundRect(cx - r * 0.58, cy - r * 0.24, r * 1.16, r * 0.44, r * 0.17);
     ctx.fill(); ctx.stroke();
+    ctx.strokeStyle = 'rgba(255,255,255,0.55)';
+    ctx.lineWidth = 1.6;
+    ctx.beginPath(); ctx.moveTo(cx - r * 0.4, cy - r * 0.12); ctx.lineTo(cx - r * 0.02, cy - r * 0.12); ctx.stroke();
   } else if (a === 'glasses') {
     ctx.strokeStyle = OUTLINE; ctx.lineWidth = 2.5;
     ctx.fillStyle = 'rgba(255,255,255,0.14)';
@@ -262,11 +269,16 @@ function drawAccessory(ctx, cx, cy, r, def) {
       ctx.beginPath(); ctx.roundRect(cx - r * 0.28 + r * s, cy - r * 0.18, r * 0.42, r * 0.36, 3); ctx.fill(); ctx.stroke();
     }
   } else if (a === 'shades') {
-    ctx.fillStyle = '#14161f';
+    // two slim tinted lenses — brows above, eyes faintly visible through
     ctx.strokeStyle = OUTLINE; ctx.lineWidth = 2.5;
-    ctx.beginPath();
-    ctx.roundRect(cx - r * 0.2, cy - r * 0.22, r * 1.16, r * 0.4, 4);
-    ctx.fill(); ctx.stroke();
+    ctx.fillStyle = 'rgba(16,18,28,0.58)';
+    for (const s of [-1, 1]) {
+      ctx.beginPath();
+      ctx.roundRect(cx + s * r * 0.36 - r * 0.27, cy - r * 0.16, r * 0.54, r * 0.34, r * 0.13);
+      ctx.fill(); ctx.stroke();
+    }
+    ctx.beginPath(); ctx.moveTo(cx - r * 0.1, cy - r * 0.04); ctx.lineTo(cx + r * 0.1, cy - r * 0.04); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(cx + r * 0.63, cy - r * 0.06); ctx.lineTo(cx + r * 0.94, cy - r * 0.14); ctx.stroke();
   } else if (a === 'stubble') {
     ctx.fillStyle = 'rgba(30,30,40,0.25)';
     ctx.beginPath(); ctx.arc(cx, cy + r * 0.5, r * 0.55, 0, Math.PI); ctx.fill();
@@ -434,10 +446,10 @@ export function drawPortrait(canvas, def, opts = {}) {
   const S = canvas.width;
   const k = S / 100;
   ctx.clearRect(0, 0, S, S);
-  // backdrop
+  // backdrop — lifted so dark suits still read against dark UI
   const g = ctx.createLinearGradient(0, 0, S, S);
-  g.addColorStop(0, def.c.suit);
-  g.addColorStop(1, '#10152a');
+  g.addColorStop(0, shade(def.c.suit, 34));
+  g.addColorStop(1, '#1a2138');
   ctx.fillStyle = g;
   ctx.beginPath(); ctx.roundRect(0, 0, S, S, 12 * k); ctx.fill();
   // burst rays

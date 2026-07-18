@@ -591,3 +591,9 @@ label.btn { display: inline-block; }
   /* portrait phones: stage up top, thumbs get the bottom */
   .screen-fight { justify-content: flex-start; padding-top: max(8px, env(safe-area-inset-top)); }
 }
+
+@media (max-width: 480px) {
+  /* very narrow: drop company chips so names never collide with the timer */
+  .hud-co { display: none; }
+  .hud-center { min-width: 50px; }
+}

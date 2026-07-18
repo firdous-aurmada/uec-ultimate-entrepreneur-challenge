@@ -5,6 +5,7 @@ import { STAGE, PHYS, ROUND, METER, BLOCK, UNICORN } from '../config.js';
 import { Fighter } from './fighter.js';
 import { FXSystem } from './fx.js';
 import { audio } from './audio.js';
+import { isTouchDevice } from './input.js';
 
 function overlap(a, b) {
   return a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
@@ -358,13 +359,18 @@ export class Game {
     if (this.mode !== 'solo') return;
     const f = this.fighters[0];
     if (!f.controller.isHuman) return;
+    const touch = isTouchDevice();
     if (!this.hintFlags.special && f.energy >= METER.SPECIAL_COST) {
       this.hintFlags.special = true;
-      this.hud.hint(`⚡ SPECIAL READY — press L (or B) for ${f.special.name}`);
+      this.hud.hint(touch
+        ? `⚡ SPECIAL READY — tap ⚡ for ${f.special.name}`
+        : `⚡ SPECIAL READY — press L (or B) for ${f.special.name}`);
     }
     if (!this.hintFlags.super && f.energy >= METER.SUPER_COST) {
       this.hintFlags.super = true;
-      this.hud.hint('🦄 FULL METER — press U (or G) for UNICORN MODE');
+      this.hud.hint(touch
+        ? '🦄 FULL METER — tap 🦄 for UNICORN MODE'
+        : '🦄 FULL METER — press U (or G) for UNICORN MODE');
     }
   }
 
