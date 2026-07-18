@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>UEC — Ultimate Entrepreneur Challenge</title>
+<meta name="description" content="Founders fight. Valuations fall. A browser arcade fighter where entrepreneurs battle with Pitch Deck Strikes, Hostile Takeovers and Unicorn Mode.">
+<meta property="og:title" content="UEC — Ultimate Entrepreneur Challenge">
+<meta property="og:description" content="Founders fight. Valuations fall. Pick your founder, master your special, climb the ladder.">
+<meta name="theme-color" content="#0b0e1a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230b0e1a'/%3E%3Ctext x='32' y='44' font-family='Arial Black,Arial' font-size='30' font-weight='900' fill='%23ffd23f' text-anchor='middle'%3EU%3C/text%3E%3Ccircle cx='47' cy='18' r='9' fill='%23ff3d6e'/%3E%3Ccircle cx='47' cy='18' r='4' fill='%23ffd23f'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div id="app">
+  <canvas id="bgCanvas" aria-hidden="true"></canvas>
+
+  <!-- ============ TITLE ============ -->
+  <section id="scr-title" class="screen">
+    <div class="corner-ui">
+      <button id="btn-sound" class="icon-btn" title="Sound on/off">🔊</button>
+      <button id="btn-settings" class="icon-btn" title="Settings">⚙️</button>
+    </div>
+    <div class="title-wrap">
+      <div class="logo" aria-label="UEC — Ultimate Entrepreneur Challenge">
+        <div class="logo-uec"><span>U</span><span>E</span><span>C</span></div>
+        <div class="logo-sub">ULTIMATE ENTREPRENEUR CHALLENGE</div>
+        <div class="logo-tag">FOUNDERS FIGHT. VALUATIONS FALL.</div>
+      </div>
+      <div class="title-menu">
+        <button id="btn-quick" class="btn btn-primary btn-big">⚡ QUICK FIGHT</button>
+        <div class="btn-row">
+          <button id="btn-arcade" class="btn">🥊 CHOOSE FIGHTER</button>
+          <button id="btn-2p" class="btn">👥 LOCAL 2-PLAYER</button>
+        </div>
+        <div class="btn-row">
+          <button id="btn-challenges" class="btn btn-sm">⚔️ CHALLENGES</button>
+          <button id="btn-leaderboard" class="btn btn-sm">🏆 LEADERBOARD</button>
+        </div>
+        <div class="btn-row">
+          <button id="btn-profile" class="btn btn-sm">👤 CREATE PROFILE</button>
+          <button id="btn-help" class="btn btn-sm">❓ HOW TO PLAY</button>
+        </div>
+      </div>
+      <div id="title-profile-chip" class="profile-chip hidden">
+        <canvas class="chip-face" id="chipFace" width="72" height="72"></canvas>
+        <div class="chip-text">
+          <div class="chip-name" id="chipName"></div>
+          <div class="chip-rank" id="chipRank"></div>
+        </div>
+      </div>
+      <div class="title-footer">v1.0 · original characters · no signup needed</div>
+    </div>
+  </section>
+
+  <!-- ============ FIGHTER SELECT ============ -->
+  <section id="scr-select" class="screen">
+    <header class="scr-head">
+      <button class="btn btn-back" data-back>← BACK</button>
+      <h1 id="select-title" class="scr-title">CHOOSE YOUR FIGHTER</h1>
+      <div class="head-spacer"></div>
+    </header>
+    <div class="select-body">
+      <div class="select-left">
+        <div id="fighter-grid" class="fighter-grid"></div>
+        <div class="pick-row">
+          <div class="pick-label">ARENA</div>
+          <div id="arena-strip" class="arena-strip"></div>
+        </div>
+        <div class="pick-row" id="difficulty-row">
+          <div class="pick-label">AI LEVEL</div>
+          <div class="seg" id="difficulty-seg">
+            <button data-diff="intern">INTERN</button>
+            <button data-diff="founder" class="on">FOUNDER</button>
+            <button data-diff="mogul">MOGUL</button>
+          </div>
+        </div>
+      </div>
+      <div class="select-right">
+        <div class="preview-card" id="preview-card">
+          <canvas id="preview-portrait" width="260" height="260"></canvas>
+          <div class="pv-name" id="pv-name"></div>
+          <div class="pv-title" id="pv-title"></div>
+          <div class="pv-co" id="pv-co"></div>
+          <div class="pv-stats">
+            <div class="stat"><span>SPD</span><div class="stat-track"><div id="stat-spd"></div></div></div>
+            <div class="stat"><span>PWR</span><div class="stat-track"><div id="stat-pwr"></div></div></div>
+            <div class="stat"><span>HP</span><div class="stat-track"><div id="stat-hp"></div></div></div>
+          </div>
+          <div class="pv-special">
+            <div class="pv-sp-name" id="pv-sp-name"></div>
+            <div class="pv-sp-desc" id="pv-sp-desc"></div>
+          </div>
+        </div>
+        <button id="btn-fight" class="btn btn-primary btn-big">FIGHT ➤</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ FIGHT ============ -->
+  <section id="scr-fight" class="screen screen-fight">
+    <div class="stage-wrap" id="stageWrap">
+      <canvas id="gameCanvas" width="960" height="540"></canvas>
+      <div id="hud">
+        <div class="hud-top">
+          <div class="hud-side hud-p1">
+            <canvas class="hud-portrait" id="hudFace1" width="96" height="96"></canvas>
+            <div class="hud-bars">
+              <div class="hud-name"><span id="hudName1">FIGHTER</span><span class="hud-co" id="hudCo1"></span></div>
+              <div class="hp-track"><div class="hp-ghost" id="hpGhost1"></div><div class="hp-fill" id="hpFill1"></div></div>
+              <div class="en-track"><div class="en-fill" id="enFill1"></div><div class="en-spark" id="enSpark1">READY</div></div>
+            </div>
+          </div>
+          <div class="hud-center">
+            <div id="hudTimer">60</div>
+            <div class="pip-rows"><div class="round-pips" id="pips1"></div><div class="round-pips" id="pips2"></div></div>
+          </div>
+          <div class="hud-side hud-p2">
+            <div class="hud-bars">
+              <div class="hud-name"><span id="hudName2">FIGHTER</span><span class="hud-co" id="hudCo2"></span></div>
+              <div class="hp-track"><div class="hp-ghost" id="hpGhost2"></div><div class="hp-fill" id="hpFill2"></div></div>
+              <div class="en-track"><div class="en-fill" id="enFill2"></div><div class="en-spark" id="enSpark2">READY</div></div>
+            </div>
+            <canvas class="hud-portrait" id="hudFace2" width="96" height="96"></canvas>
+          </div>
+        </div>
+        <div id="combo1" class="combo"></div>
+        <div id="combo2" class="combo combo-r"></div>
+        <div id="announce"></div>
+        <div id="hintToast" class="hidden"></div>
+        <div id="vsSplash" class="hidden">
+          <div class="vs-card vs-left"><canvas id="vsFace1" width="200" height="200"></canvas><div id="vsName1"></div></div>
+          <div class="vs-mark">VS</div>
+          <div class="vs-card vs-right"><canvas id="vsFace2" width="200" height="200"></canvas><div id="vsName2"></div></div>
+        </div>
+      </div>
+      <button id="btn-pause" class="icon-btn" title="Pause">⏸</button>
+    </div>
+    <div id="touchControls" class="touch hidden">
+      <div class="t-left">
+        <button class="tbtn t-up" data-k="up">▲</button>
+        <div class="t-row">
+          <button class="tbtn" data-k="left">◀</button>
+          <button class="tbtn" data-k="right">▶</button>
+        </div>
+      </div>
+      <div class="t-right">
+        <button class="tbtn t-block" data-k="block">🛡</button>
+        <div class="t-grid">
+          <button class="tbtn t-atk" data-k="punch">👊</button>
+          <button class="tbtn t-atk" data-k="kick">🦶</button>
+          <button class="tbtn t-sp" data-k="special">⚡</button>
+          <button class="tbtn t-sp" data-k="super">🦄</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ RESULTS ============ -->
+  <section id="scr-results" class="screen">
+    <div class="results-wrap">
+      <div id="result-verdict" class="result-verdict">VICTORY</div>
+      <div class="result-faces">
+        <div class="rf rf-win"><canvas id="resFaceW" width="180" height="180"></canvas><div id="resNameW"></div></div>
+        <div class="result-score" id="result-score">2 – 0</div>
+        <div class="rf rf-lose"><canvas id="resFaceL" width="140" height="140"></canvas><div id="resNameL"></div></div>
+      </div>
+      <div id="result-stats" class="result-stats"></div>
+      <div id="result-points" class="result-points hidden"></div>
+      <div class="btn-row result-btns">
+        <button id="btn-rematch" class="btn btn-primary">🔁 REMATCH</button>
+        <button id="btn-changefighter" class="btn">🎭 CHANGE FIGHTER</button>
+      </div>
+      <div class="btn-row result-btns">
+        <button id="btn-sharecard" class="btn btn-sm">📸 SHARE RESULT</button>
+        <button id="btn-res-invite" class="btn btn-sm">🔗 CHALLENGE A FRIEND</button>
+        <button id="btn-res-menu" class="btn btn-sm">🏠 MENU</button>
+      </div>
+      <div id="result-cta" class="result-cta hidden">Create a founder profile to record wins on the leaderboard → <button id="btn-res-profile" class="linklike">CREATE PROFILE</button></div>
+    </div>
+  </section>
+
+  <!-- ============ PROFILE ============ -->
+  <section id="scr-profile" class="screen scroll">
+    <header class="scr-head">
+      <button class="btn btn-back" data-back>← BACK</button>
+      <h1 class="scr-title">FOUNDER PROFILE</h1>
+      <div class="head-spacer"></div>
+    </header>
+    <div class="profile-body">
+      <div class="panel">
+        <div class="panel-title">IDENTITY</div>
+        <div class="avatar-row">
+          <div class="avatar-frame"><canvas id="avatarPreview" width="160" height="160"></canvas></div>
+          <div class="avatar-btns">
+            <label class="btn btn-sm" for="photoInput">📷 UPLOAD PHOTO</label>
+            <input type="file" id="photoInput" accept="image/*" hidden>
+            <button id="btn-photo-clear" class="btn btn-sm btn-ghost">✕ REMOVE</button>
+            <div class="hint">Your photo becomes your fighter's face.</div>
+          </div>
+        </div>
+        <label class="field"><span>FOUNDER NAME</span><input id="inp-name" maxlength="18" placeholder="e.g. Jordan Blaze"></label>
+        <label class="field"><span>COMPANY / STARTUP</span><input id="inp-company" maxlength="22" placeholder="e.g. Blaze Robotics"></label>
+      </div>
+      <div class="panel">
+        <div class="panel-title">YOUR FIGHTER</div>
+        <div class="hint">Pick a base style — your colors and photo make it yours.</div>
+        <div id="style-grid" class="style-grid"></div>
+        <div class="color-row">
+          <label class="field field-color"><span>SUIT</span><input type="color" id="inp-c1" value="#5865f2"></label>
+          <label class="field field-color"><span>ACCENT</span><input type="color" id="inp-c2" value="#ffd23f"></label>
+        </div>
+        <label class="field"><span>SIGNATURE SPECIAL</span>
+          <select id="inp-special"></select>
+        </label>
+        <div class="hint" id="special-desc"></div>
+      </div>
+      <div class="panel" id="profile-stats-panel">
+        <div class="panel-title">CAREER</div>
+        <div id="profile-stats" class="career-grid"></div>
+      </div>
+      <div class="btn-row">
+        <button id="btn-save-profile" class="btn btn-primary">💾 SAVE PROFILE</button>
+        <button id="btn-invite" class="btn">🔗 INVITE A FRIEND</button>
+      </div>
+      <div class="btn-row"><button id="btn-reset" class="btn btn-sm btn-danger">RESET ALL PROGRESS</button></div>
+    </div>
+  </section>
+
+  <!-- ============ CHALLENGES ============ -->
+  <section id="scr-challenge" class="screen scroll">
+    <header class="scr-head">
+      <button class="btn btn-back" data-back>← BACK</button>
+      <h1 class="scr-title">CHALLENGES</h1>
+      <div class="head-spacer"></div>
+    </header>
+    <div class="challenge-body">
+      <div class="panel invite-panel">
+        <div class="panel-title">🔗 INVITE A FRIEND</div>
+        <p class="hint">Send your challenge link — they'll face your fighter head-on. No signup needed.</p>
+        <button id="btn-ch-invite" class="btn btn-primary">CREATE CHALLENGE LINK</button>
+      </div>
+      <div class="panel">
+        <div class="panel-title">⚔️ BATTLE A FOUNDER</div>
+        <p class="hint">Take on the ladder — beat them to take their points.</p>
+        <div id="rival-list" class="rival-list"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ LEADERBOARD ============ -->
+  <section id="scr-leaderboard" class="screen scroll">
+    <header class="scr-head">
+      <button class="btn btn-back" data-back>← BACK</button>
+      <h1 class="scr-title">LEADERBOARD</h1>
+      <div class="head-spacer"></div>
+    </header>
+    <div class="lb-body">
+      <div id="lb-list" class="lb-list"></div>
+      <div class="hint center">Local season standings. The global ladder goes live with online play.</div>
+    </div>
+  </section>
+
+  <!-- ============ HELP ============ -->
+  <section id="scr-help" class="screen scroll">
+    <header class="scr-head">
+      <button class="btn btn-back" data-back>← BACK</button>
+      <h1 class="scr-title">HOW TO PLAY</h1>
+      <div class="head-spacer"></div>
+    </header>
+    <div class="help-body">
+      <div class="panel">
+        <div class="panel-title">🎯 THE GOAL</div>
+        <p>Win <b>2 of 3 rounds</b>. Empty your rival's health bar or have more health when the 60-second bell rings. Landing and taking hits charges your <b>energy meter</b> — spend it on your Special (50) or go full <b>UNICORN MODE</b> (100).</p>
+      </div>
+      <div class="panel">
+        <div class="panel-title">⌨️ CONTROLS — SOLO</div>
+        <div class="keys-grid" id="keys-solo"></div>
+        <div class="hint">On phones &amp; tablets, on-screen pads appear automatically.</div>
+      </div>
+      <div class="panel">
+        <div class="panel-title">👥 CONTROLS — LOCAL 2-PLAYER</div>
+        <div class="cols-2">
+          <div class="keys-grid" id="keys-p1"></div>
+          <div class="keys-grid" id="keys-p2"></div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-title">🛡 DEFENSE &amp; METER</div>
+        <p><b>Block</b> (hold) cuts damage to 15% chip. You can't block a <b>Hostile Takeover</b> — jump away instead. <b>Energy</b>: +12 when you land a hit, +8 when you take one. Specials cost 50. Unicorn Mode costs a full 100 bar and lasts 6 seconds: +35% damage, +25% speed and no chip damage taken.</p>
+      </div>
+      <div class="panel">
+        <div class="panel-title">⚡ SPECIAL ABILITIES</div>
+        <div id="ability-list" class="ability-list"></div>
+      </div>
+      <div class="panel">
+        <div class="panel-title">🏆 RANKED POINTS</div>
+        <p>Solo AI fights and friend challenges are ranked: <b>win</b> +20 × difficulty (Intern ×1 · Founder ×1.5 · Mogul ×2.5 · Challenges ×2) plus +5 per KO round and a streak bonus. A loss still earns +3 for showing up — very lean-startup of you.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ MODALS ============ -->
+  <div id="modal-root" class="hidden">
+    <div class="modal-backdrop"></div>
+
+    <div class="modal hidden" id="modal-pause">
+      <div class="modal-title">PAUSED</div>
+      <button id="btn-resume" class="btn btn-primary">▶ RESUME</button>
+      <button id="btn-restart" class="btn">🔄 RESTART MATCH</button>
+      <div class="sound-inline">
+        <label class="slider-row"><span>🔊 VOLUME</span><input type="range" id="pauseVol" min="0" max="100"></label>
+        <div class="btn-row">
+          <button id="pauseMusic" class="btn btn-sm">MUSIC: ON</button>
+          <button id="pauseSfx" class="btn btn-sm">SFX: ON</button>
+        </div>
+      </div>
+      <button id="btn-quit" class="btn btn-sm btn-ghost">🏠 QUIT TO MENU</button>
+    </div>
+
+    <div class="modal hidden" id="modal-settings">
+      <div class="modal-title">SETTINGS</div>
+      <label class="slider-row"><span>🔊 MASTER VOLUME</span><input type="range" id="setVol" min="0" max="100"></label>
+      <div class="btn-row">
+        <button id="setMusic" class="btn btn-sm">MUSIC: ON</button>
+        <button id="setSfx" class="btn btn-sm">SFX: ON</button>
+      </div>
+      <button class="btn btn-sm" data-close>CLOSE</button>
+    </div>
+
+    <div class="modal hidden" id="modal-invite">
+      <div class="modal-title">🔗 CHALLENGE LINK</div>
+      <p class="hint">Anyone who opens this link gets called out to fight your fighter.</p>
+      <div class="link-row"><input id="inviteLink" readonly><button id="btn-copylink" class="btn btn-sm">COPY</button></div>
+      <button id="btn-nativeshare" class="btn btn-sm">📤 SHARE…</button>
+      <button class="btn btn-sm btn-ghost" data-close>CLOSE</button>
+    </div>
+
+    <div class="modal hidden" id="modal-incoming">
+      <div class="modal-title">⚔️ YOU'VE BEEN CALLED OUT!</div>
+      <canvas id="incomingFace" width="140" height="140"></canvas>
+      <div id="incomingText" class="incoming-text"></div>
+      <button id="btn-accept" class="btn btn-primary">🥊 ACCEPT CHALLENGE</button>
+      <button class="btn btn-sm btn-ghost" data-close>MAYBE LATER</button>
+    </div>
+
+    <div class="modal modal-wide hidden" id="modal-card">
+      <div class="modal-title">📸 RESULT CARD</div>
+      <div class="card-holder"><canvas id="shareCanvas" width="1200" height="630"></canvas></div>
+      <div class="btn-row">
+        <button id="btn-dl-card" class="btn btn-sm">⬇ DOWNLOAD PNG</button>
+        <button id="btn-share-card" class="btn btn-sm">📤 SHARE…</button>
+        <button class="btn btn-sm btn-ghost" data-close>CLOSE</button>
+      </div>
+    </div>
+
+    <div class="modal hidden" id="modal-confirm">
+      <div class="modal-title" id="confirmTitle">ARE YOU SURE?</div>
+      <p class="hint" id="confirmText"></p>
+      <div class="btn-row">
+        <button id="btn-confirm-yes" class="btn btn-danger">YES, DO IT</button>
+        <button class="btn btn-ghost" data-close>CANCEL</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ TUTORIAL ============ -->
+  <div id="tutorial" class="hidden">
+    <div class="tut-card">
+      <div id="tut-body"></div>
+      <div class="tut-dots" id="tut-dots"></div>
+      <div class="btn-row">
+        <button id="tut-skip" class="btn btn-sm btn-ghost">SKIP</button>
+        <button id="tut-next" class="btn btn-primary">NEXT ➤</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="hidden"></div>
+</div>
+<script type="module" src="src/main.js"></script>
+</body>
+</html>
