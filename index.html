@@ -148,6 +148,7 @@
         </div>
       </div>
       <button id="btn-pause" class="icon-btn" title="Pause">⏸</button>
+      <div id="netStatus" class="hidden"><span class="live-dot ok"></span><span id="netStatusText">LIVE</span></div>
     </div>
     <div id="touchControls" class="touch hidden">
       <div class="t-left">
@@ -249,9 +250,14 @@
     </header>
     <div class="challenge-body">
       <div class="panel invite-panel">
-        <div class="panel-title">🔗 INVITE A FRIEND</div>
-        <p class="hint">Send your challenge link — they'll face your fighter head-on. No signup needed.</p>
-        <button id="btn-ch-invite" class="btn btn-primary">CREATE CHALLENGE LINK</button>
+        <div class="panel-title">🔴 LIVE MATCH — PLAY A FRIEND NOW</div>
+        <p class="hint">Create a room, send the link, and fight each other live — you'll be told the moment they join.</p>
+        <button id="btn-live-create" class="btn btn-primary">🥊 CREATE LIVE ROOM</button>
+      </div>
+      <div class="panel invite-panel">
+        <div class="panel-title">🔗 ASYNC CALL-OUT</div>
+        <p class="hint">Not online at the same time? Send a call-out link — they'll fight your fighter's AI ghost.</p>
+        <button id="btn-ch-invite" class="btn">CREATE CALL-OUT LINK</button>
       </div>
       <div class="panel">
         <div class="panel-title">⚔️ BATTLE A FOUNDER</div>
@@ -270,7 +276,7 @@
     </header>
     <div class="lb-body">
       <div id="lb-list" class="lb-list"></div>
-      <div class="hint center">Local season standings. The global ladder goes live with online play.</div>
+      <div class="hint center">Local season standings — live matches count here too. Global ladder coming soon.</div>
     </div>
   </section>
 
@@ -365,6 +371,25 @@
         <button id="btn-share-card" class="btn btn-sm">📤 SHARE…</button>
         <button class="btn btn-sm btn-ghost" data-close>CLOSE</button>
       </div>
+    </div>
+
+    <div class="modal hidden" id="modal-crop">
+      <div class="modal-title">📷 FRAME YOUR FACE</div>
+      <p class="hint">Drag to position · pinch or slide to zoom. Tight on the face works best.</p>
+      <div class="crop-stage"><canvas id="cropCanvas" width="280" height="280"></canvas></div>
+      <label class="slider-row"><span>🔍 ZOOM</span><input type="range" id="cropZoom" min="100" max="420" value="130"></label>
+      <div class="btn-row">
+        <button id="btn-crop-apply" class="btn btn-primary">✔ USE THIS</button>
+        <button class="btn btn-ghost" data-close>CANCEL</button>
+      </div>
+    </div>
+
+    <div class="modal hidden" id="modal-live">
+      <div class="modal-title">🔴 LIVE ROOM</div>
+      <div class="live-status"><span class="live-dot" id="liveDot"></span><span id="liveStatusText">Setting up the room…</span></div>
+      <div class="link-row" id="liveLinkRow"><input id="liveLink" readonly><button id="btn-live-copy" class="btn btn-sm">COPY</button></div>
+      <button id="btn-live-share" class="btn btn-sm">📤 SHARE…</button>
+      <button id="btn-live-cancel" class="btn btn-sm btn-ghost">CANCEL</button>
     </div>
 
     <div class="modal hidden" id="modal-confirm">

@@ -65,6 +65,7 @@ export function openSelect(mode) {
 }
 
 function selectTitle() {
+  if (sel.mode === 'online') return '🔴 LIVE — CHOOSE YOUR FIGHTER';
   if (sel.mode === 'versus') return sel.phase === 0 ? 'P1 — CHOOSE YOUR FIGHTER' : 'P2 — CHOOSE YOUR FIGHTER';
   if (sel.ghost) return `FACE ${sel.ghost.def.name}!`;
   return 'CHOOSE YOUR FIGHTER';
@@ -72,7 +73,11 @@ function selectTitle() {
 
 function renderSelect() {
   $('select-title').textContent = selectTitle();
-  $('difficulty-row').style.display = (sel.mode === 'versus' || sel.ghost) ? 'none' : '';
+  $('difficulty-row').style.display = (sel.mode !== 'solo' || sel.ghost) ? 'none' : '';
+  // in live matches the host picks the arena
+  const net = A.netInfo?.();
+  document.querySelector('#arena-strip').parentElement.style.display =
+    (sel.mode === 'online' && net?.role === 'guest') ? 'none' : '';
 
   const grid = $('fighter-grid');
   grid.innerHTML = '';
@@ -128,9 +133,19 @@ function renderSelect() {
 
   renderPreview();
 
+  if (sel.mode === 'online') {
+    const locked = A.netInfo?.()?.pickLocked;
+    $('btn-fight').disabled = !!locked;
+    $('btn-fight').textContent = locked ? '✓ READY — WAITING FOR RIVAL…' : 'LOCK IN ➤';
+    return;
+  }
   const ready = sel.mode !== 'versus' || (sel.p1 && sel.p2);
   $('btn-fight').disabled = !ready;
   $('btn-fight').textContent = sel.mode === 'versus' && sel.phase === 1 && !sel.p2 ? 'P2 — PICK…' : 'FIGHT ➤';
+}
+
+export function refreshSelect() {
+  if (document.getElementById('scr-select').classList.contains('active')) renderSelect();
 }
 
 function renderPreview() {
@@ -154,6 +169,11 @@ function renderPreview() {
 function onFight() {
   audio.sfx('fight');
   const p1Def = resolveDef(sel.p1);
+  if (sel.mode === 'online') {
+    A.onlinePick(p1Def, sel.arena);
+    renderSelect();
+    return;
+  }
   let p2Def, difficulty = sel.difficulty, isChallenge = false;
 
   if (sel.mode === 'versus') {
@@ -241,28 +261,133 @@ function renderCareer() {
     `<div class="rstat"><b style="font-size:13px">${rankFor(s.points)}</b><span>RANK</span></div>`;
 }
 
-// Photo → square 200px JPEG dataURL (small enough for localStorage).
-function processPhoto(file) {
+// ---------------- face-only photo crop ----------------
+// Upload → "Frame your face" modal: drag to pan, pinch/slider to zoom,
+// FaceDetector auto-centering where the browser supports it.
+
+const crop = { img: null, cx: 0, cy: 0, zoom: 1.3 };
+
+function readFileToImage(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => {
       const img = new Image();
-      img.onload = () => {
-        const S = 200;
-        const c = document.createElement('canvas');
-        c.width = c.height = S;
-        const ctx = c.getContext('2d');
-        const scale = Math.max(S / img.width, S / img.height);
-        const w = img.width * scale, h = img.height * scale;
-        ctx.drawImage(img, (S - w) / 2, (S - h) / 2, w, h);
-        resolve(c.toDataURL('image/jpeg', 0.85));
-      };
+      img.onload = () => resolve(img);
       img.onerror = reject;
       img.src = reader.result;
     };
     reader.onerror = reject;
     reader.readAsDataURL(file);
   });
+}
+
+const cropSrcSize = () => Math.min(crop.img.width, crop.img.height) / crop.zoom;
+
+function clampCrop() {
+  const half = cropSrcSize() / 2;
+  crop.cx = Math.max(half, Math.min(crop.img.width - half, crop.cx));
+  crop.cy = Math.max(half, Math.min(crop.img.height - half, crop.cy));
+}
+
+function renderCrop() {
+  const cv = $('cropCanvas');
+  const ctx = cv.getContext('2d');
+  const S = cv.width;
+  const src = cropSrcSize();
+  ctx.clearRect(0, 0, S, S);
+  ctx.drawImage(crop.img, crop.cx - src / 2, crop.cy - src / 2, src, src, 0, 0, S, S);
+  ctx.beginPath();
+  ctx.rect(0, 0, S, S);
+  ctx.arc(S / 2, S / 2, S / 2 - 8, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(5,7,15,0.62)';
+  ctx.fill('evenodd');
+  ctx.strokeStyle = '#ffd23f';
+  ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.arc(S / 2, S / 2, S / 2 - 8, 0, Math.PI * 2); ctx.stroke();
+}
+
+async function autoFrameFace() {
+  try {
+    if (!('FaceDetector' in window)) return false;
+    const faces = await new window.FaceDetector({ fastMode: true, maxDetectedFaces: 5 }).detect(crop.img);
+    if (!faces.length) return false;
+    const f = faces.reduce((a, b) => (b.boundingBox.width > a.boundingBox.width ? b : a)).boundingBox;
+    crop.cx = f.x + f.width / 2;
+    crop.cy = f.y + f.height / 2 - f.height * 0.06;      // keep the hairline in frame
+    const minSide = Math.min(crop.img.width, crop.img.height);
+    crop.zoom = Math.max(1, Math.min(4.2, minSide / (Math.max(f.width, f.height) * 1.55)));
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+
+async function openCropModal(img) {
+  crop.img = img;
+  crop.cx = img.width / 2;
+  crop.cy = img.height / 2;
+  crop.zoom = 1.3;
+  const found = await autoFrameFace();
+  clampCrop();
+  $('cropZoom').value = Math.round(crop.zoom * 100);
+  renderCrop();
+  openModal('modal-crop');
+  if (found) toast('🙂 Face found — fine-tune if you like.');
+}
+
+function wireCrop() {
+  const cv = $('cropCanvas');
+  const pts = new Map();
+  cv.addEventListener('pointerdown', (e) => {
+    e.preventDefault();
+    try { cv.setPointerCapture(e.pointerId); } catch (err) { /* best-effort */ }
+    pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    cv.classList.add('dragging');
+  });
+  cv.addEventListener('pointermove', (e) => {
+    if (!pts.has(e.pointerId) || !crop.img) return;
+    if (pts.size === 2) {
+      const [a, b] = [...pts.values()];
+      const dPrev = Math.hypot(a.x - b.x, a.y - b.y);
+      pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      const [a2, b2] = [...pts.values()];
+      const dNow = Math.hypot(a2.x - b2.x, a2.y - b2.y);
+      if (dPrev > 4) {
+        crop.zoom = Math.max(1, Math.min(4.2, crop.zoom * (dNow / dPrev)));
+        $('cropZoom').value = Math.round(crop.zoom * 100);
+        clampCrop(); renderCrop();
+      }
+      return;
+    }
+    const prev = pts.get(e.pointerId);
+    const scale = cropSrcSize() / cv.getBoundingClientRect().width;
+    crop.cx -= (e.clientX - prev.x) * scale;
+    crop.cy -= (e.clientY - prev.y) * scale;
+    pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    clampCrop(); renderCrop();
+  });
+  const lift = (e) => { pts.delete(e.pointerId); if (!pts.size) cv.classList.remove('dragging'); };
+  cv.addEventListener('pointerup', lift);
+  cv.addEventListener('pointercancel', lift);
+  $('cropZoom').oninput = (e) => {
+    crop.zoom = Math.max(1, +e.target.value / 100);
+    clampCrop(); renderCrop();
+  };
+  $('btn-crop-apply').onclick = () => {
+    if (!crop.img) return;
+    const S = 200;
+    const out = document.createElement('canvas');
+    out.width = out.height = S;
+    const src = cropSrcSize();
+    out.getContext('2d').drawImage(crop.img, crop.cx - src / 2, crop.cy - src / 2, src, src, 0, 0, S, S);
+    draft.photo = out.toDataURL('image/jpeg', 0.85);
+    crop.img = null;
+    closeModals();
+    renderAvatarPreview();
+    renderStyleGrid();
+    toast('📷 Face locked in — looking dangerous.');
+    audio.sfx('select');
+  };
 }
 
 function wireProfile() {
@@ -278,11 +403,8 @@ function wireProfile() {
     const file = e.target.files && e.target.files[0];
     if (!file) return;
     try {
-      draft.photo = await processPhoto(file);
-      renderAvatarPreview();
-      renderStyleGrid();
-      toast('📷 Photo locked in — looking dangerous.');
-      audio.sfx('select');
+      const img = await readFileToImage(file);
+      await openCropModal(img);
     } catch (err) {
       toast('Could not read that image — try another file.');
     }
@@ -331,8 +453,8 @@ export function renderLeaderboard() {
         <div class="lb-co">${r.company} · ${rankFor(r.points)}</div>
       </div>
       <div class="lb-cell">${r.wins}-${r.losses}<span>W-L</span></div>
-      <div class="lb-cell">${r.kos}<span>KO</span></div>
-      <div class="lb-cell">${r.streak}<span>STRK</span></div>
+      <div class="lb-cell opt">${r.kos}<span>KO</span></div>
+      <div class="lb-cell opt">${r.streak}<span>STRK</span></div>
       <div class="lb-pts">${r.points}</div>`);
     list.appendChild(row);
   });
@@ -443,6 +565,7 @@ function openConfirm(title, text, cb) {
   confirmCb = cb;
   openModal('modal-confirm');
 }
+export const confirmDialog = openConfirm;
 
 export function openInvite() {
   const link = buildChallengeLink();
@@ -450,6 +573,27 @@ export function openInvite() {
   $('btn-nativeshare').style.display = navigator.share ? '' : 'none';
   openModal('modal-invite');
   audio.sfx('select');
+}
+
+export function showIncomingLive(hostName, onJoin) {
+  $('incomingFace').style.display = 'none';
+  $('incomingText').innerHTML =
+    `<b>${hostName}</b> is waiting in a <b>🔴 LIVE room</b> right now.<br>Join and fight them head to head!`;
+  $('btn-accept').textContent = '🔴 JOIN LIVE ROOM';
+  $('btn-accept').onclick = () => {
+    audio.sfx('fight');
+    closeModals();
+    $('incomingFace').style.display = '';
+    $('btn-accept').textContent = '🥊 ACCEPT CHALLENGE';
+    onJoin();
+  };
+  openModal('modal-incoming');
+}
+
+export function setLiveStatus(kind, text) {
+  const dot = $('liveDot');
+  dot.classList.toggle('ok', kind === 'ok');
+  $('liveStatusText').textContent = text;
 }
 
 export function showIncomingChallenge(ghostDef, ch, onAccept) {
@@ -566,8 +710,25 @@ export function initScreens(actions) {
   // challenge invite
   $('btn-ch-invite').onclick = () => openInvite();
 
-  // profile
+  // live rooms
+  $('btn-live-create').onclick = () => { audio.sfx('select'); A.createLiveRoom(); };
+  $('btn-live-copy').onclick = async () => {
+    const ok = await copyText($('liveLink').value, $('liveLink'));
+    toast(ok ? '🔗 Live link copied — send it now!' : 'Link selected — press Ctrl/Cmd+C to copy.');
+    audio.sfx('click');
+  };
+  $('btn-live-share').onclick = () => {
+    navigator.share?.({
+      title: 'UEC — fight me LIVE',
+      text: 'I\'m in the arena right now. Join my live room and fight me. 🥊',
+      url: $('liveLink').value,
+    }).catch(() => {});
+  };
+  $('btn-live-cancel').onclick = () => { audio.sfx('back'); closeModals(); A.cancelLiveRoom(); };
+
+  // profile + face crop
   wireProfile();
+  wireCrop();
 
   // sound + settings
   wireSound();
@@ -578,7 +739,8 @@ export function initScreens(actions) {
     b.onclick = () => { audio.sfx('back'); closeModals(); A.onModalClosed?.(); };
   });
   document.querySelector('.modal-backdrop').onclick = () => {
-    if (isModalOpen('modal-pause')) return;     // pause requires explicit resume
+    // these require an explicit button choice
+    if (isModalOpen('modal-pause') || isModalOpen('modal-live')) return;
     closeModals();
     A.onModalClosed?.();
   };

@@ -29,6 +29,8 @@ html, body {
   overscroll-behavior: none;
 }
 
+html { touch-action: manipulation; }
+
 body {
   position: fixed;
   inset: 0;
@@ -39,7 +41,16 @@ body {
   -webkit-font-smoothing: antialiased;
   -webkit-tap-highlight-color: transparent;
   touch-action: manipulation;
+  /* game chrome should never text-select or show touch callouts */
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
 }
+
+input, textarea { user-select: text; -webkit-user-select: text; }
+
+/* the fight screen has no scroll — kill every gesture there */
+.screen-fight, .stage-wrap, #gameCanvas, .touch { touch-action: none; }
 
 #app { position: absolute; inset: 0; overflow: hidden; }
 
@@ -597,3 +608,48 @@ label.btn { display: inline-block; }
   .hud-co { display: none; }
   .hud-center { min-width: 50px; }
 }
+
+@media (max-width: 560px) {
+  /* leaderboard & rivals: fewer columns, tighter cells — no overlap */
+  .lb-cell.opt { display: none; }
+  .lb-row { gap: 6px; padding: 6px 8px; }
+  .lb-rank { width: 24px; font-size: 14px; }
+  .lb-row canvas { width: 32px; height: 32px; }
+  .lb-cell { min-width: 34px; font-size: 11px; }
+  .lb-pts { min-width: 42px; font-size: 13px; }
+  .lb-name { font-size: 12px; }
+  .rival { gap: 8px; padding: 7px 8px; }
+  .rival canvas { width: 40px; height: 40px; }
+  .rival-name { font-size: 12px; }
+  .rival-sub { font-size: 10px; }
+  .rival-pts { font-size: 11px; }
+}
+
+/* ---------- Face crop modal ---------- */
+.crop-stage { display: grid; place-items: center; }
+#cropCanvas {
+  width: min(72vw, 280px); height: min(72vw, 280px);
+  border-radius: 16px; touch-action: none; cursor: grab;
+  border: 2px solid var(--line); background: var(--bg2);
+}
+#cropCanvas.dragging { cursor: grabbing; }
+
+/* ---------- Live match ---------- */
+.live-status {
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  background: var(--bg2); border-radius: 12px; padding: 12px; font-weight: 800; font-size: 14px;
+  min-height: 46px; text-align: center;
+}
+.live-dot {
+  width: 12px; height: 12px; border-radius: 50%; background: var(--red);
+  animation: hpPulse .9s infinite; flex: 0 0 auto;
+}
+.live-dot.ok { background: var(--green); }
+#netStatus {
+  position: absolute; top: 8px; left: 8px; z-index: 6;
+  display: flex; align-items: center; gap: 6px;
+  background: rgba(5,7,15,.75); border: 2px solid var(--line); border-radius: 10px;
+  padding: 5px 10px; font-size: 11px; font-weight: 900; letter-spacing: 1px;
+}
+#netStatus .live-dot { width: 8px; height: 8px; }
+#netStatus.warn { border-color: var(--red); color: var(--red); }

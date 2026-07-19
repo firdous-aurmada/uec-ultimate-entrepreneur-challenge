@@ -81,9 +81,10 @@ Everyone shares 🦄 **Unicorn Mode** at full meter. Fighters have distinct spee
 ## Feature checklist
 
 - ⚡ **Guest play** — no signup; first fight includes a 3-card tutorial + in-match hints
-- 👤 **Founder profiles** — name, company, **photo upload → becomes your fighter's face**, base style, custom suit/accent colors, choice of any signature special
-- 🤖 **Vs AI** (3 difficulties) · 👥 **local 2-player** (one keyboard) · 🔗 **challenge-a-friend links** (serverless: the link carries your fighter; friends battle your AI ghost)
-- ⚔️ **Challenges screen** — call out any of 10 seeded rival founders at their skill tier
+- 👤 **Founder profiles** — name, company, **photo upload with face framing** (drag/pinch crop, auto face-detect where the browser supports it) → becomes your fighter's face, base style, custom suit/accent colors, choice of any signature special
+- 🔴 **LIVE multiplayer** — create a room, send the link, and fight a friend in real time. The inviter is notified the second their rival joins; both pick fighters, the host picks the arena, and the match runs deterministic 60 Hz lockstep over Supabase Realtime with input-delay netcode, packet-loss healing, desync detection, both-consent rematches, and graceful disconnect handling. Backgrounded tabs keep simulating via a Web Worker so you never freeze your opponent.
+- 🤖 **Vs AI** (3 difficulties) · 👥 **local 2-player** (one keyboard) · 🔗 **async call-out links** (serverless: the link carries your fighter; friends battle your AI ghost anytime)
+- ⚔️ **Challenges screen** — live rooms, call-out links, and 10 seeded rival founders at their skill tier
 - 🏆 **Leaderboard** — seeded season + you, with W-L, KOs, streaks and rank titles (Garage Dreamer → Decacorn)
 - 📈 **Ranked points** — win = 20 × difficulty (×1/×1.5/×2.5, challenges ×2) + 5/KO round + streak bonus; a loss still pays +3
 - 📸 **Shareable result cards** — 1200×630 PNG (download or native share)
@@ -123,9 +124,12 @@ src/
 
 **Debug/test harness:** open with `?debug=1` to expose `window.UEC` (deterministic `step(seconds)`, `setHP`, `setEnergy`, `setTimer`, pad access) — the whole E2E suite runs through it. `?touch=1` forces touch pads on desktop.
 
-## Built for scaling — prepared but not enabled in v1
+## Online architecture (v1.1 — live and shipped)
 
-- **Online multiplayer.** Every participant is a `Controller` that writes a gamepad each frame — human, AI, and (future) network peers are interchangeable. [src/net/online.js](src/net/online.js) ships a documented `MatchTransport` interface + `OnlineController` (delay-based lockstep, rollback-ready since game state is plain data). Challenge links already carry the identity payload a room invite needs. v1 ships the serverless version: friends fight your **AI ghost**.
+Live matches run on **Supabase Realtime broadcast channels** — one ephemeral channel per room, nothing stored, no accounts. Presence powers the "your rival just joined" notification; both clients then run the same deterministic 60 Hz simulation and exchange only input bitmasks (delay-based lockstep, ~10 frames). Packets are wall-clock paced under the realtime rate limits, carry a sliding window with peer-acknowledged re-anchoring so packet loss self-heals, and a periodic state hash aborts cleanly on any desync. The engine's `Controller` contract is what makes this small: human, AI, and network players are interchangeable (see [src/net/online.js](src/net/online.js)).
+
+## Built for scaling — prepared but not enabled yet
+
 - **Global leaderboard.** Rendering/sorting/rank logic is done; it reads one local array today. Swapping in a `fetch` keeps the UI untouched. Labeled "local season" in the UI.
 - **Tournaments & seasons.** Match results flow through one `recordMatch()` chokepoint — brackets and season resets hook there.
 - **Sponsorships.** Arena billboards rotate through a data array (`SPONSORS` in arenas.js) — real partners are a one-line swap.
