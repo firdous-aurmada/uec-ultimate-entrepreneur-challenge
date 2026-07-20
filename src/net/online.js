@@ -21,7 +21,7 @@ const SEND_MS = 60;                  // min wall-clock ms between input packets 
 const WINDOW_MAX = 60;               // max frames carried per packet
 const SYNC_EVERY = 120;              // frames between state-hash checks
 
-const BITS = ['left', 'right', 'up', 'block', 'punch', 'kick', 'special', 'super'];
+const BITS = ['left', 'right', 'up', 'block', 'punch', 'kick', 'special', 'super', 'bomb', 'dash'];
 
 export function padToMask(pad) {
   let m = 0;
@@ -50,7 +50,8 @@ export function hashGameState(game) {
   for (const x of [
     q(f[0].x), q(f[0].y), q(f[0].hp), q(f[0].energy),
     q(f[1].x), q(f[1].y), q(f[1].hp), q(f[1].energy),
-    q(game.timer), game.roundWins[0], game.roundWins[1], game.projectiles.length,
+    q(game.timer), game.roundWins[0], game.roundWins[1],
+    game.projectiles.length, game.drops.length,
   ]) mix(x);
   return h;
 }

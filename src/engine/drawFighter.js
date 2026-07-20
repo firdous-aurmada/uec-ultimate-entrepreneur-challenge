@@ -100,7 +100,7 @@ function computePose(f, t) {
       P.armB = { x: 16 + 44 * hitK, y: -86 };
       P.bodyLean = 0.24 * hitK;
       P.face = 'angry';
-    } else if (atk.kind === 'rain') {
+    } else if (atk.kind === 'rain' || atk.kind === 'bomb') {
       P.armF = { x: 12, y: -100 - 66 * hitK };
       P.armB = { x: -12, y: -92 };
       P.bodyLean = -0.1 * hitK;
@@ -121,6 +121,13 @@ function computePose(f, t) {
       P.armB = { x: 10 - 14 * hitK, y: -88 };
       P.bodyLean = 0.2 * hitK;
     }
+  } else if (st === 'dash') {
+    P.bodyLean = 0.42;
+    P.legF = { x: 34, y: -6 };
+    P.legB = { x: -26, y: -2 };
+    P.armF = { x: 40, y: -92 };
+    P.armB = { x: -34, y: -78 };
+    P.face = 'angry';
   } else if (st === 'block') {
     P.crouch = 8; P.hipY += 8; P.headY += 10; P.shoulderY += 8;
     P.armF = { x: 26, y: -96 }; P.armB = { x: 24, y: -84 };
@@ -245,6 +252,24 @@ function drawHair(ctx, cx, cy, r, def, t) {
       ctx.quadraticCurveTo(cx - r * 1.25, cy - r * 0.8, cx - r * 0.95, cy - r * 0.1);
       ctx.quadraticCurveTo(cx - r * 0.3, cy - r * 0.72, cx + r * 0.55, cy - r * 0.62);
     }, c.hair);
+  } else if (style === 'short') {
+    // close-crop: low flat cap hugging the skull
+    blob(ctx, () => {
+      ctx.arc(cx, cy - r * 0.18, r * 0.99, Math.PI * 1.02, Math.PI * 1.98);
+      ctx.closePath();
+    }, c.hair);
+  } else if (style === 'curly') {
+    // fluffy mop: overlapping puffs across the crown
+    for (const [ox, oy, s] of [[-0.62, -0.62, 0.46], [-0.2, -0.86, 0.5], [0.28, -0.84, 0.48], [0.66, -0.58, 0.42], [0, -0.62, 0.55]]) {
+      blob(ctx, () => { ctx.arc(cx + r * ox, cy + r * oy, r * s, 0, 7); }, c.hair);
+    }
+  } else if (style === 'bald') {
+    // proudly bald: just a shine
+    ctx.strokeStyle = 'rgba(255,255,255,0.5)';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(cx - r * 0.25, cy - r * 0.45, r * 0.42, Math.PI * 1.15, Math.PI * 1.6);
+    ctx.stroke();
   }
 }
 
@@ -362,6 +387,40 @@ function drawTorso(ctx, def, P) {
     ctx.beginPath(); ctx.moveTo(-14, botY - 2); ctx.quadraticCurveTo(0, botY + 8, 14, botY - 2); ctx.stroke();
   } else if (def.outfit === 'turtleneck') {
     blob(ctx, () => { ctx.roundRect(-11, topY - 6, 22, 10, 3); }, c.suit2);
+  } else if (def.outfit === 'tee') {
+    // plain crew-neck tee with a tiny rocket doodle
+    ctx.strokeStyle = c.suit2; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.arc(0, topY + 3, 8, 0.25, Math.PI - 0.25); ctx.stroke();
+    ctx.fillStyle = c.accent;
+    ctx.beginPath();
+    ctx.moveTo(0, topY + 16); ctx.lineTo(4, topY + 26); ctx.lineTo(0, topY + 36); ctx.lineTo(-4, topY + 26);
+    ctx.closePath(); ctx.fill();
+  } else if (def.outfit === 'vest') {
+    // shirt + puffer vest panels
+    blob(ctx, () => {
+      ctx.moveTo(-7, topY + 2); ctx.lineTo(0, topY + 18); ctx.lineTo(7, topY + 2); ctx.closePath();
+    }, '#e8ecf4');
+    ctx.strokeStyle = c.suit2; ctx.lineWidth = 4;
+    for (const s of [-1, 1]) {
+      ctx.beginPath();
+      ctx.moveTo(s * 9, topY + 2);
+      ctx.quadraticCurveTo(s * 15, (topY + botY) / 2, s * 11, botY + 4);
+      ctx.stroke();
+    }
+    ctx.strokeStyle = 'rgba(255,255,255,0.14)'; ctx.lineWidth = 2;
+    for (let i = 0; i < 3; i++) {
+      ctx.beginPath(); ctx.moveTo(-16, topY + 14 + i * 12); ctx.lineTo(-9, topY + 14 + i * 12); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(9, topY + 14 + i * 12); ctx.lineTo(16, topY + 14 + i * 12); ctx.stroke();
+    }
+  } else if (def.outfit === 'henley') {
+    // crew neck + button placket
+    ctx.strokeStyle = c.suit2; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.arc(0, topY + 3, 8, 0.25, Math.PI - 0.25); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0, topY + 10); ctx.lineTo(0, topY + 26); ctx.stroke();
+    ctx.fillStyle = c.suit2;
+    for (let i = 0; i < 3; i++) {
+      ctx.beginPath(); ctx.arc(3, topY + 13 + i * 6, 1.6, 0, 7); ctx.fill();
+    }
   } else if (def.outfit === 'bomber') {
     ctx.strokeStyle = c.accent; ctx.lineWidth = 3;
     ctx.beginPath(); ctx.moveTo(-w + 3, botY + 4); ctx.lineTo(w - 2, botY + 4); ctx.stroke();

@@ -26,7 +26,7 @@ export const sel = {
 };
 
 function tileDefs() {
-  const list = FIGHTERS.map(f => ({ id: f.id, def: f, badge: null }));
+  const list = FIGHTERS.map(f => ({ id: f.id, def: f, badge: f.cameo ? 'CAMEO' : null }));
   if (Save.profile) list.push({ id: 'custom', def: buildCustomFighter(Save.profile), badge: 'YOU' });
   list.push({ id: 'random', def: null, badge: null });
   return list;
@@ -529,16 +529,24 @@ export function renderHelp() {
       </div>`);
     list.appendChild(row);
   }
-  const uni = document.createElement('div');
-  uni.className = 'ability';
-  uni.innerHTML = `
-    <div style="font-size:34px;width:44px;text-align:center">🦄</div>
-    <div>
-      <div class="ab-name">${UNICORN_META.name} — EVERYONE</div>
-      <div class="ab-owner">FULL METER SUPER</div>
-      <div class="ab-desc">${UNICORN_META.desc}</div>
-    </div>`;
-  list.appendChild(uni);
+  const universals = [
+    ['💣', 'PR BOMB — EVERYONE', '25 ENERGY', 'Lob an arcing scandal that detonates on impact. Great from range; blockable up close.'],
+    ['⚙️', 'HUSTLE DASH — EVERYONE', 'FREE · SHORT COOLDOWN', 'A burst of pure grind. Closes gaps fast and cancels straight into attacks.'],
+    ['🦄', `${UNICORN_META.name} — EVERYONE`, 'FULL METER SUPER', UNICORN_META.desc],
+    ['💼', 'MYSTERY DROPS', 'RANDOM BRIEFCASES', 'Briefcases fall mid-round with hidden powers: secret funding, 10x engineers, legal shields, rockets… and the occasional toxic asset. Race your rival to them — or let them gamble.'],
+  ];
+  for (const [icon, name, owner, desc] of universals) {
+    const row = document.createElement('div');
+    row.className = 'ability';
+    row.innerHTML = `
+      <div style="font-size:34px;width:44px;text-align:center">${icon}</div>
+      <div>
+        <div class="ab-name">${name}</div>
+        <div class="ab-owner">${owner}</div>
+        <div class="ab-desc">${desc}</div>
+      </div>`;
+    list.appendChild(row);
+  }
 }
 
 // ---------------------------------------------------------------- modals

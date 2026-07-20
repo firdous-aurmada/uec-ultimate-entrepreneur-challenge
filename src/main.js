@@ -1,7 +1,7 @@
 // Boot, screen router, match lifecycle, render loop, menu background.
 
 import { STAGE, DEBUG, rankFor } from './config.js';
-import { Save, parseChallengeFromURL } from './state.js';
+import { Save, parseChallengeFromURL, buildChallengeLink } from './state.js';
 import { FIGHTERS, getFighter, buildCustomFighter, buildGhostFighter } from './data/fighters.js';
 import { randomArena, getArena } from './data/arenas.js';
 import { audio, installAudioUnlock } from './engine/audio.js';
@@ -175,7 +175,8 @@ function renderResults() {
     pts.innerHTML =
       `<span class="pts">+${lastRanked.gained} PTS</span> → ${lastRanked.total} total · ` +
       `<span class="rank-chip">${lastRanked.rank}</span>` +
-      (lastRanked.streak > 1 ? ` · 🔥 ${lastRanked.streak} WIN STREAK` : '');
+      (lastRanked.streak > 1 ? ` · 🔥 ${lastRanked.streak} WIN STREAK` : '') +
+      (lastRanked.rankUp ? `<br>📈 RANK UP — welcome to <b>${lastRanked.rank}</b>. That belongs on LinkedIn. 👇` : '');
   } else {
     pts.classList.add('hidden');
   }
@@ -348,7 +349,10 @@ function maybeHostStart() {
   if (!net.myPick || !net.peerPick) return;
   netPhase = 'starting';
   const arena = netArenaChoice === 'random' ? randomArena().id : netArenaChoice;
-  const cfg = { arena, host: net.myPick, guest: net.peerPick };
+  const cfg = {
+    arena, host: net.myPick, guest: net.peerPick,
+    seed: Math.floor(Math.random() * 0xffffffff),     // shared drop-RNG seed
+  };
   net.sendStart(cfg);
   startOnlineMatch(cfg);
 }
@@ -377,6 +381,7 @@ function startOnlineMatch(cfg) {
     mode: 'online',
     difficulty: 'founder',
     isChallenge: true,
+    seed: cfg.seed,
     hud,
     onEnd: onOnlineMatchEnd,
   });
@@ -433,7 +438,10 @@ function requestOnlineRematch() {
 function tryOnlineRematch() {
   if (!net || !netRematch.me || !netRematch.peer) return;
   if (net.role === 'host' && netPhase === 'results') {
-    const cfg = { arena: randomArena().id, host: net.myPick, guest: net.peerPick };
+    const cfg = {
+      arena: randomArena().id, host: net.myPick, guest: net.peerPick,
+      seed: Math.floor(Math.random() * 0xffffffff),
+    };
     net.sendStart(cfg);
     startOnlineMatch(cfg);
   }
@@ -529,6 +537,65 @@ function togglePause() {
     openModal('modal-pause');
   }
   audio.sfx('click');
+}
+
+// ---------------------------------------------------------------- brag sharing
+
+// The share URL is your challenge link when you have a profile — so a friend
+// clicking your brag gets *called out*, not just linked. That's the loop.
+function shareUrl() {
+  if (Save.profile) return buildChallengeLink();
+  return location.origin + location.pathname;
+}
+
+function bragText() {
+  const r = lastResult;
+  const li = r.localIdx ?? 0;
+  const won = r.winnerIdx === li;
+  const me = r.defs[li];
+  const opp = r.defs[1 - li];
+  const score = `${r.score[r.winnerIdx]}–${r.score[1 - r.winnerIdx]}`;
+  const kos = r.koRounds[r.winnerIdx];
+  const arena = currentSetup?.arena?.name || 'the arena';
+  const oppLabel = `${opp.name}${opp.company ? ' of ' + opp.company : ''}`;
+  if (won) {
+    const koBit = kos > 0 ? ` ${kos} KO${kos > 1 ? 's' : ''}.` : '';
+    const rankBit = lastRanked ? ` Currently ranked ${lastRanked.rank} (${lastRanked.total} pts).` : '';
+    return `Just took down ${oppLabel} ${score} at ${arena} in the Ultimate Entrepreneur Challenge.${koBit}${rankBit} Think you can beat me? Fight me here:`;
+  }
+  return `${oppLabel} just beat me ${score} in the Ultimate Entrepreneur Challenge. Avenge me (or laugh at me) here:`;
+}
+
+function wireShareStrip() {
+  const enc = encodeURIComponent;
+  $('sh-li').onclick = () => {
+    audio.sfx('select');
+    window.open(`https://www.linkedin.com/sharing/share-offsite/?url=${enc(shareUrl())}`, '_blank', 'noopener');
+    copyToClipboard(`${bragText()} ${shareUrl()}`);
+    toast('🔗 Brag copied too — paste it into your LinkedIn post!');
+  };
+  $('sh-x').onclick = () => {
+    audio.sfx('select');
+    window.open(`https://twitter.com/intent/tweet?text=${enc(bragText())}&url=${enc(shareUrl())}`, '_blank', 'noopener');
+  };
+  $('sh-wa').onclick = () => {
+    audio.sfx('select');
+    window.open(`https://wa.me/?text=${enc(`${bragText()} ${shareUrl()}`)}`, '_blank', 'noopener');
+  };
+  $('sh-copy').onclick = async () => {
+    audio.sfx('click');
+    const ok = await copyToClipboard(`${bragText()} ${shareUrl()}`);
+    toast(ok ? '⧉ Brag copied — paste it anywhere.' : 'Copy blocked — long-press to copy manually.');
+  };
+}
+
+async function copyToClipboard(text) {
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch (e) {
+    return false;
+  }
 }
 
 // ---------------------------------------------------------------- share card
@@ -725,6 +792,7 @@ function boot() {
   $('btn-res-profile').onclick = () => { renderProfile(); showScreen('scr-profile'); };
   $('btn-dl-card').onclick = downloadCard;
   $('btn-share-card').onclick = nativeShareCard;
+  wireShareStrip();
 
   showScreen('scr-title');
 

@@ -3,30 +3,33 @@
 // Versus mode: WASD-cluster = P1, arrows-cluster = P2.
 
 function blankPad() {
-  return { left: false, right: false, up: false, block: false, punch: false, kick: false, special: false, super: false };
+  return { left: false, right: false, up: false, block: false, punch: false, kick: false, special: false, super: false, bomb: false, dash: false };
 }
 
 const P1_KEYS = {
   KeyA: 'left', KeyD: 'right', KeyW: 'up', KeyS: 'block',
   KeyC: 'punch', KeyV: 'kick', KeyB: 'special', KeyG: 'super',
+  KeyF: 'bomb', KeyR: 'dash',
 };
 const P2_KEYS = {
   ArrowLeft: 'left', ArrowRight: 'right', ArrowUp: 'up', ArrowDown: 'block',
   KeyJ: 'punch', KeyK: 'kick', KeyL: 'special', KeyU: 'super',
+  KeyI: 'bomb', KeyO: 'dash',
 };
 
 export const KEY_LABELS = {
   solo: [
     ['Move', '← → / A D'], ['Jump', '↑ / W'], ['Block (hold)', '↓ / S'],
-    ['Punch', 'J / C'], ['Kick', 'K / V'], ['Special', 'L / B'], ['Unicorn Mode', 'U / G'], ['Pause', 'Esc'],
+    ['Punch', 'J / C'], ['Kick', 'K / V'], ['PR Bomb 💣', 'I / F'], ['Dash ⚙️', 'O / R'],
+    ['Special', 'L / B'], ['Unicorn Mode', 'U / G'], ['Pause', 'Esc'],
   ],
   p1: [
     ['Move', 'A D'], ['Jump', 'W'], ['Block', 'S'],
-    ['Punch', 'C'], ['Kick', 'V'], ['Special', 'B'], ['Unicorn', 'G'],
+    ['Punch', 'C'], ['Kick', 'V'], ['Bomb', 'F'], ['Dash', 'R'], ['Special', 'B'], ['Unicorn', 'G'],
   ],
   p2: [
     ['Move', '← →'], ['Jump', '↑'], ['Block', '↓'],
-    ['Punch', 'J'], ['Kick', 'K'], ['Special', 'L'], ['Unicorn', 'U'],
+    ['Punch', 'J'], ['Kick', 'K'], ['Bomb', 'I'], ['Dash', 'O'], ['Special', 'L'], ['Unicorn', 'U'],
   ],
 };
 

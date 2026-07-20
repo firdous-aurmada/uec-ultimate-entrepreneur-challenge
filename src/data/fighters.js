@@ -115,6 +115,34 @@ export const FIGHTERS = [
     c: { skin: '#d9a06b', suit: '#2c2f3a', suit2: '#191b23', accent: '#ff3d6e', hair: '#101116', pants: '#22242e', shoe: '#101116' },
     hairStyle: 'slick', outfit: 'pinstripe', accessory: 'shades',
   },
+  // ---- cameo tier: 100% parody, 0% affiliation ----
+  {
+    id: 'elo', name: 'ELO MA', title: 'THE TECHNOKING', company: 'SPACEY-X',
+    tagline: 'Sells flamethrowers. Expenses them as "marketing".',
+    special: 'burnrate',
+    stats: { speed: 1.05, power: 1.15, hp: 100 },
+    ai: { aggr: 0.82, jump: 0.4, prefRange: 'close' },
+    c: { skin: '#eec9a6', suit: '#1a1c24', suit2: '#0e0f15', accent: '#ff3d2e', hair: '#2a2118', pants: '#1a1c24', shoe: '#c9ced9' },
+    hairStyle: 'short', outfit: 'tee', accessory: null, cameo: true,
+  },
+  {
+    id: 'bozo', name: 'JEFF BOZO', title: 'THE EVERYTHING GUY', company: 'PRIMEZON',
+    tagline: 'Your margin is his entrance music.',
+    special: 'takeover',
+    stats: { speed: 0.9, power: 1.2, hp: 108 },
+    ai: { aggr: 0.75, jump: 0.2, prefRange: 'close' },
+    c: { skin: '#e2ab84', suit: '#243447', suit2: '#141f2c', accent: '#ff9d1a', hair: '#101116', pants: '#2c3644', shoe: '#3d4a5c' },
+    hairStyle: 'bald', outfit: 'vest', accessory: 'shades', cameo: true,
+  },
+  {
+    id: 'scam', name: 'SCAM ALT', title: 'THE ALIGNMENT GUY', company: 'CLOSEDAI',
+    tagline: 'It’s a nonprofit. The profits are simply aligned.',
+    special: 'pivot',
+    stats: { speed: 1.1, power: 0.9, hp: 96 },
+    ai: { aggr: 0.6, jump: 0.5, prefRange: 'mid' },
+    c: { skin: '#ecc39e', suit: '#6d7382', suit2: '#4a4f5c', accent: '#29d9ff', hair: '#4a3527', pants: '#2c3040', shoe: '#f0f0f0' },
+    hairStyle: 'curly', outfit: 'henley', accessory: null, cameo: true,
+  },
 ];
 
 export function getFighter(id) {

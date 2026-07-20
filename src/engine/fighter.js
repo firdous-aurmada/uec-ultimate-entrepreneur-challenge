@@ -1,7 +1,7 @@
 // Fighter entity: physics, state machine, attacks and specials.
 // Hit *detection/resolution* lives in game.js; fighters own their own state.
 
-import { STAGE, PHYS, ATTACKS, METER, UNICORN } from '../config.js';
+import { STAGE, PHYS, ATTACKS, METER, UNICORN, BOMB, DASH, DROPS } from '../config.js';
 import { SPECIALS } from '../data/fighters.js';
 
 function blankPad() {
@@ -37,6 +37,12 @@ export class Fighter {
     this.comboTaken = 0;                    // hits in the current stun chain (victim-side)
     this.comboDropT = 0;
     this.special = SPECIALS[def.special] || SPECIALS.pitchdeck;
+    this.dashCD = 0;
+    this.dashDir = 1;
+    // mystery-drop buffs
+    this.speedBuffT = 0;
+    this.dmgBuffT = 0;
+    this.shieldT = 0;
   }
 
   resetForRound(side) {
@@ -54,12 +60,24 @@ export class Fighter {
     this.comboTaken = 0;
     this.pad = blankPad();
     this.prevPad = blankPad();
+    this.dashCD = 0;
+    this.speedBuffT = 0;
+    this.dmgBuffT = 0;
+    this.shieldT = 0;
   }
 
   get grounded() { return !this.airborne; }
   get alive() { return this.hp > 0; }
-  get speedMult() { return this.def.stats.speed * (this.unicornT > 0 ? UNICORN.SPEED_MULT : 1); }
-  get dmgMult() { return this.def.stats.power * (this.unicornT > 0 ? UNICORN.DMG_MULT : 1); }
+  get speedMult() {
+    return this.def.stats.speed
+      * (this.unicornT > 0 ? UNICORN.SPEED_MULT : 1)
+      * (this.speedBuffT > 0 ? DROPS.BUFF_SPEED : 1);
+  }
+  get dmgMult() {
+    return this.def.stats.power
+      * (this.unicornT > 0 ? UNICORN.DMG_MULT : 1)
+      * (this.dmgBuffT > 0 ? DROPS.BUFF_DMG : 1);
+  }
   get actionable() {
     return this.state === 'idle' || this.state === 'walk' || this.state === 'jump' || this.state === 'block';
   }
@@ -77,7 +95,7 @@ export class Fighter {
     const a = this.attack;
     if (!a) return null;
     if (this.stateT < a.startup || this.stateT > a.startup + a.active) return null;
-    if (a.kind === 'projectile' || a.kind === 'rain') return null;   // damage via projectiles
+    if (a.kind === 'projectile' || a.kind === 'rain' || a.kind === 'bomb') return null;   // damage via projectiles
     const reach = a.reach || 82;
     const x0 = this.x + (this.facing > 0 ? 14 : -14 - reach);
     const yC = this.y + (a.hitY || -95);
@@ -93,6 +111,10 @@ export class Fighter {
 
     // timers
     this.flashT = Math.max(0, this.flashT - dt);
+    this.dashCD = Math.max(0, this.dashCD - dt);
+    this.speedBuffT = Math.max(0, this.speedBuffT - dt);
+    this.dmgBuffT = Math.max(0, this.dmgBuffT - dt);
+    this.shieldT = Math.max(0, this.shieldT - dt);
     if (this.unicornT > 0) {
       this.unicornT = Math.max(0, this.unicornT - dt);
       if (Math.random() < 12 * dt) game.fx.sparkles(this.x, this.y, 2);
@@ -133,6 +155,20 @@ export class Fighter {
         break;
       }
 
+      case 'dash': {
+        this.stateT += dt;
+        this.moveVx = this.dashDir * DASH.SPEED;
+        game.pushAfterimage(this);
+        // dashes cancel into attacks for pressure
+        if (this.stateT >= DASH.CANCEL_AFTER) {
+          if (this.pressed('punch')) { this.startAttack('punch', game); break; }
+          if (this.pressed('kick')) { this.startAttack('kick', game); break; }
+          if (this.pressed('special') && this.energy >= METER.SPECIAL_COST) { this.startSpecial(game); break; }
+        }
+        if (this.stateT >= DASH.DURATION) this.setState('idle');
+        break;
+      }
+
       default: {  // idle / walk / jump / block — actionable
         if (pad.block && this.grounded) {
           this.setState('block');
@@ -146,6 +182,11 @@ export class Fighter {
           } else if (this.pressed('special')) {
             if (this.energy >= METER.SPECIAL_COST) this.startSpecial(game);
             else game.onSpecialDenied(this);
+          } else if (this.pressed('bomb') && this.grounded) {
+            if (this.energy >= METER.BOMB_COST) this.startBomb(game);
+            else game.onSpecialDenied(this);
+          } else if (this.pressed('dash') && this.grounded && this.dashCD <= 0) {
+            this.startDash(game);
           } else if (this.pressed('punch') && !(this.airborne && this.airAttackUsed)) {
             this.startAttack('punch', game);
           } else if (this.pressed('kick') && !(this.airborne && this.airAttackUsed)) {
@@ -214,6 +255,25 @@ export class Fighter {
     if (this.airborne) this.airAttackUsed = true;
   }
 
+  startBomb(game) {
+    this.energy -= METER.BOMB_COST;
+    this.attack = {
+      kind: 'bomb', hasHit: false, hasFired: false,
+      startup: BOMB.startup, active: BOMB.active, recovery: BOMB.recovery,
+    };
+    this.setState('attack');
+    game.audio.sfx('whiff');
+  }
+
+  startDash(game) {
+    const dir = (this.pad.right ? 1 : 0) - (this.pad.left ? 1 : 0);
+    this.dashDir = dir || this.facing;
+    this.dashCD = DASH.COOLDOWN;
+    this.setState('dash');
+    game.fx.dust(this.x, this.y, 6);
+    game.audio.sfx('rush');
+  }
+
   startSpecial(game) {
     if (this.airborne) return;                       // specials are grounded
     const sp = this.special;
@@ -241,6 +301,13 @@ export class Fighter {
 
   updateAttack(dt, game) {
     const a = this.attack;
+    if (a.kind === 'bomb') {
+      if (this.stateT >= a.startup && !a.hasFired) {
+        a.hasFired = true;
+        game.spawnBomb(this);
+      }
+      return;
+    }
     const sp = a.special;
     if (!sp) return;
     const activeT = this.stateT - a.startup;

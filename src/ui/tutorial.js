@@ -23,8 +23,8 @@ const SLIDES = [
     emoji: '⚡',
     title: 'BUILD YOUR VALUATION',
     body: () => isTouchDevice()
-      ? 'Landing and taking hits fills your <b>energy meter</b>. At 50, tap <b>⚡</b> for your Special. At 100, tap <b>🦄</b> for <b>UNICORN MODE</b>.'
-      : 'Landing and taking hits fills your <b>energy meter</b>. At 50, press <b>L</b> for your Special. At 100, press <b>U</b> for <b>UNICORN MODE</b>.',
+      ? 'Hits fill your <b>energy meter</b>: at 25 lob a <b>💣 PR Bomb</b>, at 50 fire your <b>⚡ Special</b>, at 100 go <b>🦄 UNICORN MODE</b>. <b>⚙️</b> dashes — and grab the <b>mystery briefcases</b> that drop in. They hide secret powers!'
+      : 'Hits fill your <b>energy meter</b>: at 25 lob a <b>💣 PR Bomb</b> (I), at 50 fire your <b>⚡ Special</b> (L), at 100 go <b>🦄 UNICORN MODE</b> (U). Dash with <b>O</b> — and grab the <b>mystery briefcases</b> that drop in. They hide secret powers!',
   },
 ];
 

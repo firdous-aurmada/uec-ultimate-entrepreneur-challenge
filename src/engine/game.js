@@ -1,7 +1,7 @@
 // Match controller: best-of-3 rounds, timers, hit resolution, projectiles,
 // special-move orchestration, KO/victory cinematics. Emits result via onEnd().
 
-import { STAGE, PHYS, ROUND, METER, BLOCK, UNICORN } from '../config.js';
+import { STAGE, PHYS, ROUND, METER, BLOCK, UNICORN, BOMB, DROPS } from '../config.js';
 import { Fighter } from './fighter.js';
 import { FXSystem } from './fx.js';
 import { audio } from './audio.js';
@@ -11,8 +11,36 @@ function overlap(a, b) {
   return a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
 }
 
+// Seeded PRNG for anything gameplay-random (mystery drops) — the seed is
+// shared by both peers online, so the sims stay identical.
+function mulberry32(seed) {
+  let s = seed >>> 0;
+  return () => {
+    s = (s + 0x6D2B79F5) >>> 0;
+    let t = s;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+// Hidden powers — the crate never tells you which one you're getting.
+export const DROP_EFFECTS = [
+  { id: 'funding', label: '💰 SECRET FUNDING!', apply(f, g) { g.giveEnergy(f, 30); } },
+  { id: 'runway', label: '❤️ RUNWAY EXTENSION!', apply(f) { f.hp = Math.min(f.maxHp, f.hp + 18); } },
+  { id: 'coffee', label: '⚡ CAFFEINE OVERDRIVE!', apply(f) { f.speedBuffT = DROPS.BUFF_TIME; } },
+  { id: 'tenx', label: '💪 10X ENGINEER!', apply(f) { f.dmgBuffT = DROPS.BUFF_TIME; } },
+  { id: 'legal', label: '🛡 LEGAL SHIELD!', apply(f) { f.shieldT = DROPS.SHIELD_TIME; } },
+  { id: 'crash', label: '📉 MARKET CRASH!', apply(f, g) { const o = g.other(f); o.energy = Math.max(0, o.energy - 25); } },
+  { id: 'toxic', label: '💣 TOXIC ASSET!', apply(f) { f.hp = Math.max(1, f.hp - 10); } },
+  { id: 'moon', label: '🚀 TO THE MOON!', apply(f, g) {
+    const o = g.other(f);
+    if (o.state !== 'ko' && o.grounded) { o.vy = -520; o.airborne = true; o.vx = (Math.sign(o.x - f.x) || 1) * 260; }
+  } },
+];
+
 export class Game {
-  constructor({ p1, p2, arena, mode, difficulty, isChallenge, onEnd, hud }) {
+  constructor({ p1, p2, arena, mode, difficulty, isChallenge, onEnd, hud, seed }) {
     this.arena = arena;
     this.mode = mode;                        // 'solo' | 'versus'
     this.difficulty = difficulty;
@@ -42,6 +70,12 @@ export class Game {
     this.hintFlags = { special: false, super: false };
     this.finished = false;
     this.introStep = -1;
+    // mystery drops (seeded so online peers agree)
+    this.seed = (seed ?? Math.floor(Math.random() * 0xffffffff)) >>> 0;
+    this.rng = mulberry32(this.seed);
+    this.drops = [];
+    this.dropClock = 0;
+    this.nextDropAt = DROPS.FIRST_AT + this.rng() * 5;
   }
 
   other(f) { return this.fighters[0] === f ? this.fighters[1] : this.fighters[0]; }
@@ -99,6 +133,7 @@ export class Game {
     this.pushApart();
     this.updateProjectiles(dt);
     this.resolveHits();
+    this.updateDrops(dt);
     this.updateAfterimages(dt);
     this.updateHints();
 
@@ -180,6 +215,17 @@ export class Game {
     const dir = Math.sign(def.x - att.x) || att.facing;
     const cx = def.x - dir * 20;
     const cy = def.y - 100 + Math.random() * 24;
+
+    // Legal Shield: one free "objection" absorbs the hit entirely
+    if (def.shieldT > 0) {
+      def.shieldT = 0;
+      def.vx = dir * 180;
+      this.audio.sfx('block');
+      this.fx.ring(cx, cy, '#8fd8ff', 620, 6, 0.35);
+      this.fx.popup(cx, cy - 40, 'OBJECTION!', '#8fd8ff');
+      this.fx.shake(4);
+      return;
+    }
     const blocked = def.state === 'block' && def.grounded;
 
     if (blocked) {
@@ -215,6 +261,15 @@ export class Game {
 
   doGrab(att, def, a) {
     const dir = Math.sign(def.x - att.x) || att.facing;
+    if (def.shieldT > 0) {
+      def.shieldT = 0;
+      def.vx = -dir * 220;
+      att.vx = dir * -160;
+      this.audio.sfx('block');
+      this.fx.ring(def.x, def.y - 100, '#8fd8ff', 620, 6, 0.35);
+      this.fx.popup(def.x, def.y - 140, 'OBJECTION!', '#8fd8ff');
+      return;
+    }
     const sp = a.special;
     const dmg = Math.max(1, Math.round(sp.dmg * att.dmgMult));
     this.audio.sfx('grab');
@@ -278,6 +333,101 @@ export class Game {
     }
   }
 
+  // ---------------- PR bomb ----------------
+  spawnBomb(owner) {
+    this.audio.sfx('projectile');
+    this.projectiles.push({
+      type: 'bomb', owner, delay: 0,
+      x: owner.x + owner.facing * 34, y: owner.y - 118,
+      vx: owner.facing * BOMB.vx, vy: BOMB.vy, g: BOMB.g, rot: 0,
+      dmg: BOMB.dmg, kb: BOMB.kb, kbUp: BOMB.kbUp, stun: BOMB.stun, dead: false,
+      words: ['BOOM!', 'PR CRISIS!'], sfx: 'kickHit', shake: 8,
+    });
+  }
+
+  explodeBomb(p) {
+    p.dead = true;
+    this.audio.sfx('burn');
+    this.fx.ring(p.x, p.y, '#ff9d1a', 760, 8, 0.32);
+    this.fx.flames(p.x - 30, p.y + 10, 12, 1);
+    this.fx.flames(p.x + 30, p.y + 10, 12, -1);
+    this.fx.shake(8);
+    this.fx.flash('#ff9d1a', 0.12);
+    const def = this.other(p.owner);
+    if (def.state === 'ko') return;
+    const hb = def.hurtbox();
+    const nx = Math.max(hb.x, Math.min(p.x, hb.x + hb.w));
+    const ny = Math.max(hb.y, Math.min(p.y, hb.y + hb.h));
+    if (Math.hypot(nx - p.x, ny - p.y) <= BOMB.radius) {
+      this.strike(p.owner, def, {
+        kind: 'bomb', dmg: p.dmg, kb: p.kb, kbUp: p.kbUp, stun: p.stun,
+        words: p.words, sfx: p.sfx, shake: p.shake, hasHit: false,
+      }, true);
+    }
+  }
+
+  // ---------------- mystery drops ----------------
+  updateDrops(dt) {
+    this.dropClock += dt;
+    if (!this.drops.length && this.dropClock >= this.nextDropAt) {
+      this.drops.push({
+        x: 180 + this.rng() * 600, y: -40, vy: DROPS.FALL_SPEED,
+        landed: false, lifeT: DROPS.LIFETIME,
+        effect: DROP_EFFECTS[Math.floor(this.rng() * DROP_EFFECTS.length)],
+      });
+      this.scheduleNextDrop();
+    }
+    for (const d of this.drops) {
+      if (!d.landed) {
+        d.y += d.vy * dt;
+        if (d.y >= STAGE.FLOOR - 6) {
+          d.y = STAGE.FLOOR - 6;
+          d.landed = true;
+          this.fx.dust(d.x, STAGE.FLOOR, 6);
+          this.audio.sfx('block');
+        }
+        continue;
+      }
+      d.lifeT -= dt;
+      if (d.lifeT <= 0) { d.dead = true; continue; }
+      for (const f of this.fighters) {
+        if (f.grounded && f.state !== 'ko' && f.state !== 'hitstun' && Math.abs(f.x - d.x) < DROPS.PICKUP_RANGE) {
+          d.dead = true;
+          this.applyDrop(f, d);
+          break;
+        }
+      }
+    }
+    this.drops = this.drops.filter(d => !d.dead);
+  }
+
+  scheduleNextDrop() {
+    this.nextDropAt = this.dropClock + DROPS.INTERVAL_MIN + this.rng() * (DROPS.INTERVAL_MAX - DROPS.INTERVAL_MIN);
+  }
+
+  applyDrop(f, d) {
+    const e = d.effect;
+    e.apply(f, this);
+    this.fx.popup(f.x, f.y - 175, e.label, e.id === 'toxic' ? '#ff4757' : '#ffd23f');
+    if (e.id === 'toxic') {
+      this.audio.sfx('burn');
+      this.fx.flames(f.x, f.y - 20, 12, f.facing);
+      this.fx.shake(7);
+      f.flashT = 0.1;
+    } else if (e.id === 'moon') {
+      this.audio.sfx('unicorn');
+      this.fx.ring(f.x, f.y - 80, '#ffd23f', 700, 6, 0.4);
+    } else if (e.id === 'crash') {
+      this.audio.sfx('back');
+      const o = this.other(f);
+      this.fx.popup(o.x, o.y - 160, '−25 ENERGY', '#9aa3c7');
+    } else {
+      this.audio.sfx('meterFull');
+      this.fx.sparkles(f.x, f.y, 12);
+      this.fx.ring(f.x, f.y - 80, '#8fd8ff', 480, 4, 0.3);
+    }
+  }
+
   doTeleport(f) {
     const opp = this.other(f);
     const dir = Math.sign(opp.x - f.x) || 1;
@@ -327,10 +477,19 @@ export class Game {
   updateProjectiles(dt) {
     for (const p of this.projectiles) {
       if (p.delay > 0) { p.delay -= dt; continue; }
+      if (p.g) p.vy += p.g * dt;
       p.x += p.vx * dt;
       p.y += p.vy * dt;
       p.rot += dt * 9;
       if (p.type === 'slide') p.y += Math.sin(this.t * 10 + p.x * 0.02) * 18 * dt;
+
+      if (p.type === 'bomb') {
+        const target = this.other(p.owner);
+        const hitFighter = target.state !== 'ko' && overlap({ x: p.x - 14, y: p.y - 14, w: 28, h: 28 }, target.hurtbox());
+        if (hitFighter || p.y >= STAGE.FLOOR - 4) this.explodeBomb(p);
+        if (p.x < -60 || p.x > STAGE.W + 60) p.dead = true;
+        continue;
+      }
 
       const def = this.other(p.owner);
       if (def.state !== 'ko' && overlap({ x: p.x - 16, y: p.y - 12, w: 32, h: 24 }, def.hurtbox())) {
@@ -441,6 +600,8 @@ export class Game {
     this.lastTickSec = -1;
     this.projectiles = [];
     this.afterimages = [];
+    this.drops = [];
+    this.scheduleNextDrop();
     this.fighters[0].resetForRound(0);
     this.fighters[1].resetForRound(1);
     this.hud.clearAnnounce();

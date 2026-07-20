@@ -48,6 +48,19 @@ function drawProjectile(ctx, p, t) {
     ctx.beginPath();
     ctx.moveTo(-13, 8); ctx.lineTo(-6, 2); ctx.lineTo(1, 6); ctx.lineTo(12, -4);
     ctx.stroke();
+  } else if (p.type === 'bomb') {
+    ctx.rotate(p.rot * 0.7);
+    ctx.fillStyle = '#1a1c24';
+    ctx.strokeStyle = '#0a0c16';
+    ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.arc(0, 0, 13, 0, 7); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = 'rgba(255,255,255,0.25)';
+    ctx.beginPath(); ctx.arc(-4, -4, 4, 0, 7); ctx.fill();
+    // fuse + spark
+    ctx.strokeStyle = '#c9a35f'; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.moveTo(6, -10); ctx.quadraticCurveTo(12, -16, 10, -20); ctx.stroke();
+    ctx.fillStyle = ['#ffd23f', '#ff9d1a'][Math.floor(t * 20) % 2];
+    ctx.beginPath(); ctx.arc(10, -21, 4, 0, 7); ctx.fill();
   } else { // coin
     const squish = Math.abs(Math.sin(p.rot)) * 0.65 + 0.35;
     ctx.scale(squish, 1);
@@ -66,6 +79,51 @@ function drawProjectile(ctx, p, t) {
   ctx.restore();
 }
 
+function drawDrop(ctx, d, t) {
+  // blink during the last 2 seconds
+  if (d.landed && d.lifeT < 2 && Math.floor(t * 8) % 2 === 0) return;
+  ctx.save();
+  ctx.translate(d.x, d.y);
+  if (!d.landed) ctx.rotate(Math.sin(t * 6) * 0.14);
+  // glow
+  ctx.fillStyle = 'rgba(255,210,63,0.18)';
+  ctx.beginPath(); ctx.arc(0, -16, 34 + Math.sin(t * 5) * 4, 0, 7); ctx.fill();
+  // briefcase
+  ctx.fillStyle = '#6b4a2b';
+  ctx.strokeStyle = '#0a0c16';
+  ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.roundRect(-20, -30, 40, 30, 5); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = '#57391f';
+  ctx.beginPath(); ctx.roundRect(-8, -36, 16, 8, 3); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = '#ffd23f';
+  ctx.fillRect(-20, -18, 40, 5);
+  // mystery mark
+  ctx.font = '900 italic 19px system-ui';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.lineWidth = 4;
+  ctx.strokeText('?', 0, -13);
+  ctx.fillStyle = ['#ffd23f', '#fff3c2'][Math.floor(t * 4) % 2];
+  ctx.fillText('?', 0, -13);
+  ctx.restore();
+}
+
+function drawBuffIcons(ctx, f) {
+  const icons = [];
+  if (f.speedBuffT > 0) icons.push(['⚡', f.speedBuffT]);
+  if (f.dmgBuffT > 0) icons.push(['💪', f.dmgBuffT]);
+  if (f.shieldT > 0) icons.push(['🛡', f.shieldT]);
+  if (!icons.length) return;
+  ctx.save();
+  ctx.font = '16px system-ui';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  const total = icons.length * 22;
+  icons.forEach(([icon, timeLeft], i) => {
+    ctx.globalAlpha = timeLeft < 1 ? 0.35 + 0.65 * Math.abs(Math.sin(timeLeft * 10)) : 0.95;
+    ctx.fillText(icon, f.x - total / 2 + 11 + i * 22, f.y - 182);
+  });
+  ctx.restore();
+}
+
 export function renderGame(ctx, game) {
   const t = game.t;
   ctx.save();
@@ -73,6 +131,7 @@ export function renderGame(ctx, game) {
 
   game.arena.draw(ctx, t);
 
+  for (const d of game.drops) drawDrop(ctx, d, t);
   for (const f of game.fighters) drawShadow(ctx, f);
   for (const g of game.afterimages) drawAfterimage(ctx, g);
 
@@ -82,6 +141,7 @@ export function renderGame(ctx, game) {
     return w(a) - w(b);
   });
   for (const f of order) drawFighter(ctx, f, t);
+  for (const f of game.fighters) drawBuffIcons(ctx, f);
 
   for (const p of game.projectiles) drawProjectile(ctx, p, t);
 

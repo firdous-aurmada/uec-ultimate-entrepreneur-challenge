@@ -59,6 +59,7 @@ export const Save = {
   // Records a ranked match result. Returns a summary for the results screen.
   recordMatch({ won, koRounds, difficulty, isChallenge }) {
     const s = this.data.stats;
+    const prevRank = rankFor(s.points);
     s.matches += 1;
     s.kos += koRounds;                       // KO rounds count even in losing efforts
     let gained = 0;
@@ -77,7 +78,8 @@ export const Save = {
     }
     s.points += gained;
     this.persist();
-    return { gained, total: s.points, rank: rankFor(s.points), streak: s.streak };
+    const rank = rankFor(s.points);
+    return { gained, total: s.points, rank, streak: s.streak, rankUp: rank !== prevRank && won };
   },
 
   resetAll() {

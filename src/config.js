@@ -35,8 +35,36 @@ export const METER = {
   HIT_DEAL: 12,
   HIT_TAKE: 8,
   CHIP_DEAL: 3,
+  BOMB_COST: 25,
   SPECIAL_COST: 50,
   SUPER_COST: 100,
+};
+
+export const BOMB = {
+  dmg: 10, vx: 380, vy: -430, g: 1150, radius: 92,
+  kb: 300, kbUp: -220, stun: 0.4,
+  startup: 0.16, active: 0.05, recovery: 0.3,
+};
+
+export const DASH = {
+  SPEED: 1450,
+  DURATION: 0.16,
+  COOLDOWN: 1.6,
+  CANCEL_AFTER: 0.06,   // attacks can cancel the dash after this
+};
+
+// Mystery drops: seeded briefcases with hidden one-shot powers.
+export const DROPS = {
+  FIRST_AT: 6,          // seconds of round time before the first drop
+  INTERVAL_MIN: 8,
+  INTERVAL_MAX: 15,
+  FALL_SPEED: 320,
+  LIFETIME: 7,          // seconds on the ground before vanishing
+  PICKUP_RANGE: 46,
+  BUFF_TIME: 5,
+  BUFF_SPEED: 1.4,
+  BUFF_DMG: 1.4,
+  SHIELD_TIME: 8,
 };
 
 export const UNICORN = {

@@ -388,7 +388,8 @@ input, textarea { user-select: text; -webkit-user-select: text; }
 .t-left, .t-right { display: flex; flex-direction: column; align-items: center; gap: 8px; pointer-events: auto; }
 .t-right { flex-direction: row; align-items: flex-end; gap: 8px; }
 .t-row { display: flex; gap: 8px; }
-.t-grid { display: grid; grid-template-columns: repeat(2, auto); gap: 8px; }
+.t-grid { display: grid; grid-template-columns: repeat(3, auto); gap: 8px; }
+.t-bomb { background: rgba(255, 157, 26, 0.24); }
 .tbtn {
   width: clamp(52px, 12vw, 68px); height: clamp(52px, 12vw, 68px);
   border-radius: 18px; border: 2px solid rgba(240,243,255,.35);
@@ -430,6 +431,16 @@ input, textarea { user-select: text; -webkit-user-select: text; }
 .result-points .pts { color: var(--gold); font-size: 22px; font-style: italic; }
 .result-points .rank-chip { color: var(--cyan); }
 .result-cta { color: var(--muted); font-size: 13px; text-align: center; }
+
+.share-strip {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: center;
+  background: var(--panel); border: 2px solid var(--line); border-radius: 14px;
+  padding: 8px 14px;
+}
+.share-label { font-size: 11px; font-weight: 900; letter-spacing: 1.5px; color: var(--gold); }
+.sh-li { background: #0a66c2; }
+.sh-x { background: #14171c; }
+.sh-wa { background: #128c4a; }
 
 /* ---------- Panels / forms ---------- */
 .panel {

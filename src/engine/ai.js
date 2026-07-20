@@ -69,9 +69,23 @@ export class AIController {
       }
     }
 
+    // --- race to a mystery drop if one is up for grabs ---
+    const drop = game.drops.find(d => d.landed);
+    if (drop && Math.random() < 0.5 && Math.abs(drop.x - f.x) < 320) {
+      this.dir = Math.sign(drop.x - f.x) || 0;
+      if (Math.abs(drop.x - f.x) > 200 && f.dashCD <= 0 && Math.random() < 0.4) this.pulse.dash = true;
+      return;
+    }
+
     // --- supers & specials ---
     if (f.energy >= METER.SUPER_COST && (f.hp < f.maxHp * 0.5 || Math.random() < 0.25)) {
       this.pulse.super = true;
+      return;
+    }
+    // PR bomb: lob one from range
+    if (f.energy >= METER.BOMB_COST && f.energy < METER.SPECIAL_COST && dist > 260 && Math.random() < 0.3) {
+      this.pulse.bomb = true;
+      this.dir = 0;
       return;
     }
     if (f.energy >= METER.SPECIAL_COST && Math.random() < L.specialProb) {
@@ -105,7 +119,8 @@ export class AIController {
     const wantRange = P.prefRange === 'far' ? 330 : P.prefRange === 'mid' ? 210 : 110;
     if (dist > wantRange + 60) {
       this.dir = toward;
-      if (Math.random() < P.jump * 0.35) this.pulse.up = true;
+      if (f.dashCD <= 0 && dist > 280 && Math.random() < L.aggr * 0.3) this.pulse.dash = true;
+      else if (Math.random() < P.jump * 0.35) this.pulse.up = true;
     } else if (dist < wantRange - 70 && Math.random() > L.aggr) {
       // too close for a zoner's comfort — back off unless cornered
       const backX = f.x - toward * 60;
