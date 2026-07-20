@@ -108,8 +108,11 @@ export class FXSystem {
   }
 
   popup(x, y, text, color = '#ffd23f') {
+    // keep long labels (mystery-drop names) on screen even in the corners
+    const margin = 40 + text.length * 8;
     this.popups.push({
-      x: x + (Math.random() - 0.5) * 30, y: y - 20 - Math.random() * 30,
+      x: Math.max(margin, Math.min(960 - margin, x + (Math.random() - 0.5) * 30)),
+      y: y - 20 - Math.random() * 30,
       text, color, t: 0, dur: 0.6, rot: (Math.random() - 0.5) * 0.5,
     });
   }

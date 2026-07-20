@@ -49,6 +49,7 @@ class Input {
 
   onKey(e, down) {
     if (!this.enabled) return;
+    if (e.ctrlKey || e.metaKey || e.altKey) return;   // never swallow browser shortcuts (Cmd+R, Ctrl+F…)
     if (down && (e.code === 'Escape' || e.code === 'KeyP')) {
       if (this.onPause) this.onPause();
       e.preventDefault();

@@ -55,9 +55,10 @@ export const DASH = {
 
 // Mystery drops: seeded briefcases with hidden one-shot powers.
 export const DROPS = {
-  FIRST_AT: 6,          // seconds of round time before the first drop
-  INTERVAL_MIN: 8,
-  INTERVAL_MAX: 15,
+  FIRST_AT: 5,          // seconds of fight time before a round's first drop
+  FIRST_JITTER: 3,
+  INTERVAL_MIN: 7,      // between drops within the same round
+  INTERVAL_MAX: 12,
   FALL_SPEED: 320,
   LIFETIME: 7,          // seconds on the ground before vanishing
   PICKUP_RANGE: 46,

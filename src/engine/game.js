@@ -35,7 +35,10 @@ export const DROP_EFFECTS = [
   { id: 'toxic', label: '💣 TOXIC ASSET!', apply(f) { f.hp = Math.max(1, f.hp - 10); } },
   { id: 'moon', label: '🚀 TO THE MOON!', apply(f, g) {
     const o = g.other(f);
-    if (o.state !== 'ko' && o.grounded) { o.vy = -520; o.airborne = true; o.vx = (Math.sign(o.x - f.x) || 1) * 260; }
+    if (o.state === 'ko') return;
+    o.vy = Math.min(o.vy, -520);          // works on airborne rivals too
+    o.airborne = true;
+    o.vx = (Math.sign(o.x - f.x) || 1) * 260;
   } },
 ];
 
@@ -75,7 +78,7 @@ export class Game {
     this.rng = mulberry32(this.seed);
     this.drops = [];
     this.dropClock = 0;
-    this.nextDropAt = DROPS.FIRST_AT + this.rng() * 5;
+    this.nextDropAt = DROPS.FIRST_AT + this.rng() * DROPS.FIRST_JITTER;
   }
 
   other(f) { return this.fighters[0] === f ? this.fighters[1] : this.fighters[0]; }
@@ -401,8 +404,12 @@ export class Game {
     this.drops = this.drops.filter(d => !d.dead);
   }
 
-  scheduleNextDrop() {
-    this.nextDropAt = this.dropClock + DROPS.INTERVAL_MIN + this.rng() * (DROPS.INTERVAL_MAX - DROPS.INTERVAL_MIN);
+  // fresh=true → round just started: use the short first-drop timing so even
+  // quick KO rounds get their briefcase.
+  scheduleNextDrop(fresh = false) {
+    this.nextDropAt = this.dropClock + (fresh
+      ? DROPS.FIRST_AT + this.rng() * DROPS.FIRST_JITTER
+      : DROPS.INTERVAL_MIN + this.rng() * (DROPS.INTERVAL_MAX - DROPS.INTERVAL_MIN));
   }
 
   applyDrop(f, d) {
@@ -601,7 +608,7 @@ export class Game {
     this.projectiles = [];
     this.afterimages = [];
     this.drops = [];
-    this.scheduleNextDrop();
+    this.scheduleNextDrop(true);
     this.fighters[0].resetForRound(0);
     this.fighters[1].resetForRound(1);
     this.hud.clearAnnounce();
