@@ -26,6 +26,24 @@ export class AIController {
     this.blockT -= game.dt;
     if (this.blockT > 0) pad.block = true;
 
+    // chain reflex: the instant a strike connects, decide once whether to
+    // continue the string (punch → punch → kick → special)
+    const atk = f.attack;
+    if (f.state === 'attack' && atk && atk.hasHit && !atk.aiChainDecided
+      && (atk.kind === 'punch' || atk.kind === 'kick')) {
+      atk.aiChainDecided = true;
+      if (Math.random() < (this.level.chain ?? 0.4)) {
+        if (atk.kind === 'punch') {
+          if ((atk.jabs || 1) < 3) this.pulse.punch = true;
+          else this.pulse.kick = true;
+        } else if (f.energy >= METER.SPECIAL_COST) {
+          this.pulse.special = true;
+        } else if (f.energy >= METER.SUPER_COST) {
+          this.pulse.super = true;
+        }
+      }
+    }
+
     if (this.dir === 1) pad.right = true;
     else if (this.dir === -1) pad.left = true;
 

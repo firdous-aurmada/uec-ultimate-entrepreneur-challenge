@@ -1,7 +1,7 @@
 // Match controller: best-of-3 rounds, timers, hit resolution, projectiles,
 // special-move orchestration, KO/victory cinematics. Emits result via onEnd().
 
-import { STAGE, PHYS, ROUND, METER, BLOCK, UNICORN, BOMB, DROPS } from '../config.js';
+import { STAGE, PHYS, ROUND, METER, BLOCK, UNICORN, BOMB, DROPS, COMBO } from '../config.js';
 import { Fighter } from './fighter.js';
 import { FXSystem } from './fx.js';
 import { audio } from './audio.js';
@@ -70,7 +70,7 @@ export class Game {
     this.roundWinner = -1;
     this.roundWasKO = false;
     this.lastTickSec = -1;
-    this.hintFlags = { special: false, super: false };
+    this.hintFlags = { special: false, super: false, combo: false };
     this.finished = false;
     this.introStep = -1;
     // mystery drops (seeded so online peers agree)
@@ -244,14 +244,25 @@ export class Game {
       return;
     }
 
-    const dmg = Math.max(1, Math.round(a.dmg * att.dmgMult));
-    def.applyHit({ dmg, kb: a.kb, kbUp: a.kbUp || 0, stun: a.stun, dir });
+    // combo damage scaling: deeper into a chain → lighter hits
+    const depth = Math.min(def.comboTaken, COMBO.SCALING.length - 1);
+    const dmg = Math.max(1, Math.round(a.dmg * att.dmgMult * COMBO.SCALING[depth]));
+    // chained jabs shove less so strings stay in range; finishers launch normally
+    let kb = a.kb;
+    if (a.kind === 'punch' && def.comboTaken >= 1) kb *= COMBO.JAB_CHAIN_KB;
+    def.applyHit({ dmg, kb, kbUp: a.kbUp || 0, stun: a.stun, dir });
     this.giveEnergy(att, METER.HIT_DEAL);
     this.giveEnergy(def, METER.HIT_TAKE);
 
     const attIdx = this.fighters.indexOf(att);
     this.maxCombo[attIdx] = Math.max(this.maxCombo[attIdx], def.comboTaken);
     if (def.comboTaken >= 2) this.hud.combo(attIdx, def.comboTaken);
+    const milestone = COMBO.MILESTONES[def.comboTaken];
+    if (milestone) {
+      this.fx.popup(def.x, def.y - 170, milestone, '#29d9ff');
+      this.audio.sfx('select');
+      if (def.comboTaken >= 7) { this.fx.flash('#29d9ff', 0.14); this.fx.shake(6); }
+    }
 
     const heavy = a.kind !== 'punch';
     this.audio.sfx(fromProjectile ? (a.sfx || 'paperHit') : heavy ? 'kickHit' : 'punchHit');
@@ -537,6 +548,10 @@ export class Game {
       this.hud.hint(touch
         ? '🦄 FULL METER — tap 🦄 for UNICORN MODE'
         : '🦄 FULL METER — press U (or G) for UNICORN MODE');
+    }
+    if (!this.hintFlags.combo && this.maxCombo[0] >= 3) {
+      this.hintFlags.combo = true;
+      this.hud.hint('🔥 CHAINS: on hit, punch ×3 → kick → special. Keep it going!');
     }
   }
 

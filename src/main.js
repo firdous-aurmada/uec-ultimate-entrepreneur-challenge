@@ -497,7 +497,7 @@ function netStep(rawDt) {
     while (netAccum >= NET_STEP && steps < 5) {
       if (!net.canStep()) break;
       if (DEBUG && window.__autoInput) window.__autoInput(currentGame, input.pads[0], net.frame);
-      net.queueLocal(padToMask(input.pads[0]));
+      net.queueLocal(padToMask(input.samplePad(0)));
       const [lm, rm] = net.padsFor();
       netCtl[netLocalIdx].mask = lm;
       netCtl[1 - netLocalIdx].mask = rm;

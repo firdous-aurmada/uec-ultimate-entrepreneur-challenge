@@ -80,15 +80,24 @@ export const BLOCK = {
   PUSH: 120,           // pushback on blocked hit
 };
 
+// Chain combos: attacks cancel into the next tier ON HIT (whiffs stay punishable).
+// punch ×3 → kick → special / bomb / Unicorn. Later hits deal scaled damage.
+export const COMBO = {
+  MAX_JABS: 3,                          // punches per string
+  SCALING: [1, 0.85, 0.7, 0.6, 0.5],   // damage mult by victim's current chain depth
+  JAB_CHAIN_KB: 0.55,                  // chained jabs shove less, so strings stay in range
+  MILESTONES: { 3: 'COMBO!', 5: 'SYNERGY!', 7: 'DISRUPTED!' },
+};
+
 export const ATTACKS = {
-  punch: { startup: 0.07, active: 0.09, recovery: 0.16, dmg: 7,  reach: 82,  hitY: -104, kb: 190, kbUp: 0,    stun: 0.26, shake: 5,  words: ['POW!', 'JAB!', 'BAM!'] },
+  punch: { startup: 0.07, active: 0.09, recovery: 0.16, dmg: 7,  reach: 82,  hitY: -104, kb: 110, kbUp: 0,    stun: 0.26, shake: 5,  words: ['POW!', 'JAB!', 'BAM!'] },
   kick:  { startup: 0.14, active: 0.10, recovery: 0.24, dmg: 12, reach: 104, hitY: -78,  kb: 320, kbUp: -120, stun: 0.34, shake: 8,  words: ['WHAM!', 'SMACK!', 'BOOM!'] },
 };
 
 export const AI_LEVELS = {
-  intern:  { label: 'INTERN',  react: 0.42, blockProb: 0.16, aggr: 0.45, mistake: 0.30, specialProb: 0.25, mult: 1.0 },
-  founder: { label: 'FOUNDER', react: 0.26, blockProb: 0.38, aggr: 0.68, mistake: 0.14, specialProb: 0.55, mult: 1.5 },
-  mogul:   { label: 'MOGUL',   react: 0.14, blockProb: 0.62, aggr: 0.85, mistake: 0.05, specialProb: 0.8,  mult: 2.5 },
+  intern:  { label: 'INTERN',  react: 0.42, blockProb: 0.16, aggr: 0.45, mistake: 0.30, specialProb: 0.25, chain: 0.2,  mult: 1.0 },
+  founder: { label: 'FOUNDER', react: 0.26, blockProb: 0.38, aggr: 0.68, mistake: 0.14, specialProb: 0.55, chain: 0.5,  mult: 1.5 },
+  mogul:   { label: 'MOGUL',   react: 0.14, blockProb: 0.62, aggr: 0.85, mistake: 0.05, specialProb: 0.8,  chain: 0.85, mult: 2.5 },
 };
 
 export const POINTS = {

@@ -1,7 +1,7 @@
 // Fighter entity: physics, state machine, attacks and specials.
 // Hit *detection/resolution* lives in game.js; fighters own their own state.
 
-import { STAGE, PHYS, ATTACKS, METER, UNICORN, BOMB, DASH, DROPS } from '../config.js';
+import { STAGE, PHYS, ATTACKS, METER, UNICORN, BOMB, DASH, DROPS, COMBO } from '../config.js';
 import { SPECIALS } from '../data/fighters.js';
 
 function blankPad() {
@@ -147,6 +147,40 @@ export class Fighter {
         this.stateT += dt;
         this.updateAttack(dt, game);
         const a = this.attack;
+        // buffer the next chain input even before this attack connects —
+        // mashing must never drop a link
+        if (!a.buffered) {
+          for (const k of ['punch', 'kick', 'special', 'bomb', 'super']) {
+            if (this.pressed(k)) { a.buffered = k; break; }
+          }
+        }
+        // chain cancels — only once the attack CONNECTED (hit or block):
+        // punch ×3 → kick → special / bomb / Unicorn. Whiffs must recover.
+        if (a.hasHit && this.grounded && this.stateT >= a.startup && a.buffered) {
+          const want = a.buffered;
+          a.buffered = null;
+          const jabs = a.jabs || 1;
+          if (a.kind === 'punch' && want === 'punch' && jabs < COMBO.MAX_JABS) {
+            this.startAttack('punch', game);
+            this.attack.jabs = jabs + 1;
+            this.x += this.facing * 12;                // chained jabs step in
+            break;
+          }
+          if (a.kind === 'punch' && want === 'kick') {
+            this.startAttack('kick', game);
+            break;
+          }
+          if (a.kind === 'punch' || a.kind === 'kick') {
+            if (want === 'special' && this.energy >= METER.SPECIAL_COST) { this.startSpecial(game); break; }
+            if (want === 'bomb' && this.energy >= METER.BOMB_COST) { this.startBomb(game); break; }
+            if (want === 'super' && this.energy >= METER.SUPER_COST) {
+              this.activateUnicorn(game);
+              this.attack = null;
+              this.setState('idle');
+              break;
+            }
+          }
+        }
         const total = a.startup + a.active + a.recovery;
         if (this.stateT >= total) {
           this.attack = null;

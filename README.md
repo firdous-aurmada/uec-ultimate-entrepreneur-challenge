@@ -59,6 +59,10 @@ Win **2 of 3 rounds** (60 s each): empty your rival's health bar or lead when th
 
 Touch pads appear automatically on phones/tablets (or force them with `?touch=1`).
 
+## What's new in v1.3
+
+- 🔗 **Real combos** — attacks now **cancel on hit**: chain Punch ×3 → Kick → Special / 💣 / 🦄. Whiffs still recover in full, chained hits scale down in damage (100/85/70/60/50%), chained jabs shove less so strings stay in range, and milestone callouts fire at 3/5/7 hits (COMBO! → SYNERGY! → DISRUPTED!). Founder and Mogul AIs chain back.
+
 ## What's new in v1.2
 
 - 🎁 **Mystery drops** — briefcases parachute into every round carrying **hidden powers** (Secret Funding, 10x Engineer, Legal Shield, To The Moon… and the occasional Toxic Asset). Seeded RNG, so both players in a live match see identical drops.

@@ -36,9 +36,26 @@ export const KEY_LABELS = {
 class Input {
   constructor() {
     this.pads = [blankPad(), blankPad()];
+    // presses latch until sampled, so taps during hitstop/frozen frames
+    // (or shorter than one sim frame) are never lost — combos depend on it
+    this.latch = [{}, {}];
     this.mode = 'solo';
     this.onPause = null;
     this.enabled = false;
+  }
+
+  press(padIdx, key, down) {
+    this.pads[padIdx][key] = down;
+    if (down) this.latch[padIdx][key] = true;
+  }
+
+  // One sim-frame's view of a pad: held keys + any presses since last sample.
+  samplePad(i) {
+    const pad = { ...this.pads[i] };
+    const latch = this.latch[i];
+    for (const k in latch) if (latch[k]) pad[k] = true;
+    this.latch[i] = {};
+    return pad;
   }
 
   init() {
@@ -60,17 +77,18 @@ class Input {
     if (!inP1 && !inP2) return;
     e.preventDefault();
     if (this.mode === 'solo') {
-      if (inP1) this.pads[0][inP1] = down;
-      if (inP2) this.pads[0][inP2] = down;
+      if (inP1) this.press(0, inP1, down);
+      if (inP2) this.press(0, inP2, down);
     } else {
-      if (inP1) this.pads[0][inP1] = down;
-      if (inP2) this.pads[1][inP2] = down;
+      if (inP1) this.press(0, inP1, down);
+      if (inP2) this.press(1, inP2, down);
     }
   }
 
   reset() {
     this.pads[0] = blankPad();
     this.pads[1] = blankPad();
+    this.latch = [{}, {}];
   }
 
   // Wire the on-screen touch pads (always feed pad 0).
@@ -80,7 +98,7 @@ class Input {
       const press = (e) => {
         e.preventDefault();
         btn.classList.add('held');
-        this.pads[0][key] = true;
+        this.press(0, key, true);
       };
       const release = (e) => {
         if (e) e.preventDefault();
@@ -111,6 +129,6 @@ export function isTouchDevice() {
 export class HumanController {
   constructor(padIndex) { this.padIndex = padIndex; this.isHuman = true; }
   update(fighter) {
-    fighter.pad = { ...input.pads[this.padIndex] };
+    fighter.pad = input.samplePad(this.padIndex);
   }
 }

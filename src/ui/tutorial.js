@@ -14,10 +14,10 @@ const SLIDES = [
   },
   {
     emoji: '👊',
-    title: 'STRIKE & DEFEND',
+    title: 'STRIKE & CHAIN',
     body: () => isTouchDevice()
-      ? '<b>👊 Punch</b> is fast, <b>🦶 Kick</b> hits harder. Hold <b>🛡</b> to block — you\'ll only take chip damage. Watch out: throws can\'t be blocked!'
-      : '<b>J</b> = quick punch, <b>K</b> = heavy kick. Hold <b>↓</b> (or S) to block and take only chip damage. Watch out: throws can\'t be blocked — jump away!',
+      ? '<b>👊 Punch</b> is fast, <b>🦶 Kick</b> hits harder — and when a hit <b>connects</b>, chain it: <b>punch ×3 → kick → special</b>. Hold <b>🛡</b> to block; throws can\'t be blocked!'
+      : '<b>J</b> = quick punch, <b>K</b> = heavy kick — and when a hit <b>connects</b>, chain it: <b>punch ×3 → kick → special</b>. Hold <b>↓</b> (or S) to block; throws can\'t be blocked — jump away!',
   },
   {
     emoji: '⚡',
