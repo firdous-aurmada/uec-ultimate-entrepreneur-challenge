@@ -90,7 +90,7 @@ function renderSelect() {
       if (t.id === sel.p2) tile.classList.add('sel2');
     }
     const c = document.createElement('canvas');
-    c.width = c.height = 120;
+    c.width = c.height = 280;
     if (t.def) drawPortrait(c, t.def); else drawRandomTile(c);
     tile.appendChild(c);
     const name = document.createElement('div');
@@ -234,7 +234,7 @@ function renderStyleGrid() {
     const tile = document.createElement('div');
     tile.className = 'f-tile' + (draft.baseId === f.id ? ' sel' : '');
     const c = document.createElement('canvas');
-    c.width = c.height = 90;
+    c.width = c.height = 180;
     drawPortrait(c, { ...f, photo: draft.photo, c: { ...f.c, suit: draft.c1, accent: draft.c2 } });
     tile.appendChild(c);
     const n = document.createElement('div');
@@ -375,7 +375,7 @@ function wireCrop() {
   };
   $('btn-crop-apply').onclick = () => {
     if (!crop.img) return;
-    const S = 200;
+    const S = 320;
     const out = document.createElement('canvas');
     out.width = out.height = S;
     const src = cropSrcSize();
@@ -473,7 +473,7 @@ export function renderChallenges() {
     const row = document.createElement('div');
     row.className = 'rival';
     const c = document.createElement('canvas');
-    c.width = c.height = 80;
+    c.width = c.height = 112;
     drawPortrait(c, getFighter(r.fighter));
     row.appendChild(c);
     row.insertAdjacentHTML('beforeend', `
@@ -518,7 +518,7 @@ export function renderHelp() {
     const row = document.createElement('div');
     row.className = 'ability';
     const c = document.createElement('canvas');
-    c.width = c.height = 80;
+    c.width = c.height = 96;
     drawPortrait(c, f);
     row.appendChild(c);
     row.insertAdjacentHTML('beforeend', `

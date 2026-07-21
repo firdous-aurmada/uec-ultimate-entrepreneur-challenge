@@ -320,6 +320,7 @@ function drawHead(ctx, def, cx, cy, r, face, t, unicorn) {
   const photo = def.photo ? getPhoto(def.photo) : null;
   if (photo) {
     ctx.save();
+    ctx.imageSmoothingQuality = 'high';
     ctx.beginPath(); ctx.arc(cx, cy, r, 0, 7); ctx.closePath(); ctx.clip();
     ctx.drawImage(photo, cx - r, cy - r, r * 2, r * 2);
     ctx.restore();

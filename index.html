@@ -56,7 +56,7 @@
         </div>
       </div>
       <div id="title-profile-chip" class="profile-chip hidden">
-        <canvas class="chip-face" id="chipFace" width="72" height="72"></canvas>
+        <canvas class="chip-face" id="chipFace" width="96" height="96"></canvas>
         <div class="chip-text">
           <div class="chip-name" id="chipName"></div>
           <div class="chip-rank" id="chipRank"></div>
@@ -91,7 +91,7 @@
       </div>
       <div class="select-right">
         <div class="preview-card" id="preview-card">
-          <canvas id="preview-portrait" width="260" height="260"></canvas>
+          <canvas id="preview-portrait" width="420" height="420"></canvas>
           <div class="pv-name" id="pv-name"></div>
           <div class="pv-title" id="pv-title"></div>
           <div class="pv-co" id="pv-co"></div>
@@ -117,7 +117,7 @@
       <div id="hud">
         <div class="hud-top">
           <div class="hud-side hud-p1">
-            <canvas class="hud-portrait" id="hudFace1" width="96" height="96"></canvas>
+            <canvas class="hud-portrait" id="hudFace1" width="112" height="112"></canvas>
             <div class="hud-bars">
               <div class="hud-name"><span id="hudName1">FIGHTER</span><span class="hud-co" id="hudCo1"></span></div>
               <div class="hp-track"><div class="hp-ghost" id="hpGhost1"></div><div class="hp-fill" id="hpFill1"></div></div>
@@ -134,7 +134,7 @@
               <div class="hp-track"><div class="hp-ghost" id="hpGhost2"></div><div class="hp-fill" id="hpFill2"></div></div>
               <div class="en-track"><div class="en-fill" id="enFill2"></div><div class="en-spark" id="enSpark2">READY</div></div>
             </div>
-            <canvas class="hud-portrait" id="hudFace2" width="96" height="96"></canvas>
+            <canvas class="hud-portrait" id="hudFace2" width="112" height="112"></canvas>
           </div>
         </div>
         <div id="combo1" class="combo"></div>
@@ -142,9 +142,9 @@
         <div id="announce"></div>
         <div id="hintToast" class="hidden"></div>
         <div id="vsSplash" class="hidden">
-          <div class="vs-card vs-left"><canvas id="vsFace1" width="200" height="200"></canvas><div id="vsName1"></div></div>
+          <div class="vs-card vs-left"><canvas id="vsFace1" width="400" height="400"></canvas><div id="vsName1"></div></div>
           <div class="vs-mark">VS</div>
-          <div class="vs-card vs-right"><canvas id="vsFace2" width="200" height="200"></canvas><div id="vsName2"></div></div>
+          <div class="vs-card vs-right"><canvas id="vsFace2" width="400" height="400"></canvas><div id="vsName2"></div></div>
         </div>
       </div>
       <button id="btn-pause" class="icon-btn" title="Pause">⏸</button>
@@ -177,9 +177,9 @@
     <div class="results-wrap">
       <div id="result-verdict" class="result-verdict">VICTORY</div>
       <div class="result-faces">
-        <div class="rf rf-win"><canvas id="resFaceW" width="180" height="180"></canvas><div id="resNameW"></div></div>
+        <div class="rf rf-win"><canvas id="resFaceW" width="320" height="320"></canvas><div id="resNameW"></div></div>
         <div class="result-score" id="result-score">2 – 0</div>
-        <div class="rf rf-lose"><canvas id="resFaceL" width="140" height="140"></canvas><div id="resNameL"></div></div>
+        <div class="rf rf-lose"><canvas id="resFaceL" width="240" height="240"></canvas><div id="resNameL"></div></div>
       </div>
       <div id="result-stats" class="result-stats"></div>
       <div id="result-points" class="result-points hidden"></div>
@@ -214,7 +214,7 @@
       <div class="panel">
         <div class="panel-title">IDENTITY</div>
         <div class="avatar-row">
-          <div class="avatar-frame"><canvas id="avatarPreview" width="160" height="160"></canvas></div>
+          <div class="avatar-frame"><canvas id="avatarPreview" width="200" height="200"></canvas></div>
           <div class="avatar-btns">
             <label class="btn btn-sm" for="photoInput">📷 UPLOAD PHOTO</label>
             <input type="file" id="photoInput" accept="image/*" hidden>
@@ -374,7 +374,7 @@
 
     <div class="modal hidden" id="modal-incoming">
       <div class="modal-title">⚔️ YOU'VE BEEN CALLED OUT!</div>
-      <canvas id="incomingFace" width="140" height="140"></canvas>
+      <canvas id="incomingFace" width="240" height="240"></canvas>
       <div id="incomingText" class="incoming-text"></div>
       <button id="btn-accept" class="btn btn-primary">🥊 ACCEPT CHALLENGE</button>
       <button class="btn btn-sm btn-ghost" data-close>MAYBE LATER</button>
@@ -393,7 +393,7 @@
     <div class="modal hidden" id="modal-crop">
       <div class="modal-title">📷 FRAME YOUR FACE</div>
       <p class="hint">Drag to position · pinch or slide to zoom. Tight on the face works best.</p>
-      <div class="crop-stage"><canvas id="cropCanvas" width="280" height="280"></canvas></div>
+      <div class="crop-stage"><canvas id="cropCanvas" width="560" height="560"></canvas></div>
       <label class="slider-row"><span>🔍 ZOOM</span><input type="range" id="cropZoom" min="100" max="420" value="130"></label>
       <div class="btn-row">
         <button id="btn-crop-apply" class="btn btn-primary">✔ USE THIS</button>

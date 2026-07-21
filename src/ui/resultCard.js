@@ -81,7 +81,8 @@ export function renderResultCard(canvas, data) {
     }
     ctx.save();
     if (!won) ctx.globalAlpha = 0.6;
-    ctx.drawImage(face(def, s), cx - s / 2, y);
+    ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(face(def, s * 2), cx - s / 2, y, s, s);
     ctx.restore();
     ctx.font = '900 italic 28px system-ui';
     ctx.fillStyle = won ? '#f0f3ff' : '#8b93b8';
