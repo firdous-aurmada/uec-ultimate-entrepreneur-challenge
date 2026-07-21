@@ -655,16 +655,20 @@ function setupBg() {
     });
   }
   const resize = () => {
-    bg.canvas.width = innerWidth;
-    bg.canvas.height = innerHeight;
+    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    bg.w = innerWidth;
+    bg.h = innerHeight;
+    bg.canvas.width = Math.round(innerWidth * dpr);
+    bg.canvas.height = Math.round(innerHeight * dpr);
+    bg.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   };
   resize();
   window.addEventListener('resize', resize);
 }
 
 function drawBg(t) {
-  const { ctx, canvas } = bg;
-  const W = canvas.width, H = canvas.height;
+  const { ctx } = bg;
+  const W = bg.w, H = bg.h;
   const g = ctx.createLinearGradient(0, 0, W, H);
   g.addColorStop(0, '#0b0e1a');
   g.addColorStop(0.6, '#10152a');
