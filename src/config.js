@@ -90,9 +90,18 @@ export const COMBO = {
 };
 
 export const ATTACKS = {
-  punch: { startup: 0.07, active: 0.09, recovery: 0.16, dmg: 7,  reach: 82,  hitY: -104, kb: 110, kbUp: 0,    stun: 0.26, shake: 5,  words: ['POW!', 'JAB!', 'BAM!'] },
-  kick:  { startup: 0.14, active: 0.10, recovery: 0.24, dmg: 12, reach: 104, hitY: -78,  kb: 320, kbUp: -120, stun: 0.34, shake: 8,  words: ['WHAM!', 'SMACK!', 'BOOM!'] },
+  punch: { startup: 0.05, active: 0.06, recovery: 0.11, dmg: 7,  reach: 84,  hitY: -104, kb: 110, kbUp: 0,    stun: 0.24, shake: 6,  words: ['POW!', 'JAB!', 'BAM!'] },
+  kick:  { startup: 0.10, active: 0.08, recovery: 0.17, dmg: 12, reach: 106, hitY: -78,  kb: 320, kbUp: -120, stun: 0.32, shake: 9,  words: ['WHAM!', 'SMACK!', 'BOOM!'] },
 };
+
+// 💸 Acqui-Hire: close-range talent raid that siphons the rival's energy.
+export const STEAL = {
+  AMOUNT: 15, COOLDOWN: 3.5,
+  startup: 0.12, active: 0.08, recovery: 0.3, reach: 92, stun: 0.18,
+};
+
+// Perfectly timed block (tap block just before impact) = parry.
+export const PARRY = { WINDOW: 0.12, STAGGER: 0.5, ENERGY: 10 };
 
 export const AI_LEVELS = {
   intern:  { label: 'INTERN',  react: 0.42, blockProb: 0.16, aggr: 0.45, mistake: 0.30, specialProb: 0.25, chain: 0.2,  mult: 1.0 },

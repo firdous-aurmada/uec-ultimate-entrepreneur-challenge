@@ -232,16 +232,14 @@ function renderStyleGrid() {
   const grid = $('style-grid');
   grid.innerHTML = '';
   for (const f of FIGHTERS) {
+    // pure base looks — distinct bodies/outfits, no photo, no custom colors,
+    // no name labels: you're picking a SILHOUETTE, the preview shows the mix
     const tile = document.createElement('div');
     tile.className = 'f-tile' + (draft.baseId === f.id ? ' sel' : '');
     const c = document.createElement('canvas');
     c.width = c.height = 180;
-    drawPortrait(c, { ...f, photo: draft.photo, c: { ...f.c, suit: draft.c1, accent: draft.c2 } });
+    drawPortrait(c, f);
     tile.appendChild(c);
-    const n = document.createElement('div');
-    n.className = 'f-name';
-    n.textContent = f.name.split(' ')[0];
-    tile.appendChild(n);
     tile.onclick = () => { audio.sfx('click'); draft.baseId = f.id; renderStyleGrid(); renderAvatarPreview(); };
     grid.appendChild(tile);
   }
@@ -529,8 +527,10 @@ export function renderHelp() {
     list.appendChild(row);
   }
   const universals = [
-    ['💣', 'PR BOMB — EVERYONE', '25 ENERGY', 'Lob an arcing scandal that detonates on impact. Great from range; blockable up close.'],
-    ['⚙️', 'HUSTLE DASH — EVERYONE', 'FREE · SHORT COOLDOWN', 'A burst of pure grind. Closes gaps fast and cancels straight into attacks.'],
+    ['⚖️', 'CEASE & DESIST — EVERYONE', '25 ENERGY', 'Hurl legal paperwork in a vicious arc. You have been served — and knocked down.'],
+    ['💸', 'ACQUI-HIRE — EVERYONE', 'FREE · COOLDOWN', 'Raid their team at close range and siphon their energy into your meter. Blockable, parryable, extremely rude.'],
+    ['🛡', 'PARRY — EVERYONE', 'TAP BLOCK LAST-INSTANT', 'A perfectly timed block turns the attack away: the attacker staggers, you gain energy. Grabs cannot be parried.'],
+    ['💨', 'HUSTLE DASH — EVERYONE', 'FREE · SHORT COOLDOWN', 'A burst of pure grind. Closes gaps fast and cancels straight into attacks.'],
     ['🦄', `${UNICORN_META.name} — EVERYONE`, 'FULL METER SUPER', UNICORN_META.desc],
     ['💼', 'MYSTERY DROPS', 'RANDOM BRIEFCASES', 'Briefcases fall mid-round with hidden powers: secret funding, 10x engineers, legal shields, rockets… and the occasional toxic asset. Race your rival to them — or let them gamble.'],
   ];

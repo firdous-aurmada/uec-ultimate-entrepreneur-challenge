@@ -21,7 +21,7 @@ const SEND_MS = 60;                  // min wall-clock ms between input packets 
 const WINDOW_MAX = 60;               // max frames carried per packet
 const SYNC_EVERY = 120;              // frames between state-hash checks
 
-const BITS = ['left', 'right', 'up', 'block', 'punch', 'kick', 'special', 'super', 'bomb', 'dash'];
+const BITS = ['left', 'right', 'up', 'block', 'punch', 'kick', 'special', 'super', 'bomb', 'dash', 'steal'];
 
 export function padToMask(pad) {
   let m = 0;
@@ -67,6 +67,9 @@ function loadClient() {
   }
   return sbPromise;
 }
+
+// Shared client accessor (auth reuses the same Supabase project/connection).
+export function getSupabase() { return loadClient(); }
 
 export function makeRoomId() {
   const raw = (crypto.randomUUID ? crypto.randomUUID().replace(/-/g, '') : Math.random().toString(36).slice(2) + Date.now().toString(36));

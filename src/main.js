@@ -17,6 +17,7 @@ import {
   showIncomingLive, setLiveStatus, refreshSelect, confirmDialog,
 } from './ui/screens.js';
 import { shouldShowTutorial, showTutorial } from './ui/tutorial.js';
+import { AUTH, initAuth, onAuthChange, signInGoogle, signInMicrosoft, signInEmail, signOut, currentUser, userHandle } from './auth.js';
 import {
   NetSession, MaskController, makeRoomId, padToMask,
   STEP as NET_STEP,
@@ -51,6 +52,8 @@ function identity() {
 // ---------------------------------------------------------------- router
 
 function showScreen(id) {
+  // hard sign-in gate (only once providers are configured — see src/auth.js)
+  if (AUTH.REQUIRED && !currentUser() && id !== 'scr-auth') id = 'scr-auth';
   document.querySelectorAll('.screen').forEach(s => s.classList.toggle('active', s.id === id));
   input.enabled = id === 'scr-fight';
   if (id !== 'scr-fight') {
@@ -797,6 +800,37 @@ function boot() {
   $('btn-dl-card').onclick = downloadCard;
   $('btn-share-card').onclick = nativeShareCard;
   wireShareStrip();
+
+  // ---- sign in ----
+  const authFail = (e) => toast(
+    /not enabled|unsupported|disabled/i.test(e?.message || '')
+      ? '🔐 That provider isn\'t switched on yet — see README → Enabling sign-in.'
+      : `Sign-in failed: ${e?.message || e}`);
+  $('btn-account').onclick = () => {
+    audio.sfx('click');
+    if (currentUser()) {
+      confirmDialog('SIGN OUT?', currentUser().email || 'Signed in', () => { signOut(); toast('Signed out.'); });
+    } else {
+      showScreen('scr-auth');
+    }
+  };
+  $('btn-auth-google').onclick = () => { audio.sfx('click'); signInGoogle().catch(authFail); };
+  $('btn-auth-ms').onclick = () => { audio.sfx('click'); signInMicrosoft().catch(authFail); };
+  $('btn-auth-email').onclick = () => {
+    audio.sfx('click');
+    const email = $('authEmail').value.trim();
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { toast('Enter a valid email first.'); return; }
+    signInEmail(email)
+      .then(() => toast('📬 Magic link sent — check your inbox!'))
+      .catch(authFail);
+  };
+  $('btn-auth-back').onclick = () => { audio.sfx('back'); if (!AUTH.REQUIRED || currentUser()) showScreen('scr-title'); };
+  onAuthChange((session) => {
+    $('btn-account').textContent = session ? `👤 ${userHandle()} · SIGN OUT` : '🔐 SIGN IN';
+    if (session && document.getElementById('scr-auth').classList.contains('active')) showScreen('scr-title');
+  });
+  initAuth();
+  if (AUTH.REQUIRED && !currentUser()) showScreen('scr-auth');
 
   showScreen('scr-title');
 

@@ -124,6 +124,11 @@ export class AIController {
 
     // --- melee range ---
     if (dist < 128) {
+      if (opp.energy >= 25 && f.stealCD <= 0 && Math.random() < L.aggr * 0.3) {
+        this.pulse.steal = true;
+        this.dir = 0;
+        return;
+      }
       const r = Math.random();
       if (r < L.aggr * 0.55) this.pulse.punch = true;
       else if (r < L.aggr) this.pulse.kick = true;

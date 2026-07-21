@@ -1,7 +1,7 @@
 // Fighter entity: physics, state machine, attacks and specials.
 // Hit *detection/resolution* lives in game.js; fighters own their own state.
 
-import { STAGE, PHYS, ATTACKS, METER, UNICORN, BOMB, DASH, DROPS, COMBO } from '../config.js';
+import { STAGE, PHYS, ATTACKS, METER, UNICORN, BOMB, DASH, DROPS, COMBO, STEAL } from '../config.js';
 import { SPECIALS } from '../data/fighters.js';
 
 function blankPad() {
@@ -39,6 +39,7 @@ export class Fighter {
     this.special = SPECIALS[def.special] || SPECIALS.pitchdeck;
     this.dashCD = 0;
     this.dashDir = 1;
+    this.stealCD = 0;
     // mystery-drop buffs
     this.speedBuffT = 0;
     this.dmgBuffT = 0;
@@ -61,6 +62,7 @@ export class Fighter {
     this.pad = blankPad();
     this.prevPad = blankPad();
     this.dashCD = 0;
+    this.stealCD = 0;
     this.speedBuffT = 0;
     this.dmgBuffT = 0;
     this.shieldT = 0;
@@ -112,6 +114,7 @@ export class Fighter {
     // timers
     this.flashT = Math.max(0, this.flashT - dt);
     this.dashCD = Math.max(0, this.dashCD - dt);
+    this.stealCD = Math.max(0, this.stealCD - dt);
     this.speedBuffT = Math.max(0, this.speedBuffT - dt);
     this.dmgBuffT = Math.max(0, this.dmgBuffT - dt);
     this.shieldT = Math.max(0, this.shieldT - dt);
@@ -150,7 +153,7 @@ export class Fighter {
         // buffer the next chain input even before this attack connects —
         // mashing must never drop a link
         if (!a.buffered) {
-          for (const k of ['punch', 'kick', 'special', 'bomb', 'super']) {
+          for (const k of ['punch', 'kick', 'special', 'bomb', 'super', 'steal']) {
             if (this.pressed(k)) { a.buffered = k; break; }
           }
         }
@@ -168,6 +171,10 @@ export class Fighter {
           }
           if (a.kind === 'punch' && want === 'kick') {
             this.startAttack('kick', game);
+            break;
+          }
+          if (a.kind === 'punch' && want === 'steal' && this.stealCD <= 0) {
+            this.startSteal(game);
             break;
           }
           if (a.kind === 'punch' || a.kind === 'kick') {
@@ -219,6 +226,8 @@ export class Fighter {
           } else if (this.pressed('bomb') && this.grounded) {
             if (this.energy >= METER.BOMB_COST) this.startBomb(game);
             else game.onSpecialDenied(this);
+          } else if (this.pressed('steal') && this.grounded && this.stealCD <= 0) {
+            this.startSteal(game);
           } else if (this.pressed('dash') && this.grounded && this.dashCD <= 0) {
             this.startDash(game);
           } else if (this.pressed('punch') && !(this.airborne && this.airAttackUsed)) {
@@ -294,6 +303,17 @@ export class Fighter {
     this.attack = {
       kind: 'bomb', hasHit: false, hasFired: false,
       startup: BOMB.startup, active: BOMB.active, recovery: BOMB.recovery,
+    };
+    this.setState('attack');
+    game.audio.sfx('whiff');
+  }
+
+  startSteal(game) {
+    this.stealCD = STEAL.COOLDOWN;
+    this.attack = {
+      kind: 'steal', hasHit: false,
+      startup: STEAL.startup, active: STEAL.active, recovery: STEAL.recovery,
+      reach: STEAL.reach, hitY: -95,
     };
     this.setState('attack');
     game.audio.sfx('whiff');

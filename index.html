@@ -54,6 +54,9 @@
           <button id="btn-profile" class="btn btn-sm">👤 CREATE PROFILE</button>
           <button id="btn-help" class="btn btn-sm">❓ HOW TO PLAY</button>
         </div>
+        <div class="btn-row">
+          <button id="btn-account" class="btn btn-sm btn-ghost">🔐 SIGN IN</button>
+        </div>
       </div>
       <div id="title-profile-chip" class="profile-chip hidden">
         <canvas class="chip-face" id="chipFace" width="96" height="96"></canvas>
@@ -62,7 +65,30 @@
           <div class="chip-rank" id="chipRank"></div>
         </div>
       </div>
-      <div class="title-footer">v1.3 · original characters &amp; parody cameos · no signup needed</div>
+      <div class="title-footer">v1.4 · parody founders · all in good fun</div>
+    </div>
+  </section>
+
+  <!-- ============ SIGN IN ============ -->
+  <section id="scr-auth" class="screen">
+    <div class="auth-wrap">
+      <div class="logo" style="text-align:center">
+        <div class="logo-uec" style="font-size:clamp(48px,9vw,84px)"><span>U</span><span>E</span><span>C</span></div>
+        <div class="logo-sub" style="font-size:clamp(9px,1.4vw,13px)">ULTIMATE ENTREPRENEUR CHALLENGE</div>
+      </div>
+      <div class="auth-card">
+        <div class="modal-title">SIGN IN TO FIGHT</div>
+        <p class="hint">One account — your wins, streaks and rivalries everywhere.</p>
+        <button id="btn-auth-google" class="btn auth-google">Continue with Google</button>
+        <button id="btn-auth-ms" class="btn auth-ms">Continue with Microsoft</button>
+        <div class="auth-div">— or —</div>
+        <div class="link-row">
+          <input id="authEmail" type="email" placeholder="you@startup.com" autocomplete="email">
+          <button id="btn-auth-email" class="btn btn-sm">SEND LINK</button>
+        </div>
+        <div class="hint">We'll email you a one-tap magic sign-in link.</div>
+        <button id="btn-auth-back" class="btn btn-sm btn-ghost">← BACK</button>
+      </div>
     </div>
   </section>
 
@@ -152,7 +178,10 @@
     </div>
     <div id="touchControls" class="touch hidden">
       <div class="t-left">
-        <button class="tbtn t-up" data-k="up">▲</button>
+        <div class="t-row">
+          <button class="tbtn t-up" data-k="up">▲</button>
+          <button class="tbtn t-bomb" data-k="dash">💨</button>
+        </div>
         <div class="t-row">
           <button class="tbtn" data-k="left">◀</button>
           <button class="tbtn" data-k="right">▶</button>
@@ -163,10 +192,10 @@
         <div class="t-grid">
           <button class="tbtn t-atk" data-k="punch">👊</button>
           <button class="tbtn t-atk" data-k="kick">🦶</button>
-          <button class="tbtn t-bomb" data-k="bomb">💣</button>
+          <button class="tbtn t-steal" data-k="steal">💸</button>
           <button class="tbtn t-sp" data-k="special">⚡</button>
           <button class="tbtn t-sp" data-k="super">🦄</button>
-          <button class="tbtn t-bomb" data-k="dash">⚙️</button>
+          <button class="tbtn t-bomb" data-k="bomb">⚖️</button>
         </div>
       </div>
     </div>
@@ -299,7 +328,7 @@
     <div class="help-body">
       <div class="panel">
         <div class="panel-title">🎯 THE GOAL</div>
-        <p>Win <b>2 of 3 rounds</b>. Empty your rival's health bar or have more health when the 60-second bell rings. Landing and taking hits charges your <b>energy meter</b> — spend it on a <b>💣 PR Bomb (25)</b>, your <b>⚡ Special (50)</b> or go full <b>🦄 UNICORN MODE (100)</b>. And race your rival to the <b>💼 mystery briefcases</b> that fall mid-round — every one hides a secret power.</p>
+        <p>Win <b>2 of 3 rounds</b>. Empty your rival's health bar or have more health when the 60-second bell rings. Landing and taking hits charges your <b>energy meter</b> — spend it on a <b>⚖️ Cease &amp; Desist (25)</b>, your <b>⚡ Special (50)</b> or go full <b>🦄 UNICORN MODE (100)</b> — or skip the meter entirely and <b>💸 Acqui-Hire</b> their energy for yourself. And race your rival to the <b>💼 mystery briefcases</b> that fall mid-round — every one hides a secret power.</p>
       </div>
       <div class="panel">
         <div class="panel-title">⌨️ CONTROLS — SOLO</div>
@@ -315,11 +344,11 @@
       </div>
       <div class="panel">
         <div class="panel-title">🔗 COMBOS</div>
-        <p>Attacks <b>cancel on hit</b>: chain <b>Punch ×3 → Kick → Special / 💣 / 🦄</b>. Whiffed swings still recover in full — no mashing your way to safety. Chained hits deal scaled-down damage the deeper you go, so save the expensive finishers for the end of a string and watch the <b>HITS</b> counter climb.</p>
+        <p>Attacks <b>cancel on hit</b>: chain <b>Punch ×3 → Kick → Special / ⚖️ / 🦄</b> — or sneak a <b>💸 Acqui-Hire</b> into the string. Whiffed swings still recover in full — no mashing your way to safety. Chained hits deal scaled-down damage the deeper you go, so save the expensive finishers for the end of a string and watch the <b>HITS</b> counter climb.</p>
       </div>
       <div class="panel">
         <div class="panel-title">🛡 DEFENSE &amp; METER</div>
-        <p><b>Block</b> (hold) cuts damage to 15% chip — and chip can never finish you. You can't block a <b>Hostile Takeover</b> — jump away instead. <b>⚙️ Dash</b> (free, short cooldown) closes gaps or escapes corners and cancels straight into attacks. <b>Energy</b>: +12 when you land a hit, +8 when you take one — spend it 💣&nbsp;25 · ⚡&nbsp;50 · 🦄&nbsp;100. Unicorn Mode lasts 6 seconds: +35% damage, +25% speed, no chip taken. A <b>🛡 Legal Shield</b> briefcase absorbs one full hit — even a Takeover.</p>
+        <p><b>Block</b> (hold) cuts damage to 15% chip — and chip can never finish you. You can't block a <b>Hostile Takeover</b> — jump away instead. <b>💨 Dash</b> (free, short cooldown) closes gaps or escapes corners and cancels straight into attacks. <b>PARRY:</b> tap block at the very last instant to turn an attack away — the attacker staggers and you pocket energy. Grabs beat parries. <b>Energy</b>: +12 when you land a hit, +8 when you take one — spend it 💣&nbsp;25 · ⚡&nbsp;50 · 🦄&nbsp;100. Unicorn Mode lasts 6 seconds: +35% damage, +25% speed, no chip taken. A <b>🛡 Legal Shield</b> briefcase absorbs one full hit — even a Takeover.</p>
       </div>
       <div class="panel">
         <div class="panel-title">⚡ SPECIAL ABILITIES</div>

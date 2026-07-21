@@ -59,6 +59,25 @@ Win **2 of 3 rounds** (60 s each): empty your rival's health bar or lead when th
 
 Touch pads appear automatically on phones/tablets (or force them with `?touch=1`).
 
+## What's new in v1.4
+
+- 🕶 **Famous-founder roster** — the whole cast is now parody legends: **Lizbeth Holmez** (Theramos), **Adam Weumann** (WeWerk), **Steve Jobz** (Pear), **Kim Koindashian** (SkimzCoin), **Cathie Woodz** (ARKK Capital), **Carl Icahnt** (Icahnt Holdings) + the cameo tier (Elo Ma, Jeff Bozo, Scam Alt). 100% satire, 0% affiliation.
+- 🥊 **Combat feel pass** — punches/kicks are meaningfully faster (5-frame punch startup), with anticipation wind-ups, harder overshoot, motion-smear arcs and heavier hitstop. Mashing feels *good* now.
+- ⚖️ **Cease & Desist** replaces the bomb: hurl legal paperwork in an arc (25 energy). You've been served.
+- 💸 **Acqui-Hire** — new universal steal: raid their team at close range and siphon 15 energy into your meter (free, 3.5 s cooldown, blockable/parryable). Chains out of punches for maximum disrespect.
+- 🛡 **PARRY** — tap block at the last instant to turn an attack away: attacker staggers, you gain energy. Grabs beat parries; parries beat everything else. Real skill ceiling unlocked.
+- 💨 Dash got its proper emoji and moved next to the movement pad on touch.
+- 🔐 **Sign-in system** (Google / Microsoft / email magic link via Supabase Auth) — built, wired, and gated behind `AUTH.REQUIRED` in [src/auth.js](src/auth.js) until providers are enabled (see below).
+
+## Enabling sign-in (owner checklist, ~5 min)
+
+Email links are **already enabled** on the Supabase project; OAuth needs credentials. In the [Supabase dashboard](https://supabase.com/dashboard/project/orgjgkatnxvkaleopaja):
+
+1. **Authentication → URL Configuration** — set Site URL to `https://firdous-aurmada.github.io/uec-ultimate-entrepreneur-challenge/` and add it (plus `http://localhost:4173`) to Redirect URLs.
+2. **Authentication → Providers → Google** — paste a Client ID/Secret from Google Cloud Console (authorized redirect URI: `https://orgjgkatnxvkaleopaja.supabase.co/auth/v1/callback`).
+3. **Authentication → Providers → Azure** — same with a Microsoft Entra app registration.
+4. Flip `AUTH.REQUIRED` to `true` in `src/auth.js` and push — the game is now sign-in-gated.
+
 ## What's new in v1.3
 
 - 🔗 **Real combos** — attacks now **cancel on hit**: chain Punch ×3 → Kick → Special / 💣 / 🦄. Whiffs still recover in full, chained hits scale down in damage (100/85/70/60/50%), chained jabs shove less so strings stay in range, and milestone callouts fire at 3/5/7 hits (COMBO! → SYNERGY! → DISRUPTED!). Founder and Mogul AIs chain back.
@@ -74,12 +93,12 @@ Touch pads appear automatically on phones/tablets (or force them with `?touch=1`
 
 | Fighter | Company | Signature special |
 |---|---|---|
-| **Ava Sterling** · The Visionary | Nimbus Labs | 📊 **Pitch Deck Strike** — volley of 3 slide projectiles |
-| **Max Vega** · The Burner | Rocketly | 🔥 **Burn Rate Blast** — point-blank inferno, huge damage |
-| **Kai Nakamura** · The Pivot | Loopwise | 🔄 **Pivot Punch** — teleports behind you, fist first |
-| **Zara Okafor** · The Growth Hacker | Hypervine | 📈 **Growth Hack** — viral rush that locks in a 4-hit flurry |
-| **Eleanor Voss** · The Shark | Apex Capital | 💰 **Funding Round** — gold rains down and refunds her energy |
-| **Dex Kruger** · The Raider | OmniCorp Holdings | 🦈 **Hostile Takeover** — unblockable command grab |
+| **Lizbeth Holmez** · The Visionary | Theramos | 🔄 **Pivot Punch** — vanishes mid-claim, reappears fist-first |
+| **Adam Weumann** · The Burner | WeWerk | 🔥 **Burn Rate Blast** — point-blank $47B inferno |
+| **Steve Jobz** · The Keynote | Pear | 📊 **Pitch Deck Strike** — one more thing: 3 razor slides |
+| **Kim Koindashian** · The Influencer | SkimzCoin | 📈 **Growth Hack** — viral rush that locks in a 4-hit flurry |
+| **Cathie Woodz** · The Believer | ARKK Capital | 💰 **Funding Round** — buys every dip, rains gold |
+| **Carl Icahnt** · The Raider | Icahnt Holdings | 🦈 **Hostile Takeover** — unblockable command grab |
 
 | Unicorn Mode in The Unicorn Club | Pitch Deck Strike on The Stock Exchange |
 |---|---|

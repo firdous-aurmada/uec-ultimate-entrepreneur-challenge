@@ -86,7 +86,7 @@ class AudioEngine {
       back:       () => this.tone({ freq: 330, type: 'square', dur: 0.08, vol: 0.25, slide: -110 }),
       whiff:      () => this.noise({ dur: 0.09, vol: 0.16, freq: 900, slide: 1400, q: 2 }),
       kickWhiff:  () => this.noise({ dur: 0.13, vol: 0.2, freq: 500, slide: 900, q: 2 }),
-      punchHit:   () => { this.noise({ dur: 0.1, vol: 0.55, freq: 1800, slide: -1300, q: 0.8 }); this.tone({ freq: 160, type: 'sine', dur: 0.12, vol: 0.6, slide: -90 }); },
+      punchHit:   () => { this.noise({ dur: 0.07, vol: 0.6, freq: 2600, slide: -1900, q: 0.9 }); this.tone({ freq: 170, type: 'sine', dur: 0.11, vol: 0.7, slide: -100 }); this.tone({ freq: 950, type: 'square', dur: 0.03, vol: 0.18 }); },
       kickHit:    () => { this.noise({ dur: 0.16, vol: 0.6, freq: 900, slide: -700, q: 0.8 }); this.tone({ freq: 110, type: 'sine', dur: 0.18, vol: 0.75, slide: -60 }); },
       block:      () => { this.tone({ freq: 2200, type: 'triangle', dur: 0.05, vol: 0.3 }); this.noise({ dur: 0.06, vol: 0.2, freq: 3000, q: 4 }); },
       grab:       () => { this.noise({ dur: 0.2, vol: 0.4, freq: 400, slide: 600 }); this.tone({ freq: 90, type: 'sawtooth', dur: 0.25, vol: 0.35, slide: -40 }); },
@@ -107,6 +107,8 @@ class AudioEngine {
       victory:    () => [0, 4, 7, 12, 16].forEach((s, i) => this.tone({ freq: 392 * Math.pow(2, s / 12), type: 'square', dur: 0.22, vol: 0.3, delay: i * 0.12 })),
       defeat:     () => [7, 5, 3, 0].forEach((s, i) => this.tone({ freq: 294 * Math.pow(2, s / 12), type: 'triangle', dur: 0.3, vol: 0.35, delay: i * 0.18 })),
       timeTick:   () => this.tone({ freq: 1000, type: 'square', dur: 0.05, vol: 0.2 }),
+      parry:      () => { this.tone({ freq: 1900, type: 'triangle', dur: 0.09, vol: 0.4 }); this.tone({ freq: 2540, type: 'triangle', dur: 0.16, vol: 0.32, delay: 0.05 }); this.noise({ dur: 0.08, vol: 0.16, freq: 5200, q: 3 }); },
+      steal:      () => { this.tone({ freq: 1320, type: 'square', dur: 0.07, vol: 0.24 }); this.tone({ freq: 1980, type: 'square', dur: 0.09, vol: 0.24, delay: 0.06 }); this.noise({ dur: 0.14, vol: 0.2, freq: 2400, slide: 2600, q: 1.6, delay: 0.03 }); },
     };
     (S[name] || (() => {}))();
   }

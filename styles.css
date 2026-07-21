@@ -178,6 +178,22 @@ input, textarea { user-select: text; -webkit-user-select: text; }
 .chip-rank { font-size: 11px; color: var(--gold); font-weight: 700; letter-spacing: 1px; }
 .title-footer { color: var(--muted); font-size: 11px; letter-spacing: 1px; }
 
+/* ---------- Sign in ---------- */
+#scr-auth { align-items: center; justify-content: center; gap: 22px; }
+.auth-wrap { display: flex; flex-direction: column; align-items: center; gap: 20px; padding: 20px; width: 100%; max-width: 420px; }
+.auth-card {
+  background: var(--panel); border: 3px solid var(--line); border-radius: 20px;
+  padding: 22px; display: flex; flex-direction: column; gap: 12px; width: 100%;
+  text-align: center; box-shadow: 0 14px 50px rgba(0,0,0,.5);
+}
+.auth-card .btn { width: 100%; }
+.auth-google { background: #f4f6ff; color: #1c2333; }
+.auth-ms { background: #1a66d0; }
+.auth-div { color: var(--muted); font-size: 11px; font-weight: 900; letter-spacing: 2px; }
+.auth-card .link-row { flex-direction: column; gap: 10px; }
+.auth-card .link-row input { width: 100%; font-size: 15px; padding: 12px; text-align: center; }
+.auth-card .link-row .btn { width: 100%; }
+
 /* ---------- Fighter select ---------- */
 #scr-select { overflow: hidden; }
 .select-body {
@@ -390,6 +406,7 @@ input, textarea { user-select: text; -webkit-user-select: text; }
 .t-row { display: flex; gap: 8px; }
 .t-grid { display: grid; grid-template-columns: repeat(3, auto); gap: 8px; }
 .t-bomb { background: rgba(255, 157, 26, 0.24); }
+.t-steal { background: rgba(87, 255, 138, 0.22); }
 .tbtn {
   width: clamp(52px, 12vw, 68px); height: clamp(52px, 12vw, 68px);
   border-radius: 18px; border: 2px solid rgba(240,243,255,.35);

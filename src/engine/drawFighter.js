@@ -83,9 +83,9 @@ function computePose(f, t) {
     const total = atk.startup + atk.active + atk.recovery;
     const k = Math.min(1, f.stateT / total);
     const hitK = f.stateT < atk.startup
-      ? (f.stateT / atk.startup) * 0.3                       // windup
+      ? (f.stateT / atk.startup) * -0.18                     // anticipation: coil back
       : f.stateT < atk.startup + atk.active
-        ? 0.3 + 0.7 * ease.outBack(Math.min(1, (f.stateT - atk.startup) / atk.active))
+        ? 0.18 + 0.94 * ease.outBack(Math.min(1, (f.stateT - atk.startup) / atk.active))
         : 1 - ease.inQuad((f.stateT - atk.startup - atk.active) / atk.recovery);
     P.face = 'angry';
     if (atk.kind === 'kick') {
@@ -238,13 +238,18 @@ function drawHair(ctx, cx, cy, r, def, t) {
     blob(ctx, () => { ctx.arc(cx + r * 0.62, cy - r * 0.95, r * 0.52, 0, 7); }, c.hair);
     blob(ctx, () => { ctx.arc(cx, cy - r * 0.35, r * 0.98, Math.PI, 0); }, c.hair);
   } else if (style === 'bob') {
-    blob(ctx, () => {
-      ctx.arc(cx, cy - r * 0.15, r * 1.08, Math.PI * 0.75, Math.PI * 2.25);
-      ctx.lineTo(cx + r * 0.85, cy + r * 0.55);
-      ctx.lineTo(cx + r * 0.55, cy + r * 0.2);
-      ctx.moveTo(cx - r * 0.78, cy + r * 0.62);
-      ctx.lineTo(cx - r * 1.0, cy + r * 0.1);
-    }, c.hair);
+    // crown sweep — stays above the brow line
+    blob(ctx, () => { ctx.arc(cx, cy - r * 0.28, r * 1.02, Math.PI * 0.96, Math.PI * 2.04); }, c.hair);
+    // outer curtains framing the face (eyes/mouth stay clear)
+    for (const sgn of [-1, 1]) {
+      blob(ctx, () => {
+        ctx.moveTo(cx + sgn * r * 0.66, cy - r * 0.72);
+        ctx.quadraticCurveTo(cx + sgn * r * 1.22, cy - r * 0.25, cx + sgn * r * 0.98, cy + r * 0.6);
+        ctx.lineTo(cx + sgn * r * 0.72, cy + r * 0.42);
+        ctx.quadraticCurveTo(cx + sgn * r * 0.92, cy - r * 0.15, cx + sgn * r * 0.55, cy - r * 0.55);
+        ctx.closePath();
+      }, c.hair);
+    }
   } else if (style === 'slick') {
     blob(ctx, () => {
       ctx.moveTo(cx + r * 0.95, cy - r * 0.4);
@@ -485,6 +490,29 @@ export function drawFighter(ctx, f, t) {
   // head
   drawHead(ctx, def, P.headX + (P.bodyLean * 26), P.headY, 22, P.face, t, f.unicornT > 0);
   ctx.restore();
+
+  // motion smear behind the striking limb (sells the speed)
+  if (f.state === 'attack' && f.attack && (f.attack.kind === 'punch' || f.attack.kind === 'kick')) {
+    const a2 = f.attack;
+    if (f.stateT >= a2.startup && f.stateT <= a2.startup + a2.active + 0.03) {
+      const isKick = a2.kind === 'kick';
+      const ox = isKick ? 8 : 10;
+      const oy = isKick ? P.hipY : P.shoulderY + 8;
+      const tx = isKick ? P.legF.x : P.armF.x;
+      const ty = isKick ? P.legF.y - 6 : P.armF.y;
+      const rad = Math.hypot(tx - ox, ty - oy);
+      const ang = Math.atan2(ty - oy, tx - ox);
+      ctx.save();
+      ctx.globalAlpha = 0.3;
+      ctx.fillStyle = c.accent;
+      ctx.beginPath();
+      ctx.arc(ox, oy, rad, ang - 0.85, ang + 0.06);
+      ctx.arc(ox, oy, rad * 0.45, ang + 0.06, ang - 0.85, true);
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+    }
+  }
 
   // front leg, front arm
   capsule(ctx, 8, P.hipY, P.legF.x, P.legF.y - 6, 15, c.pants);

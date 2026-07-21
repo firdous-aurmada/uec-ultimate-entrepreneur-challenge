@@ -1,7 +1,7 @@
 // Match controller: best-of-3 rounds, timers, hit resolution, projectiles,
 // special-move orchestration, KO/victory cinematics. Emits result via onEnd().
 
-import { STAGE, PHYS, ROUND, METER, BLOCK, UNICORN, BOMB, DROPS, COMBO } from '../config.js';
+import { STAGE, PHYS, ROUND, METER, BLOCK, UNICORN, BOMB, DROPS, COMBO, STEAL, PARRY } from '../config.js';
 import { Fighter } from './fighter.js';
 import { FXSystem } from './fx.js';
 import { audio } from './audio.js';
@@ -203,6 +203,12 @@ export class Game {
       if (a.hasHit) continue;
       if (!overlap(hb, def.hurtbox())) continue;
 
+      if (a.kind === 'steal') {
+        a.hasHit = true;
+        this.doSteal(att, def);
+        continue;
+      }
+
       if (a.kind === 'grab') {
         a.hasHit = true;
         if (def.airborne) continue;                    // grabs whiff vs air
@@ -230,6 +236,24 @@ export class Game {
       return;
     }
     const blocked = def.state === 'block' && def.grounded;
+
+    // PARRY: block started within the parry window → attack turned away
+    if (blocked && def.stateT <= PARRY.WINDOW && a.kind !== 'grab') {
+      this.giveEnergy(def, PARRY.ENERGY);
+      this.audio.sfx('parry');
+      this.fx.ring(cx, cy, '#8fd8ff', 700, 7, 0.32);
+      this.fx.popup(cx, cy - 44, 'PARRIED!', '#8fd8ff');
+      this.fx.hitstop(0.12);
+      this.fx.shake(5);
+      if (!fromProjectile) {
+        att.attack = null;
+        att.setState('hitstun');
+        att.stunT = PARRY.STAGGER;
+        att.vx = -dir * 260;
+        att.flashT = 0.06;
+      }
+      return;
+    }
 
     if (blocked) {
       let chip = Math.max(1, Math.round(a.dmg * att.dmgMult * BLOCK.CHIP));
@@ -270,7 +294,51 @@ export class Game {
     this.fx.popup(cx, cy - 30, words[Math.floor(Math.random() * words.length)], heavy ? '#ff3d6e' : '#ffd23f');
     this.fx.spark(cx, cy, heavy ? '#ff5c39' : '#ffd23f', heavy ? 14 : 9, heavy ? 430 : 330);
     this.fx.shake(a.shake || 6);
-    this.fx.hitstop(heavy ? 0.085 : 0.05);
+    this.fx.hitstop(heavy ? 0.1 : 0.06);
+  }
+
+  // 💸 Acqui-Hire: siphon energy instead of dealing damage.
+  doSteal(att, def) {
+    const dir = Math.sign(def.x - att.x) || att.facing;
+    if (def.shieldT > 0) {
+      def.shieldT = 0;
+      def.vx = dir * 160;
+      this.audio.sfx('block');
+      this.fx.ring(def.x, def.y - 100, '#8fd8ff', 620, 6, 0.35);
+      this.fx.popup(def.x, def.y - 140, 'OBJECTION!', '#8fd8ff');
+      return;
+    }
+    const blocked = def.state === 'block' && def.grounded;
+    if (blocked && def.stateT <= PARRY.WINDOW) {
+      this.giveEnergy(def, PARRY.ENERGY);
+      this.audio.sfx('parry');
+      this.fx.ring(def.x, def.y - 100, '#8fd8ff', 700, 7, 0.32);
+      this.fx.popup(def.x, def.y - 144, 'PARRIED!', '#8fd8ff');
+      att.attack = null;
+      att.setState('hitstun');
+      att.stunT = PARRY.STAGGER;
+      att.vx = -dir * 260;
+      return;
+    }
+    if (blocked) {
+      this.audio.sfx('block');
+      this.fx.spark(def.x - dir * 20, def.y - 100, '#8fd8ff', 6, 240);
+      return;
+    }
+    const amt = Math.min(STEAL.AMOUNT, Math.floor(def.energy));
+    def.energy = Math.max(0, def.energy - amt);
+    this.giveEnergy(att, amt);
+    def.applyHit({ dmg: 0, kb: 110, kbUp: 0, stun: STEAL.stun, dir });
+    def.hp = Math.min(def.maxHp, def.hp);            // dmg 0 → no health change
+    const attIdx = this.fighters.indexOf(att);
+    this.maxCombo[attIdx] = Math.max(this.maxCombo[attIdx], def.comboTaken);
+    this.audio.sfx('steal');
+    this.fx.coins(def.x, def.y - 90, 7);
+    this.fx.spark(att.x, att.y - 100, '#ffd23f', 6, 260);
+    this.fx.popup(def.x, def.y - 150, amt > 0 ? '💸 ACQUI-HIRED!' : 'ALREADY BROKE!', '#ffd23f');
+    if (amt > 0) this.fx.popup(att.x, att.y - 175, `+${amt}⚡`, '#57ff8a');
+    this.fx.hitstop(0.07);
+    this.fx.shake(4);
   }
 
   doGrab(att, def, a) {
@@ -355,18 +423,18 @@ export class Game {
       x: owner.x + owner.facing * 34, y: owner.y - 118,
       vx: owner.facing * BOMB.vx, vy: BOMB.vy, g: BOMB.g, rot: 0,
       dmg: BOMB.dmg, kb: BOMB.kb, kbUp: BOMB.kbUp, stun: BOMB.stun, dead: false,
-      words: ['BOOM!', 'PR CRISIS!'], sfx: 'kickHit', shake: 8,
+      words: ['SERVED!', 'C&D!'], sfx: 'kickHit', shake: 8,
     });
   }
 
   explodeBomb(p) {
     p.dead = true;
-    this.audio.sfx('burn');
-    this.fx.ring(p.x, p.y, '#ff9d1a', 760, 8, 0.32);
-    this.fx.flames(p.x - 30, p.y + 10, 12, 1);
-    this.fx.flames(p.x + 30, p.y + 10, 12, -1);
+    this.audio.sfx('paperHit');
+    this.audio.sfx('grab');
+    this.fx.ring(p.x, p.y, '#ff4757', 760, 8, 0.32);
+    this.fx.papers(p.x, p.y, 16);
     this.fx.shake(8);
-    this.fx.flash('#ff9d1a', 0.12);
+    this.fx.flash('#ff4757', 0.1);
     const def = this.other(p.owner);
     if (def.state === 'ko') return;
     const hb = def.hurtbox();

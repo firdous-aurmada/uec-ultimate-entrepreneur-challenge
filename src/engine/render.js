@@ -49,18 +49,20 @@ function drawProjectile(ctx, p, t) {
     ctx.moveTo(-13, 8); ctx.lineTo(-6, 2); ctx.lineTo(1, 6); ctx.lineTo(12, -4);
     ctx.stroke();
   } else if (p.type === 'bomb') {
-    ctx.rotate(p.rot * 0.7);
-    ctx.fillStyle = '#1a1c24';
+    // cease & desist: a spinning legal envelope with a red wax seal
+    ctx.rotate(Math.sin(t * 11 + p.x * 0.03) * 0.35);
+    ctx.fillStyle = '#ece0bd';
     ctx.strokeStyle = '#0a0c16';
     ctx.lineWidth = 3;
-    ctx.beginPath(); ctx.arc(0, 0, 13, 0, 7); ctx.fill(); ctx.stroke();
-    ctx.fillStyle = 'rgba(255,255,255,0.25)';
-    ctx.beginPath(); ctx.arc(-4, -4, 4, 0, 7); ctx.fill();
-    // fuse + spark
-    ctx.strokeStyle = '#c9a35f'; ctx.lineWidth = 3;
-    ctx.beginPath(); ctx.moveTo(6, -10); ctx.quadraticCurveTo(12, -16, 10, -20); ctx.stroke();
-    ctx.fillStyle = ['#ffd23f', '#ff9d1a'][Math.floor(t * 20) % 2];
-    ctx.beginPath(); ctx.arc(10, -21, 4, 0, 7); ctx.fill();
+    ctx.beginPath(); ctx.roundRect(-17, -12, 34, 24, 3); ctx.fill(); ctx.stroke();
+    ctx.strokeStyle = '#b8a670';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(-17, -12); ctx.lineTo(0, 2); ctx.lineTo(17, -12);
+    ctx.stroke();
+    ctx.fillStyle = '#c22836';
+    ctx.beginPath(); ctx.arc(0, 4, 5.5, 0, 7); ctx.fill();
+    ctx.strokeStyle = '#0a0c16'; ctx.lineWidth = 1.5; ctx.stroke();
   } else { // coin
     const squish = Math.abs(Math.sin(p.rot)) * 0.65 + 0.35;
     ctx.scale(squish, 1);
