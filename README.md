@@ -92,7 +92,7 @@ Everyone shares 🦄 **Unicorn Mode** at full meter. Fighters have distinct spee
 ## Feature checklist
 
 - ⚡ **Guest play** — no signup; first fight includes a 3-card tutorial + in-match hints
-- 👤 **Founder profiles** — name, company, **photo upload with face framing** (drag/pinch crop, auto face-detect where the browser supports it) → becomes your fighter's face, base style, custom suit/accent colors, choice of any signature special
+- 👤 **Founder profiles** — name, company, **photo upload with automatic face capture** (on-device face detection in every browser via a vendored MIT detector — picojs — with drag/pinch fine-tuning; photos never leave the device) → becomes your fighter's face, base style, custom suit/accent colors, choice of any signature special
 - 🔴 **LIVE multiplayer** — create a room, send the link, and fight a friend in real time. The inviter is notified the second their rival joins; both pick fighters, the host picks the arena, and the match runs deterministic 60 Hz lockstep over Supabase Realtime with input-delay netcode, packet-loss healing, desync detection, both-consent rematches, and graceful disconnect handling. Backgrounded tabs keep simulating via a Web Worker so you never freeze your opponent.
 - 🤖 **Vs AI** (3 difficulties) · 👥 **local 2-player** (one keyboard) · 🔗 **async call-out links** (serverless: the link carries your fighter; friends battle your AI ghost anytime)
 - ⚔️ **Challenges screen** — live rooms, call-out links, and 10 seeded rival founders at their skill tier

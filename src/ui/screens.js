@@ -9,6 +9,7 @@ import { drawPortrait, setPhotoReadyCallback } from '../engine/drawFighter.js';
 import { audio } from '../engine/audio.js';
 import { KEY_LABELS } from '../engine/input.js';
 import { renderResultCard } from './resultCard.js';
+import { detectFace } from './faceDetect.js';
 
 const $ = (id) => document.getElementById(id);
 let A = null;   // actions provided by main.js
@@ -308,14 +309,12 @@ function renderCrop() {
 
 async function autoFrameFace() {
   try {
-    if (!('FaceDetector' in window)) return false;
-    const faces = await new window.FaceDetector({ fastMode: true, maxDetectedFaces: 5 }).detect(crop.img);
-    if (!faces.length) return false;
-    const f = faces.reduce((a, b) => (b.boundingBox.width > a.boundingBox.width ? b : a)).boundingBox;
-    crop.cx = f.x + f.width / 2;
-    crop.cy = f.y + f.height / 2 - f.height * 0.06;      // keep the hairline in frame
+    const face = await detectFace(crop.img);
+    if (!face) return false;
+    crop.cx = face.cx;
+    crop.cy = face.cy - face.size * 0.06;                // keep the hairline in frame
     const minSide = Math.min(crop.img.width, crop.img.height);
-    crop.zoom = Math.max(1, Math.min(4.2, minSide / (Math.max(f.width, f.height) * 1.55)));
+    crop.zoom = Math.max(1, Math.min(4.2, minSide / (face.size * 1.55)));
     return true;
   } catch (e) {
     return false;
