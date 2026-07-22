@@ -84,12 +84,17 @@ export const BLOCK = {
 // punch ×3 → kick → special / bomb / Unicorn. Later hits deal scaled damage.
 export const COMBO = {
   MAX_JABS: 3,                          // punches per string
-  SCALING: [1, 0.85, 0.7, 0.6, 0.5],   // damage mult by victim's current chain depth
-  JAB_CHAIN_KB: 0.55,                  // chained jabs shove less, so strings stay in range
-  MILESTONES: { 3: 'COMBO!', 5: 'SYNERGY!', 7: 'DISRUPTED!' },
+  SCALING: [1, 0.85, 0.7, 0.6, 0.5, 0.45, 0.4],  // damage mult by victim's chain depth
+  JAB_CHAIN_KB: 0.55,                  // chained light hits shove less, so strings stay in range
+  MILESTONES: { 3: 'COMBO!', 5: 'SYNERGY!', 7: 'DISRUPTED!', 10: 'ACQUIRED!' },
+  // Magic series: cancel a landed basic into the SAME move (up to its cap) or
+  // any HIGHER-ranked basic, then a finisher. slap → punch → kick → special.
+  RANK: { slap: 0, punch: 1, kick: 2 },
+  CAP:  { slap: 2, punch: 3, kick: 2 },
 };
 
 export const ATTACKS = {
+  slap:  { startup: 0.04, active: 0.06, recovery: 0.12, dmg: 4,  reach: 78,  hitY: -112, kb: 70,  kbUp: 0,    stun: 0.20, shake: 4,  words: ['SLAP!', 'SMACK!', 'DISRESPECT!'] },
   punch: { startup: 0.05, active: 0.06, recovery: 0.11, dmg: 7,  reach: 84,  hitY: -104, kb: 110, kbUp: 0,    stun: 0.24, shake: 6,  words: ['POW!', 'JAB!', 'BAM!'] },
   kick:  { startup: 0.10, active: 0.08, recovery: 0.17, dmg: 12, reach: 106, hitY: -78,  kb: 320, kbUp: -120, stun: 0.32, shake: 9,  words: ['WHAM!', 'SMACK!', 'BOOM!'] },
 };

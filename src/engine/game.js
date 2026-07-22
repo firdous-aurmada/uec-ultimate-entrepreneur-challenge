@@ -288,13 +288,14 @@ export class Game {
       if (def.comboTaken >= 7) { this.fx.flash('#29d9ff', 0.14); this.fx.shake(6); }
     }
 
-    const heavy = a.kind !== 'punch';
-    this.audio.sfx(fromProjectile ? (a.sfx || 'paperHit') : heavy ? 'kickHit' : 'punchHit');
+    const slap = a.kind === 'slap';
+    const heavy = a.kind !== 'punch' && !slap;
+    this.audio.sfx(fromProjectile ? (a.sfx || 'paperHit') : slap ? 'slapHit' : heavy ? 'kickHit' : 'punchHit');
     const words = a.words || ['POW!'];
-    this.fx.popup(cx, cy - 30, words[Math.floor(Math.random() * words.length)], heavy ? '#ff3d6e' : '#ffd23f');
-    this.fx.spark(cx, cy, heavy ? '#ff5c39' : '#ffd23f', heavy ? 14 : 9, heavy ? 430 : 330);
+    this.fx.popup(cx, cy - 30, words[Math.floor(Math.random() * words.length)], slap ? '#ff9df3' : heavy ? '#ff3d6e' : '#ffd23f');
+    this.fx.spark(cx, cy, slap ? '#ff9df3' : heavy ? '#ff5c39' : '#ffd23f', slap ? 7 : heavy ? 14 : 9, slap ? 280 : heavy ? 430 : 330);
     this.fx.shake(a.shake || 6);
-    this.fx.hitstop(heavy ? 0.1 : 0.06);
+    this.fx.hitstop(slap ? 0.045 : heavy ? 0.1 : 0.06);
   }
 
   // 💸 Acqui-Hire: siphon energy instead of dealing damage.

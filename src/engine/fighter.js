@@ -153,31 +153,34 @@ export class Fighter {
         // buffer the next chain input even before this attack connects —
         // mashing must never drop a link
         if (!a.buffered) {
-          for (const k of ['punch', 'kick', 'special', 'bomb', 'super', 'steal']) {
+          for (const k of ['slap', 'punch', 'kick', 'special', 'bomb', 'super', 'steal']) {
             if (this.pressed(k)) { a.buffered = k; break; }
           }
         }
-        // chain cancels — only once the attack CONNECTED (hit or block):
-        // punch ×3 → kick → special / bomb / Unicorn. Whiffs must recover.
+        // chain cancels — only once the attack CONNECTED (hit or block).
+        // Magic series: same basic up to its cap, or escalate to a HIGHER basic,
+        // then a finisher. slap → punch → kick → special/bomb/steal/Unicorn.
         if (a.hasHit && this.grounded && this.stateT >= a.startup && a.buffered) {
           const want = a.buffered;
           a.buffered = null;
-          const jabs = a.jabs || 1;
-          if (a.kind === 'punch' && want === 'punch' && jabs < COMBO.MAX_JABS) {
-            this.startAttack('punch', game);
-            this.attack.jabs = jabs + 1;
-            this.x += this.facing * 12;                // chained jabs step in
-            break;
-          }
-          if (a.kind === 'punch' && want === 'kick') {
-            this.startAttack('kick', game);
-            break;
-          }
-          if (a.kind === 'punch' && want === 'steal' && this.stealCD <= 0) {
-            this.startSteal(game);
-            break;
-          }
-          if (a.kind === 'punch' || a.kind === 'kick') {
+          const curRank = COMBO.RANK[a.kind];
+          const wantRank = COMBO.RANK[want];
+          if (curRank !== undefined && wantRank !== undefined) {
+            const n = a.chainN || 1;
+            if (want === a.kind && n < COMBO.CAP[want]) {
+              this.startAttack(want, game);
+              this.attack.chainN = n + 1;
+              if (want !== 'kick') this.x += this.facing * 12;   // slaps/jabs step in
+              break;
+            }
+            if (wantRank > curRank) {                            // escalate to a heavier basic
+              this.startAttack(want, game);
+              this.attack.chainN = 1;
+              break;
+            }
+            // downgrade (e.g. kick → punch) not allowed → falls through to recovery
+          } else if (curRank !== undefined) {                    // finishers from any basic
+            if (want === 'steal' && curRank <= 1 && this.stealCD <= 0) { this.startSteal(game); break; }
             if (want === 'special' && this.energy >= METER.SPECIAL_COST) { this.startSpecial(game); break; }
             if (want === 'bomb' && this.energy >= METER.BOMB_COST) { this.startBomb(game); break; }
             if (want === 'super' && this.energy >= METER.SUPER_COST) {
@@ -230,6 +233,8 @@ export class Fighter {
             this.startSteal(game);
           } else if (this.pressed('dash') && this.grounded && this.dashCD <= 0) {
             this.startDash(game);
+          } else if (this.pressed('slap') && !(this.airborne && this.airAttackUsed)) {
+            this.startAttack('slap', game);
           } else if (this.pressed('punch') && !(this.airborne && this.airAttackUsed)) {
             this.startAttack('punch', game);
           } else if (this.pressed('kick') && !(this.airborne && this.airAttackUsed)) {

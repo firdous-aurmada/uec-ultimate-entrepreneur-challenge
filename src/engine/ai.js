@@ -27,14 +27,17 @@ export class AIController {
     if (this.blockT > 0) pad.block = true;
 
     // chain reflex: the instant a strike connects, decide once whether to
-    // continue the string (punch → punch → kick → special)
+    // continue the string (slap → punch → kick → special)
     const atk = f.attack;
     if (f.state === 'attack' && atk && atk.hasHit && !atk.aiChainDecided
-      && (atk.kind === 'punch' || atk.kind === 'kick')) {
+      && (atk.kind === 'slap' || atk.kind === 'punch' || atk.kind === 'kick')) {
       atk.aiChainDecided = true;
       if (Math.random() < (this.level.chain ?? 0.4)) {
-        if (atk.kind === 'punch') {
-          if ((atk.jabs || 1) < 3) this.pulse.punch = true;
+        const n = atk.chainN || 1;
+        if (atk.kind === 'slap') {
+          this.pulse.punch = true;                 // slap escalates into punches
+        } else if (atk.kind === 'punch') {
+          if (n < 3) this.pulse.punch = true;
           else this.pulse.kick = true;
         } else if (f.energy >= METER.SPECIAL_COST) {
           this.pulse.special = true;
@@ -130,7 +133,8 @@ export class AIController {
         return;
       }
       const r = Math.random();
-      if (r < L.aggr * 0.55) this.pulse.punch = true;
+      if (r < L.aggr * 0.28) this.pulse.slap = true;        // quick slap to start a string
+      else if (r < L.aggr * 0.66) this.pulse.punch = true;
       else if (r < L.aggr) this.pulse.kick = true;
       else if (r < L.aggr + 0.18) { this.blockT = 0.25; this.dir = 0; return; }
       else this.dir = -toward;                   // create space

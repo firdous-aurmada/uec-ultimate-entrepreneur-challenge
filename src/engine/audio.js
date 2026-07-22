@@ -87,6 +87,7 @@ class AudioEngine {
       whiff:      () => this.noise({ dur: 0.09, vol: 0.16, freq: 900, slide: 1400, q: 2 }),
       kickWhiff:  () => this.noise({ dur: 0.13, vol: 0.2, freq: 500, slide: 900, q: 2 }),
       punchHit:   () => { this.noise({ dur: 0.07, vol: 0.6, freq: 2600, slide: -1900, q: 0.9 }); this.tone({ freq: 170, type: 'sine', dur: 0.11, vol: 0.7, slide: -100 }); this.tone({ freq: 950, type: 'square', dur: 0.03, vol: 0.18 }); },
+      slapHit:    () => { this.noise({ dur: 0.035, vol: 0.7, freq: 4200, slide: -2600, q: 0.8 }); this.noise({ dur: 0.02, vol: 0.5, freq: 7000, q: 2.5, delay: 0.002 }); this.tone({ freq: 360, type: 'sine', dur: 0.05, vol: 0.4, slide: -180 }); },
       kickHit:    () => { this.noise({ dur: 0.16, vol: 0.6, freq: 900, slide: -700, q: 0.8 }); this.tone({ freq: 110, type: 'sine', dur: 0.18, vol: 0.75, slide: -60 }); },
       block:      () => { this.tone({ freq: 2200, type: 'triangle', dur: 0.05, vol: 0.3 }); this.noise({ dur: 0.06, vol: 0.2, freq: 3000, q: 4 }); },
       grab:       () => { this.noise({ dur: 0.2, vol: 0.4, freq: 400, slide: 600 }); this.tone({ freq: 90, type: 'sawtooth', dur: 0.25, vol: 0.35, slide: -40 }); },

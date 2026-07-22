@@ -3,33 +3,33 @@
 // Versus mode: WASD-cluster = P1, arrows-cluster = P2.
 
 function blankPad() {
-  return { left: false, right: false, up: false, block: false, punch: false, kick: false, special: false, super: false, bomb: false, dash: false, steal: false };
+  return { left: false, right: false, up: false, block: false, slap: false, punch: false, kick: false, special: false, super: false, bomb: false, dash: false, steal: false };
 }
 
 const P1_KEYS = {
   KeyA: 'left', KeyD: 'right', KeyW: 'up', KeyS: 'block',
-  KeyC: 'punch', KeyV: 'kick', KeyB: 'special', KeyG: 'super',
+  KeyX: 'slap', KeyC: 'punch', KeyV: 'kick', KeyB: 'special', KeyG: 'super',
   KeyF: 'bomb', KeyR: 'dash', KeyT: 'steal',
 };
 const P2_KEYS = {
   ArrowLeft: 'left', ArrowRight: 'right', ArrowUp: 'up', ArrowDown: 'block',
-  KeyJ: 'punch', KeyK: 'kick', KeyL: 'special', KeyU: 'super',
+  KeyH: 'slap', KeyJ: 'punch', KeyK: 'kick', KeyL: 'special', KeyU: 'super',
   KeyI: 'bomb', KeyO: 'dash', KeyM: 'steal',
 };
 
 export const KEY_LABELS = {
   solo: [
     ['Move', '← → / A D'], ['Jump', '↑ / W'], ['Block (hold)', '↓ / S'],
-    ['Punch', 'J / C'], ['Kick', 'K / V'], ['Cease & Desist ⚖️', 'I / F'], ['Acqui-Hire 💸', 'M / T'],
+    ['Slap 🖐', 'H / X'], ['Punch', 'J / C'], ['Kick', 'K / V'], ['Cease & Desist ⚖️', 'I / F'], ['Acqui-Hire 💸', 'M / T'],
     ['Dash 💨', 'O / R'], ['Special', 'L / B'], ['Unicorn Mode', 'U / G'], ['Pause', 'Esc'],
   ],
   p1: [
     ['Move', 'A D'], ['Jump', 'W'], ['Block', 'S'],
-    ['Punch', 'C'], ['Kick', 'V'], ['C&D ⚖️', 'F'], ['Acqui-Hire 💸', 'T'], ['Dash 💨', 'R'], ['Special', 'B'], ['Unicorn', 'G'],
+    ['Slap 🖐', 'X'], ['Punch', 'C'], ['Kick', 'V'], ['C&D ⚖️', 'F'], ['Acqui-Hire 💸', 'T'], ['Dash 💨', 'R'], ['Special', 'B'], ['Unicorn', 'G'],
   ],
   p2: [
     ['Move', '← →'], ['Jump', '↑'], ['Block', '↓'],
-    ['Punch', 'J'], ['Kick', 'K'], ['C&D ⚖️', 'I'], ['Acqui-Hire 💸', 'M'], ['Dash 💨', 'O'], ['Special', 'L'], ['Unicorn', 'U'],
+    ['Slap 🖐', 'H'], ['Punch', 'J'], ['Kick', 'K'], ['C&D ⚖️', 'I'], ['Acqui-Hire 💸', 'M'], ['Dash 💨', 'O'], ['Special', 'L'], ['Unicorn', 'U'],
   ],
 };
 

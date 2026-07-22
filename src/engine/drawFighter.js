@@ -133,6 +133,14 @@ function computePose(f, t) {
       P.legF = { x: 15 + Math.sin(ph) * 20, y: -Math.max(0, Math.sin(ph + 1.5)) * 12 };
       P.legB = { x: -14 + Math.sin(ph + Math.PI) * 20, y: -Math.max(0, Math.sin(ph + Math.PI + 1.5)) * 12 };
       P.armF = { x: 48, y: -96 }; P.armB = { x: -30, y: -80 };
+    } else if (atk.kind === 'slap') {
+      // open-hand backhand: arm swings high and across, big shoulder rotation
+      const reach = (atk.reach || 78) * 0.95;
+      const swing = hitK;                                    // 0→1 across the swing
+      P.armF = { x: 8 + reach * swing, y: -128 + 30 * swing };  // starts cocked high, whips down-across
+      P.armB = { x: -18 - 10 * swing, y: -84 };
+      P.bodyLean = 0.26 * swing;
+      P.headX = 3 * swing;
     } else { // punch / projectile / teleport strike
       const reach = (atk.kind === 'punch' ? (atk.reach || 82) : 88) * 0.95;
       P.armF = { x: 22 + reach * hitK, y: -104 };

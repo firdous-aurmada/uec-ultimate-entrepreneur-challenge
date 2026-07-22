@@ -23,7 +23,7 @@ const SEND_MS = 60;                  // min wall-clock ms between input packets 
 const WINDOW_MAX = 60;               // max frames carried per packet
 const SYNC_EVERY = 120;              // frames between state-hash checks
 
-const BITS = ['left', 'right', 'up', 'block', 'punch', 'kick', 'special', 'super', 'bomb', 'dash', 'steal'];
+const BITS = ['left', 'right', 'up', 'block', 'punch', 'kick', 'special', 'super', 'bomb', 'dash', 'steal', 'slap'];
 
 export function padToMask(pad) {
   let m = 0;
