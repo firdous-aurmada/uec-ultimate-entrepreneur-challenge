@@ -69,7 +69,9 @@ Touch pads appear automatically on phones/tablets (or force them with `?touch=1`
 - 💨 Dash got its proper emoji and moved next to the movement pad on touch.
 - 🔐 **Sign-in system** (Google / Microsoft / email magic link via Supabase Auth) — built, wired, and gated behind `AUTH.REQUIRED` in [src/auth.js](src/auth.js) until providers are enabled (see below).
 
-## Enabling sign-in (owner checklist, ~5 min)
+## Enabling sign-in (owner checklist)
+
+**Step-by-step credential guide (Google & Microsoft consoles): [docs/AUTH-SETUP.md](docs/AUTH-SETUP.md).** Summary:
 
 The game runs on its **own dedicated Supabase project** (`uec-game`, ref `oqzxkzkyiiahxmppgrkn`), isolated from other Aurmada projects. Sign-in needs the OAuth providers switched on. In the [Supabase dashboard](https://supabase.com/dashboard/project/oqzxkzkyiiahxmppgrkn):
 

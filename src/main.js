@@ -18,6 +18,7 @@ import {
 } from './ui/screens.js';
 import { shouldShowTutorial, showTutorial } from './ui/tutorial.js';
 import { AUTH, initAuth, onAuthChange, signInGoogle, signInMicrosoft, signInEmail, signOut, currentUser, userHandle } from './auth.js';
+import { syncProfileUp, reportOnlineMatch } from './net/cloud.js';
 import {
   NetSession, MaskController, makeRoomId, padToMask,
   STEP as NET_STEP,
@@ -43,10 +44,11 @@ let netRematch = { me: false, peer: false };
 let guestTag = null;
 
 function identity() {
+  const uid = currentUser()?.id || null;   // rooms carry auth ids so wins can be verified
   const p = Save.profile;
-  if (p) return { n: p.name, co: p.company || 'Stealth Startup', pts: Save.stats.points };
+  if (p) return { n: p.name, co: p.company || 'Stealth Startup', pts: Save.stats.points, uid };
   if (!guestTag) guestTag = 'FOUNDER-' + Math.floor(1000 + Math.random() * 9000);
-  return { n: guestTag, co: 'Stealth Startup', pts: Save.stats.points };
+  return { n: guestTag, co: 'Stealth Startup', pts: Save.stats.points, uid };
 }
 
 // ---------------------------------------------------------------- router
@@ -428,6 +430,24 @@ function onOnlineMatchEnd(result) {
   updateTitleChip();
   renderResults();
   showScreen('scr-results');
+
+  // global-board reporting: only when BOTH players are signed in; the server
+  // applies stats only once both reports agree
+  const myUid = currentUser()?.id;
+  const oppUid = net?.peer?.uid || null;
+  if (myUid && oppUid && net) {
+    reportOnlineMatch({
+      roomId: net.roomId,
+      opponentUid: oppUid,
+      iWon: result.winnerIdx === netLocalIdx,
+      myRounds: result.score[netLocalIdx],
+      oppRounds: result.score[1 - netLocalIdx],
+      koRounds: result.koRounds[netLocalIdx],
+    }).then((status) => {
+      if (status === 'applied') toast('🌍 Global leaderboard updated!');
+      else if (status === 'pending') toast('🌍 Result recorded — waiting for your rival\'s confirmation.');
+    });
+  }
 }
 
 function requestOnlineRematch() {
@@ -828,6 +848,7 @@ function boot() {
   onAuthChange((session) => {
     $('btn-account').textContent = session ? `👤 ${userHandle()} · SIGN OUT` : '🔐 SIGN IN';
     if (session && document.getElementById('scr-auth').classList.contains('active')) showScreen('scr-title');
+    if (session) syncProfileUp();   // local profile follows the account up to the cloud
   });
   initAuth();
   if (AUTH.REQUIRED && !currentUser()) showScreen('scr-auth');

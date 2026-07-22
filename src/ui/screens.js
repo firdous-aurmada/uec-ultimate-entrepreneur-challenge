@@ -10,6 +10,8 @@ import { audio } from '../engine/audio.js';
 import { KEY_LABELS } from '../engine/input.js';
 import { renderResultCard } from './resultCard.js';
 import { detectFace } from './faceDetect.js';
+import { fetchLeaderboard, syncProfileUp } from '../net/cloud.js';
+import { currentUser } from '../auth.js';
 
 const $ = (id) => document.getElementById(id);
 let A = null;   // actions provided by main.js
@@ -419,6 +421,11 @@ function wireProfile() {
     updateTitleChip();
     audio.sfx('victory');
     toast('💾 Profile saved. The ladder awaits.');
+    if (currentUser()) {
+      syncProfileUp().then((ok) => toast(ok
+        ? '☁️ Profile synced to your account.'
+        : '⚠️ Cloud sync failed — will retry on your next sign-in.'));
+    }
   };
   $('btn-invite').onclick = () => openInvite();
   $('btn-reset').onclick = () => {
@@ -431,29 +438,81 @@ function wireProfile() {
 
 // ---------------------------------------------------------------- leaderboard
 
+// Escape anything user-authored before it touches innerHTML. Handles from the
+// cloud and names from challenge links are untrusted.
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (ch) => (
+  { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]
+));
+
+let lbTab = 'global';
+
+function lbRow(i, def, { name, company, points, wins, losses, kos, streak, you }) {
+  const row = document.createElement('div');
+  row.className = 'lb-row' + (you ? ' you' : '');
+  const c = document.createElement('canvas');
+  c.width = c.height = 80;
+  drawPortrait(c, def);
+  row.innerHTML = `<div class="lb-rank">${i + 1}</div>`;
+  row.appendChild(c);
+  row.insertAdjacentHTML('beforeend', `
+    <div class="lb-main">
+      <div class="lb-name">${esc(name)}${you ? ' ◂ YOU' : ''}</div>
+      <div class="lb-co">${esc(company)} · ${rankFor(points)}</div>
+    </div>
+    <div class="lb-cell">${wins | 0}-${losses | 0}<span>W-L</span></div>
+    <div class="lb-cell opt">${kos | 0}<span>KO</span></div>
+    <div class="lb-cell opt">${streak | 0}<span>STRK</span></div>
+    <div class="lb-pts">${points | 0}</div>`);
+  return row;
+}
+
 export function renderLeaderboard() {
+  document.querySelectorAll('#lb-seg button').forEach(b => {
+    b.classList.toggle('on', b.dataset.lb === lbTab);
+    b.onclick = () => { audio.sfx('click'); lbTab = b.dataset.lb; renderLeaderboard(); };
+  });
+  $('lb-note').textContent = lbTab === 'global'
+    ? '🌍 Signed-in founders only — confirmed live matches vs real players.'
+    : '🏠 Practice season on this device (AI fights & call-outs).';
+  if (lbTab === 'global') renderGlobalBoard();
+  else renderLocalBoard();
+}
+
+function renderLocalBoard() {
   const list = $('lb-list');
   list.innerHTML = '';
-  const rows = Save.leaderboard();
-  rows.forEach((r, i) => {
-    const row = document.createElement('div');
-    row.className = 'lb-row' + (r.you ? ' you' : '');
-    const c = document.createElement('canvas');
-    c.width = c.height = 80;
+  Save.leaderboard().forEach((r, i) => {
     const def = r.custom && Save.profile ? buildCustomFighter(Save.profile) : getFighter(r.fighter);
-    drawPortrait(c, def);
-    row.innerHTML = `<div class="lb-rank">${i + 1}</div>`;
-    row.appendChild(c);
-    row.insertAdjacentHTML('beforeend', `
-      <div class="lb-main">
-        <div class="lb-name">${r.name}${r.you ? ' ◂ YOU' : ''}</div>
-        <div class="lb-co">${r.company} · ${rankFor(r.points)}</div>
-      </div>
-      <div class="lb-cell">${r.wins}-${r.losses}<span>W-L</span></div>
-      <div class="lb-cell opt">${r.kos}<span>KO</span></div>
-      <div class="lb-cell opt">${r.streak}<span>STRK</span></div>
-      <div class="lb-pts">${r.points}</div>`);
-    list.appendChild(row);
+    list.appendChild(lbRow(i, def, r));
+  });
+}
+
+async function renderGlobalBoard() {
+  const list = $('lb-list');
+  list.innerHTML = '<div class="hint center">Fetching the global ladder…</div>';
+  let rows;
+  try {
+    rows = await fetchLeaderboard();
+  } catch (e) {
+    if (lbTab !== 'global') return;
+    list.innerHTML = '<div class="hint center">Couldn\'t reach the global ladder — check your connection and try again.</div>';
+    return;
+  }
+  if (lbTab !== 'global') return;                     // switched tabs mid-fetch
+  if (!rows.length) {
+    list.innerHTML = '<div class="hint center">Nobody on the global board yet. Sign in, win a 🔴 LIVE match, and claim the crown. 👑</div>';
+    return;
+  }
+  list.innerHTML = '';
+  const myId = currentUser()?.id;
+  rows.forEach((r, i) => {
+    const base = getFighter(r.base_id);
+    const def = { ...base, c: { ...base.c, suit: r.c1 || base.c.suit, accent: r.c2 || base.c.accent } };
+    list.appendChild(lbRow(i, def, {
+      name: r.handle, company: r.company || 'Stealth Startup', points: r.points,
+      wins: r.wins, losses: r.losses, kos: r.kos, streak: r.streak,
+      you: myId && r.id === myId,
+    }));
   });
 }
 
@@ -475,10 +534,10 @@ export function renderChallenges() {
     row.appendChild(c);
     row.insertAdjacentHTML('beforeend', `
       <div class="rival-info">
-        <div class="rival-name">${r.name}</div>
-        <div class="rival-sub">${r.company} · ${tierFor(r.points).toUpperCase()} AI</div>
+        <div class="rival-name">${esc(r.name)}</div>
+        <div class="rival-sub">${esc(r.company)} · ${tierFor(r.points).toUpperCase()} AI</div>
       </div>
-      <div class="rival-pts">${r.points}<span>PTS</span></div>`);
+      <div class="rival-pts">${r.points | 0}<span>PTS</span></div>`);
     const btn = document.createElement('button');
     btn.className = 'btn btn-sm btn-primary';
     btn.textContent = 'FIGHT';
@@ -585,7 +644,7 @@ export function openInvite() {
 export function showIncomingLive(hostName, onJoin) {
   $('incomingFace').style.display = 'none';
   $('incomingText').innerHTML =
-    `<b>${hostName}</b> is waiting in a <b>🔴 LIVE room</b> right now.<br>Join and fight them head to head!`;
+    `<b>${esc(hostName)}</b> is waiting in a <b>🔴 LIVE room</b> right now.<br>Join and fight them head to head!`;
   $('btn-accept').textContent = '🔴 JOIN LIVE ROOM';
   $('btn-accept').onclick = () => {
     audio.sfx('fight');
@@ -606,7 +665,7 @@ export function setLiveStatus(kind, text) {
 export function showIncomingChallenge(ghostDef, ch, onAccept) {
   drawPortrait($('incomingFace'), ghostDef);
   $('incomingText').innerHTML =
-    `<b>${ghostDef.name}</b> of <b>${ghostDef.company}</b> (${ch.pts} pts · ${rankFor(ch.pts)}) ` +
+    `<b>${esc(ghostDef.name)}</b> of <b>${esc(ghostDef.company)}</b> (${ch.pts | 0} pts · ${rankFor(ch.pts)}) ` +
     `has called you out.<br>Settle it in the arena.`;
   $('btn-accept').onclick = () => { audio.sfx('fight'); closeModals(); onAccept(); };
   openModal('modal-incoming');
