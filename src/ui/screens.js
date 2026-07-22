@@ -302,10 +302,6 @@ function renderStyleGrid() {
     c.width = c.height = 180;
     drawPortrait(c, f);
     tile.appendChild(c);
-    const name = document.createElement('div');
-    name.className = 'f-name';
-    name.textContent = f.name.replace(/^THE /, '');
-    tile.appendChild(name);
     tile.onclick = () => { audio.sfx('click'); draft.baseId = f.id; renderStyleGrid(); renderAvatarPreview(); };
     grid.appendChild(tile);
   }
@@ -842,6 +838,8 @@ export function initScreens(actions) {
   $('btn-leaderboard').onclick = () => { audio.sfx('select'); renderLeaderboard(); A.showScreen('scr-leaderboard'); };
   $('btn-profile').onclick = () => { audio.sfx('select'); renderProfile(); A.showScreen('scr-profile'); };
   $('btn-help').onclick = () => { audio.sfx('select'); renderHelp(); A.showScreen('scr-help'); };
+  $('btn-about').onclick = () => { audio.sfx('select'); A.showScreen('scr-about'); };
+  $('btn-about-fight').onclick = () => { audio.sfx('fight'); A.quickFight(); };
   $('title-profile-chip').onclick = () => { audio.sfx('select'); renderProfile(); A.showScreen('scr-profile'); };
 
   // back buttons

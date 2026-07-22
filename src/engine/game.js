@@ -619,7 +619,7 @@ export class Game {
     }
     if (!this.hintFlags.combo && this.maxCombo[0] >= 3) {
       this.hintFlags.combo = true;
-      this.hud.hint('🔥 CHAINS: on hit, punch ×3 → kick → special. Keep it going!');
+      this.hud.hint('🔥 COMBO! Keep hitting — punch, punch, punch, then 🦶, then ⚡!');
     }
   }
 

@@ -514,6 +514,32 @@ label.btn { display: inline-block; }
 .rival-pts span { display: block; color: var(--cyan); font-size: 9px; letter-spacing: 1px; }
 
 /* ---------- Leaderboard ---------- */
+/* ---------- About / Story ---------- */
+.about-body {
+  width: 100%; max-width: 680px; margin: 0 auto;
+  padding: 4px 16px calc(30px + env(safe-area-inset-bottom));
+  display: flex; flex-direction: column; gap: 14px;
+}
+.about-hero { text-align: center; padding: 10px 0 4px; }
+.about-year {
+  font-size: 12px; font-weight: 900; letter-spacing: 3px; color: var(--cyan);
+  text-shadow: 2px 2px 0 var(--shadow);
+}
+.about-tagline {
+  font-size: clamp(22px, 5vw, 34px); font-weight: 900; font-style: italic;
+  letter-spacing: 1px; color: var(--gold); margin-top: 6px;
+  text-shadow: 3px 3px 0 var(--pink), 5px 5px 0 var(--shadow);
+}
+.about-chapter p { color: #d6dcf5; }
+.about-chapter p + p { margin-top: 8px; }
+.about-punch {
+  font-size: clamp(16px, 3vw, 20px); font-weight: 900; font-style: italic;
+  color: var(--gold) !important; text-align: center; letter-spacing: .5px;
+  text-shadow: 2px 2px 0 var(--shadow);
+}
+.about-cta { display: flex; flex-direction: column; align-items: center; gap: 8px; margin-top: 6px; }
+.about-cta .btn { width: 100%; max-width: 340px; }
+
 .soon-teaser {
   margin-top: 4px; padding: 10px 12px; border-radius: 12px;
   background: linear-gradient(90deg, rgba(123,92,255,.16), rgba(41,217,255,.10));
@@ -552,6 +578,21 @@ label.btn { display: inline-block; }
   border-radius: 7px; padding: 3px 7px; font-family: ui-monospace, Menlo, monospace;
   font-size: 12px; font-weight: 800; color: var(--gold);
 }
+.combo-route {
+  display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 6px;
+  padding: 12px 6px; margin: 4px 0;
+}
+.cr-step {
+  width: 46px; height: 46px; border-radius: 12px; font-size: 24px;
+  display: grid; place-items: center; flex: 0 0 auto;
+  background: rgba(255,61,110,.2); border: 2px solid var(--pink);
+}
+.cr-step.big { background: rgba(41,217,255,.22); border-color: var(--cyan); box-shadow: 0 0 14px rgba(41,217,255,.4); }
+.cr-arrow { color: var(--gold); font-weight: 900; font-size: 20px; flex: 0 0 auto; }
+.combo-route-caption { text-align: center; font-weight: 800; color: var(--gold); font-size: 14px; }
+.combo-tips { margin: 8px 0 0; padding-left: 4px; list-style: none; display: flex; flex-direction: column; gap: 8px; }
+.combo-tips li { color: #d6dcf5; font-size: 13px; line-height: 1.5; }
+
 .ability-list { display: flex; flex-direction: column; gap: 10px; }
 .ability { display: flex; gap: 12px; align-items: center; background: var(--bg2); border-radius: 12px; padding: 8px 12px; }
 .ability canvas { width: 44px; height: 44px; flex: 0 0 auto; }
