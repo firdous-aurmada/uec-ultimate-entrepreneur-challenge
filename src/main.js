@@ -847,6 +847,8 @@ function boot() {
   $('btn-auth-back').onclick = () => { audio.sfx('back'); if (!AUTH.REQUIRED || currentUser()) showScreen('scr-title'); };
   onAuthChange((session) => {
     $('btn-account').textContent = session ? `👤 ${userHandle()} · SIGN OUT` : '🔐 SIGN IN';
+    // hard gate: no escape hatch until signed in, so hide the dead BACK control
+    $('btn-auth-back').style.display = (AUTH.REQUIRED && !session) ? 'none' : '';
     if (session && document.getElementById('scr-auth').classList.contains('active')) showScreen('scr-title');
     if (session) syncProfileUp();   // local profile follows the account up to the cloud
   });

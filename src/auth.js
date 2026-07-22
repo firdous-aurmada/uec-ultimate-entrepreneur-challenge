@@ -6,7 +6,7 @@
 // Until then the Sign-In screen is reachable from the title and everything
 // works the moment providers are switched on. Flip REQUIRED to true to
 // enforce the gate.
-export const AUTH = { REQUIRED: false };
+export const AUTH = { REQUIRED: true };
 
 import { getSupabase } from './net/online.js';
 
