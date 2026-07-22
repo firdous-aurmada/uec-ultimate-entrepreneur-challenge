@@ -277,6 +277,18 @@ export function renderProfile() {
   renderStyleGrid();
   renderAvatarPreview();
   renderCareer();
+
+  // photo saved before color-matching existed → derive colors from it now
+  if (draft.photo && !draft.skin) {
+    const img = new Image();
+    img.onload = () => {
+      if (draft.photo !== img.src) return;   // profile changed while loading
+      applyPhotoColors(img);
+      renderAvatarPreview();
+      renderStyleGrid();
+    };
+    img.src = draft.photo;
+  }
 }
 
 function renderStyleGrid() {
