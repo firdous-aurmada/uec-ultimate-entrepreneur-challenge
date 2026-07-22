@@ -103,10 +103,12 @@ export const STEAL = {
 // Perfectly timed block (tap block just before impact) = parry.
 export const PARRY = { WINDOW: 0.12, STAGGER: 0.5, ENERGY: 10 };
 
+// Internal keys stay intern/founder/mogul (used everywhere); label is the
+// display name shown to players.
 export const AI_LEVELS = {
-  intern:  { label: 'INTERN',  react: 0.42, blockProb: 0.16, aggr: 0.45, mistake: 0.30, specialProb: 0.25, chain: 0.2,  mult: 1.0 },
-  founder: { label: 'FOUNDER', react: 0.26, blockProb: 0.38, aggr: 0.68, mistake: 0.14, specialProb: 0.55, chain: 0.5,  mult: 1.5 },
-  mogul:   { label: 'MOGUL',   react: 0.14, blockProb: 0.62, aggr: 0.85, mistake: 0.05, specialProb: 0.8,  chain: 0.85, mult: 2.5 },
+  intern:  { label: 'ROOKIE',    react: 0.42, blockProb: 0.16, aggr: 0.45, mistake: 0.30, specialProb: 0.25, chain: 0.2,  mult: 1.0 },
+  founder: { label: 'CONTENDER', react: 0.26, blockProb: 0.38, aggr: 0.68, mistake: 0.14, specialProb: 0.55, chain: 0.5,  mult: 1.5 },
+  mogul:   { label: 'CHAMPION',  react: 0.14, blockProb: 0.62, aggr: 0.85, mistake: 0.05, specialProb: 0.8,  chain: 0.85, mult: 2.5 },
 };
 
 export const POINTS = {

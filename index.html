@@ -109,9 +109,9 @@
         <div class="pick-row" id="difficulty-row">
           <div class="pick-label">AI LEVEL</div>
           <div class="seg" id="difficulty-seg">
-            <button data-diff="intern">INTERN</button>
-            <button data-diff="founder" class="on">FOUNDER</button>
-            <button data-diff="mogul">MOGUL</button>
+            <button data-diff="intern">ROOKIE</button>
+            <button data-diff="founder" class="on">CONTENDER</button>
+            <button data-diff="mogul">CHAMPION</button>
           </div>
         </div>
       </div>
@@ -266,6 +266,7 @@
           <select id="inp-special"></select>
         </label>
         <div class="hint" id="special-desc"></div>
+        <div class="soon-teaser">🔮 <b>Coming soon:</b> describe a fighter or an arena in words and generate your own — custom characters, custom battlegrounds.</div>
       </div>
       <div class="panel" id="profile-stats-panel">
         <div class="panel-title">CAREER</div>
@@ -407,10 +408,8 @@
       <button class="btn btn-sm btn-ghost" data-close>CLOSE</button>
     </div>
 
-    <div class="modal hidden" id="modal-incoming">
-      <div class="modal-title">⚔️ YOU'VE BEEN CALLED OUT!</div>
-      <canvas id="incomingFace" width="240" height="240"></canvas>
-      <div id="incomingText" class="incoming-text"></div>
+    <div class="modal modal-wide hidden" id="modal-incoming">
+      <div class="card-holder"><canvas id="challengeCard" width="900" height="520"></canvas></div>
       <button id="btn-accept" class="btn btn-primary">🥊 ACCEPT CHALLENGE</button>
       <button class="btn btn-sm btn-ghost" data-close>MAYBE LATER</button>
     </div>

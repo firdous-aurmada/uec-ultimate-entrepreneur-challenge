@@ -163,6 +163,11 @@ src/
 
 Live matches run on **Supabase Realtime broadcast channels** — one ephemeral channel per room, nothing stored, no accounts. Presence powers the "your rival just joined" notification; both clients then run the same deterministic 60 Hz simulation and exchange only input bitmasks (delay-based lockstep, ~10 frames). Packets are wall-clock paced under the realtime rate limits, carry a sliding window with peer-acknowledged re-anchoring so packet loss self-heals, and a periodic state hash aborts cleanly on any desync. The engine's `Controller` contract is what makes this small: human, AI, and network players are interchangeable (see [src/net/online.js](src/net/online.js)).
 
+## Roadmap
+
+- 🔮 **Prompt-generated fighters & arenas** — describe a character or a battleground in words and generate your own. (Teased in-app; the procedural rig + arena system are built to accept new definitions.)
+- 🌍 Global leaderboard is live (signed-in players, confirmed live matches). Custom SMTP for email sign-ups at scale + Google app verification are the remaining launch-polish items.
+
 ## Built for scaling — prepared but not enabled yet
 
 - **Global leaderboard.** Rendering/sorting/rank logic is done; it reads one local array today. Swapping in a `fetch` keeps the UI untouched. Labeled "local season" in the UI.

@@ -29,10 +29,26 @@ export async function syncProfileUp() {
       c2: /^#[0-9a-fA-F]{6}$/.test(p.c2 || '') ? p.c2 : null,
       special: p.special || null,
       photo: p.photo && p.photo.length < 100000 && p.photo.startsWith('data:image/') ? p.photo : null,
+      skin: /^#[0-9a-fA-F]{6}$/.test(p.skin || '') ? p.skin : null,
+      hair: /^#[0-9a-fA-F]{6}$/.test(p.hair || '') ? p.hair : null,
     });
     return !error;
   } catch (e) {
     return false;
+  }
+}
+
+// Fetch one founder's public profile (for showing a challenger's real avatar).
+export async function fetchProfile(id) {
+  if (!id) return null;
+  try {
+    const sb = await getSupabase();
+    const { data, error } = await sb.from('profiles')
+      .select('handle, company, base_id, c1, c2, special, photo, skin, hair, points')
+      .eq('id', id).maybeSingle();
+    return error ? null : data;
+  } catch (e) {
+    return null;
   }
 }
 

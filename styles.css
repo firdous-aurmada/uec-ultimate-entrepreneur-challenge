@@ -514,6 +514,13 @@ label.btn { display: inline-block; }
 .rival-pts span { display: block; color: var(--cyan); font-size: 9px; letter-spacing: 1px; }
 
 /* ---------- Leaderboard ---------- */
+.soon-teaser {
+  margin-top: 4px; padding: 10px 12px; border-radius: 12px;
+  background: linear-gradient(90deg, rgba(123,92,255,.16), rgba(41,217,255,.10));
+  border: 1px dashed var(--purple); color: var(--muted); font-size: 12px; line-height: 1.5;
+}
+.soon-teaser b { color: var(--cyan); }
+
 .lb-tabs { display: flex; justify-content: center; padding-bottom: 4px; }
 .lb-list { display: flex; flex-direction: column; gap: 6px; min-height: 120px; }
 .lb-row {
@@ -579,7 +586,7 @@ label.btn { display: inline-block; }
 .incoming-text { font-size: 15px; line-height: 1.6; }
 .incoming-text b { color: var(--gold); }
 .card-holder { border-radius: 12px; overflow: hidden; border: 2px solid var(--line); }
-#shareCanvas { width: 100%; height: auto; display: block; }
+#shareCanvas, #challengeCard { width: 100%; height: auto; display: block; }
 
 /* ---------- Tutorial ---------- */
 #tutorial { position: absolute; inset: 0; z-index: 70; display: grid; place-items: center; background: rgba(5,7,15,.82); }

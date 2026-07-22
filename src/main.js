@@ -18,7 +18,7 @@ import {
 } from './ui/screens.js';
 import { shouldShowTutorial, showTutorial } from './ui/tutorial.js';
 import { AUTH, initAuth, onAuthChange, signInGoogle, signInMicrosoft, signInEmail, signOut, currentUser, userHandle } from './auth.js';
-import { syncProfileUp, reportOnlineMatch } from './net/cloud.js';
+import { syncProfileUp, reportOnlineMatch, fetchProfile } from './net/cloud.js';
 import {
   NetSession, MaskController, makeRoomId, padToMask,
   STEP as NET_STEP,
@@ -42,6 +42,53 @@ let netPickLocked = false;
 let netArenaChoice = 'random';
 let netRematch = { me: false, peer: false };
 let guestTag = null;
+
+// incoming invites parsed at boot, shown once past the sign-in gate
+let pendingChallenge = null;
+let pendingLive = null;
+let firstTimeShown = false;
+
+function invitesAllowed() {
+  return !AUTH.REQUIRED || !!currentUser();
+}
+
+function maybeShowPendingInvite() {
+  if (!invitesAllowed()) return;
+  if (pendingLive) {
+    const { hostName, roomId } = pendingLive;
+    pendingLive = null;
+    showIncomingLive(hostName, () => joinLiveRoom(roomId));
+  } else if (pendingChallenge) {
+    const ch = pendingChallenge;
+    pendingChallenge = null;
+    presentChallenge(ch);
+  }
+}
+
+// Build the challenger's ghost — enriched with their real photo/colors from the
+// cloud when the link carries their user id — then show the VS card.
+async function presentChallenge(ch) {
+  let data = { ...ch };
+  if (ch.u) {
+    const prof = await fetchProfile(ch.u);
+    if (prof) {
+      data = {
+        n: prof.handle || ch.n, co: prof.company || ch.co,
+        f: prof.base_id || ch.f, sp: prof.special || ch.sp,
+        pts: prof.points ?? ch.pts,
+        photo: prof.photo || null, skin: prof.skin || null, hair: prof.hair || null,
+        c1: prof.c1 || null, c2: prof.c2 || null,
+      };
+    }
+  }
+  const ghostDef = buildGhostFighter(data);
+  const pts = data.pts || 0;
+  const difficulty = pts >= 1200 ? 'mogul' : pts >= 300 ? 'founder' : 'intern';
+  showIncomingChallenge(ghostDef, { pts }, () => {
+    sel.ghost = { def: ghostDef, difficulty, isChallenge: true };
+    openSelect('solo');
+  });
+}
 
 function identity() {
   const uid = currentUser()?.id || null;   // rooms carry auth ids so wins can be verified
@@ -850,33 +897,37 @@ function boot() {
     // hard gate: no escape hatch until signed in, so hide the dead BACK control
     $('btn-auth-back').style.display = (AUTH.REQUIRED && !session) ? 'none' : '';
     if (session && document.getElementById('scr-auth').classList.contains('active')) showScreen('scr-title');
-    if (session) syncProfileUp();   // local profile follows the account up to the cloud
+    if (session) {
+      syncProfileUp();              // local profile follows the account up to the cloud
+      if (pendingChallenge || pendingLive) {
+        maybeShowPendingInvite();
+      } else if (!Save.profile && !firstTimeShown) {
+        // first-time flow: signed in but no founder yet → create one, then fight
+        firstTimeShown = true;
+        renderProfile();
+        showScreen('scr-profile');
+        toast('👋 Welcome, founder! Set up your fighter, then hit the arena.');
+      }
+    }
   });
   initAuth();
   if (AUTH.REQUIRED && !currentUser()) showScreen('scr-auth');
 
   showScreen('scr-title');
 
-  // incoming links: live room first, then async ghost challenge
+  // incoming links: parse now, but only surface once the player is past the
+  // sign-in gate (so the challenge card isn't buried under the auth screen)
   const qs = new URLSearchParams(location.search);
   const roomParam = qs.get('room');
   const cleanURL = () => history.replaceState(null, '', location.pathname + (DEBUG ? '?debug=1' : ''));
   if (roomParam) {
-    const hostName = (qs.get('hn') || 'A founder').slice(0, 24);
+    pendingLive = { hostName: (qs.get('hn') || 'A founder').slice(0, 24), roomId: roomParam };
     cleanURL();
-    showIncomingLive(hostName, () => joinLiveRoom(roomParam));
   } else {
     const ch = parseChallengeFromURL();
-    if (ch) {
-      cleanURL();
-      const ghostDef = buildGhostFighter(ch);
-      const difficulty = ch.pts >= 1200 ? 'mogul' : ch.pts >= 300 ? 'founder' : 'intern';
-      showIncomingChallenge(ghostDef, ch, () => {
-        sel.ghost = { def: ghostDef, difficulty, isChallenge: true };
-        openSelect('solo');
-      });
-    }
+    if (ch) { pendingChallenge = ch; cleanURL(); }
   }
+  maybeShowPendingInvite();
 
   requestAnimationFrame(loop);
 

@@ -80,7 +80,7 @@ export const FIGHTERS = [
     hairStyle: 'cap', outfit: 'hoodie', accessory: 'stubble',
   },
   {
-    id: 'kai', name: 'STEVE JOBZ', title: 'THE KEYNOTE', company: 'PEAR', 
+    id: 'kai', name: 'STEVE NOJOBS', title: 'THE KEYNOTE', company: 'PEAR',
     tagline: 'One more thing… it’s a fist.',
     special: 'pitchdeck',
     stats: { speed: 1.15, power: 0.9, hp: 95 },
@@ -145,13 +145,56 @@ export const FIGHTERS = [
   },
 ];
 
+// ---- BASE CHARACTERS ----------------------------------------------------
+// Generic, unbranded silhouettes for the "build your fighter" flow. These are
+// the bodies players pick from (NOT the famous-founder roster). Varied skin
+// tones, hairstyles and outfits so everyone finds a starting point that fits.
+export const BASE_CHARACTERS = [
+  { id: 'b-neo',   name: 'THE FOUNDER',   base: true, special: 'pitchdeck',
+    stats: { speed: 1.0, power: 1.0, hp: 100 }, ai: { aggr: 0.6, jump: 0.35, prefRange: 'mid' },
+    c: { skin: '#f0c896', suit: '#5865f2', suit2: '#3d47c9', accent: '#29d9ff', hair: '#2a2320', pants: '#23294f', shoe: '#eef1ff' },
+    hairStyle: 'neat', outfit: 'blazer', accessory: 'glasses' },
+  { id: 'b-hack',  name: 'THE HACKER',    base: true, special: 'growthhack',
+    stats: { speed: 1.15, power: 0.9, hp: 95 }, ai: { aggr: 0.7, jump: 0.5, prefRange: 'mid' },
+    c: { skin: '#e8b48c', suit: '#2ee66b', suit2: '#1a9c46', accent: '#0b0e1a', hair: '#191a22', pants: '#20242f', shoe: '#d9ffe6' },
+    hairStyle: 'ponytail', outfit: 'hoodie', accessory: null },
+  { id: 'b-growth', name: 'THE OPERATOR',  base: true, special: 'fundinground',
+    stats: { speed: 1.05, power: 1.0, hp: 100 }, ai: { aggr: 0.72, jump: 0.4, prefRange: 'mid' },
+    c: { skin: '#8a5a3b', suit: '#e332a9', suit2: '#a91277', accent: '#ffd23f', hair: '#1c1424', pants: '#2c1a3d', shoe: '#ffd23f' },
+    hairStyle: 'puffs', outfit: 'bomber', accessory: 'earrings' },
+  { id: 'b-closer', name: 'THE CLOSER',    base: true, special: 'takeover',
+    stats: { speed: 0.9, power: 1.2, hp: 108 }, ai: { aggr: 0.8, jump: 0.18, prefRange: 'close' },
+    c: { skin: '#d9a06b', suit: '#1c2a5e', suit2: '#111a3d', accent: '#ff3d6e', hair: '#101116', pants: '#141d42', shoe: '#101116' },
+    hairStyle: 'slick', outfit: 'pinstripe', accessory: 'shades' },
+  { id: 'b-design', name: 'THE DESIGNER',  base: true, special: 'pivot',
+    stats: { speed: 1.1, power: 0.95, hp: 96 }, ai: { aggr: 0.62, jump: 0.5, prefRange: 'mid' },
+    c: { skin: '#f2cdb2', suit: '#7b5cff', suit2: '#5a3fd6', accent: '#ff9df3', hair: '#3a2a20', pants: '#2a2340', shoe: '#f0eaff' },
+    hairStyle: 'bob', outfit: 'turtleneck', accessory: null },
+  { id: 'b-builder', name: 'THE BUILDER',  base: true, special: 'burnrate',
+    stats: { speed: 0.95, power: 1.15, hp: 102 }, ai: { aggr: 0.82, jump: 0.3, prefRange: 'close' },
+    c: { skin: '#7a4a30', suit: '#ff7a1a', suit2: '#d15505', accent: '#ffd23f', hair: '#12100e', pants: '#2a2018', shoe: '#f5f5f5' },
+    hairStyle: 'curly', outfit: 'henley', accessory: null },
+  { id: 'b-intern', name: 'THE INTERN',    base: true, special: 'growthhack',
+    stats: { speed: 1.1, power: 0.9, hp: 94 }, ai: { aggr: 0.6, jump: 0.55, prefRange: 'mid' },
+    c: { skin: '#eec9a6', suit: '#29d9ff', suit2: '#1893b3', accent: '#ff3d6e', hair: '#2a2118', pants: '#20263f', shoe: '#ffffff' },
+    hairStyle: 'short', outfit: 'tee', accessory: null },
+  { id: 'b-shark',  name: 'THE SHARK',     base: true, special: 'fundinground',
+    stats: { speed: 0.9, power: 1.1, hp: 105 }, ai: { aggr: 0.68, jump: 0.2, prefRange: 'far' },
+    c: { skin: '#c99a6a', suit: '#0f5f57', suit2: '#0a3f3a', accent: '#ffd23f', hair: '#efe6d8', pants: '#0d3a35', shoe: '#1a1a24' },
+    hairStyle: 'bald', outfit: 'vest', accessory: 'shades' },
+];
+
+const ALL_BY_ID = new Map([...FIGHTERS, ...BASE_CHARACTERS].map(f => [f.id, f]));
+
 export function getFighter(id) {
-  return FIGHTERS.find(f => f.id === id) || FIGHTERS[0];
+  return ALL_BY_ID.get(id) || FIGHTERS[0];
 }
+
+export const DEFAULT_BASE_ID = 'b-neo';
 
 // Builds a fighter definition for a user profile (custom colors/special/photo).
 export function buildCustomFighter(profile) {
-  const base = getFighter(profile.baseId || 'ava');
+  const base = getFighter(profile.baseId || DEFAULT_BASE_ID);
   return {
     ...base,
     id: 'custom',
@@ -174,7 +217,9 @@ export function buildCustomFighter(profile) {
   };
 }
 
-// Ghost fighter for an incoming challenge link.
+// Ghost fighter for an incoming challenge. `ch` carries the link payload
+// (n/co/f/sp/pts) and, when the challenger's cloud profile was fetched,
+// their real photo + colors (photo/skin/hair/c1/c2) so the card shows THEM.
 export function buildGhostFighter(ch) {
   const base = getFighter(ch.f);
   return {
@@ -184,6 +229,15 @@ export function buildGhostFighter(ch) {
     company: (ch.co || 'RIVAL VENTURES').toUpperCase(),
     title: 'CHALLENGER',
     special: ch.sp && SPECIALS[ch.sp] ? ch.sp : base.special,
+    photo: ch.photo || null,
+    c: {
+      ...base.c,
+      skin: ch.skin || base.c.skin,
+      hair: ch.hair || base.c.hair,
+      suit: ch.c1 || base.c.suit,
+      suit2: shade(ch.c1 || base.c.suit, -28),
+      accent: ch.c2 || base.c.accent,
+    },
   };
 }
 

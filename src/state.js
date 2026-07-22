@@ -3,6 +3,7 @@
 
 import { SAVE_KEY, POINTS, AI_LEVELS, rankFor } from './config.js';
 import { SEED_PLAYERS } from './data/seed.js';
+import { currentUser } from './auth.js';
 
 const DEFAULTS = () => ({
   profile: null,           // { name, company, photo, baseId, c1, c2, special }
@@ -125,9 +126,10 @@ export function buildChallengeLink() {
     v: 1,
     n: p?.name || 'A mystery founder',
     co: p?.company || 'Stealth Startup',
-    f: p?.baseId || Save.data.lastFighter || 'ava',
+    f: p?.baseId || Save.data.lastFighter || 'b-neo',
     sp: p?.special || null,
     pts: Save.stats.points || 0,
+    u: currentUser()?.id || undefined,   // lets the recipient fetch the real photo/colors
   };
   const url = new URL(location.href);
   url.search = '';
@@ -145,9 +147,10 @@ export function parseChallengeFromURL() {
     return {
       n: String(data.n || 'Rival').slice(0, 24),
       co: String(data.co || 'Rival Ventures').slice(0, 28),
-      f: String(data.f || 'ava'),
+      f: String(data.f || 'b-neo'),
       sp: data.sp ? String(data.sp) : null,
       pts: Math.max(0, Math.min(999999, Number(data.pts) || 0)),
+      u: typeof data.u === 'string' && /^[0-9a-fA-F-]{10,40}$/.test(data.u) ? data.u : null,
     };
   } catch (e) {
     return null;

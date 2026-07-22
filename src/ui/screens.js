@@ -1,14 +1,14 @@
 // All menu screens + modals: fighter select, profile (photo upload → avatar),
 // challenges & invite links, leaderboard, help, settings/pause, share card.
 
-import { FIGHTERS, SPECIALS, UNICORN_META, getFighter, buildCustomFighter } from '../data/fighters.js';
+import { FIGHTERS, BASE_CHARACTERS, DEFAULT_BASE_ID, SPECIALS, UNICORN_META, getFighter, buildCustomFighter } from '../data/fighters.js';
 import { ARENAS, getArena, randomArena } from '../data/arenas.js';
 import { Save, buildChallengeLink } from '../state.js';
-import { rankFor } from '../config.js';
-import { drawPortrait, setPhotoReadyCallback } from '../engine/drawFighter.js';
+import { rankFor, AI_LEVELS } from '../config.js';
+import { drawPortrait, setPhotoReadyCallback, ensurePhoto } from '../engine/drawFighter.js';
 import { audio } from '../engine/audio.js';
 import { KEY_LABELS } from '../engine/input.js';
-import { renderResultCard } from './resultCard.js';
+import { renderResultCard, renderChallengeCard } from './resultCard.js';
 import { detectFace } from './faceDetect.js';
 import { fetchLeaderboard, syncProfileUp } from '../net/cloud.js';
 import { currentUser } from '../auth.js';
@@ -202,7 +202,7 @@ let draft = null;
 
 function newDraft() {
   return Save.profile ? { ...Save.profile } : {
-    name: '', company: '', photo: null, baseId: 'jobz',
+    name: '', company: '', photo: null, baseId: DEFAULT_BASE_ID,
     c1: '#5865f2', c2: '#ffd23f', special: 'pitchdeck',
     skin: null, hair: null,
   };
@@ -294,15 +294,18 @@ export function renderProfile() {
 function renderStyleGrid() {
   const grid = $('style-grid');
   grid.innerHTML = '';
-  for (const f of FIGHTERS) {
-    // pure base looks — distinct bodies/outfits, no photo, no custom colors,
-    // no name labels: you're picking a SILHOUETTE, the preview shows the mix
+  for (const f of BASE_CHARACTERS) {
+    // pick a body/silhouette; your photo + colors are layered on in the preview
     const tile = document.createElement('div');
     tile.className = 'f-tile' + (draft.baseId === f.id ? ' sel' : '');
     const c = document.createElement('canvas');
     c.width = c.height = 180;
     drawPortrait(c, f);
     tile.appendChild(c);
+    const name = document.createElement('div');
+    name.className = 'f-name';
+    name.textContent = f.name.replace(/^THE /, '');
+    tile.appendChild(name);
     tile.onclick = () => { audio.sfx('click'); draft.baseId = f.id; renderStyleGrid(); renderAvatarPreview(); };
     grid.appendChild(tile);
   }
@@ -373,9 +376,12 @@ async function autoFrameFace() {
     const face = await detectFace(crop.img);
     if (!face) return false;
     crop.cx = face.cx;
-    crop.cy = face.cy - face.size * 0.06;                // keep the hairline in frame
+    crop.cy = face.cy - face.size * 0.12;                // bias up so forehead/hair fit
     const minSide = Math.min(crop.img.width, crop.img.height);
-    crop.zoom = Math.max(1, Math.min(4.2, minSide / (face.size * 1.55)));
+    // the avatar is a CIRCLE inscribed in the crop square, so pad enough that the
+    // whole head (taller/wider than the detection box) sits inside the circle,
+    // not clipped in the square's corners
+    crop.zoom = Math.max(1, Math.min(4.2, minSide / (face.size * 1.9)));
     return true;
   } catch (e) {
     return false;
@@ -386,7 +392,7 @@ async function openCropModal(img) {
   crop.img = img;
   crop.cx = img.width / 2;
   crop.cy = img.height / 2;
-  crop.zoom = 1.3;
+  crop.zoom = 1.7;                            // fallback (no face found): assume centred, zoom in
   const found = await autoFrameFace();
   clampCrop();
   $('cropZoom').value = Math.round(crop.zoom * 100);
@@ -597,7 +603,7 @@ export function renderChallenges() {
     row.insertAdjacentHTML('beforeend', `
       <div class="rival-info">
         <div class="rival-name">${esc(r.name)}</div>
-        <div class="rival-sub">${esc(r.company)} · ${tierFor(r.points).toUpperCase()} AI</div>
+        <div class="rival-sub">${esc(r.company)} · ${AI_LEVELS[tierFor(r.points)].label} AI</div>
       </div>
       <div class="rival-pts">${r.points | 0}<span>PTS</span></div>`);
     const btn = document.createElement('button');
@@ -703,15 +709,24 @@ export function openInvite() {
   audio.sfx('select');
 }
 
-export function showIncomingLive(hostName, onJoin) {
-  $('incomingFace').style.display = 'none';
-  $('incomingText').innerHTML =
-    `<b>${esc(hostName)}</b> is waiting in a <b>🔴 LIVE room</b> right now.<br>Join and fight them head to head!`;
+// The recipient's own fighter for the right side of a challenge card.
+function myFighterDef() {
+  return Save.profile ? buildCustomFighter(Save.profile) : getFighter(DEFAULT_BASE_ID);
+}
+function myFighterName() {
+  return Save.profile ? (Save.profile.name || 'YOU').toUpperCase() : 'YOU';
+}
+
+export async function showIncomingLive(hostName, onJoin) {
+  const you = myFighterDef();
+  await ensurePhoto(you.photo);
+  renderChallengeCard($('challengeCard'),
+    { def: null, name: String(hostName || 'A FOUNDER').toUpperCase(), sub: '🔴 LIVE ROOM · WAITING' },
+    { def: you, name: myFighterName(), sub: 'FIGHT LIVE' });
   $('btn-accept').textContent = '🔴 JOIN LIVE ROOM';
   $('btn-accept').onclick = () => {
     audio.sfx('fight');
     closeModals();
-    $('incomingFace').style.display = '';
     $('btn-accept').textContent = '🥊 ACCEPT CHALLENGE';
     onJoin();
   };
@@ -724,11 +739,13 @@ export function setLiveStatus(kind, text) {
   $('liveStatusText').textContent = text;
 }
 
-export function showIncomingChallenge(ghostDef, ch, onAccept) {
-  drawPortrait($('incomingFace'), ghostDef);
-  $('incomingText').innerHTML =
-    `<b>${esc(ghostDef.name)}</b> of <b>${esc(ghostDef.company)}</b> (${ch.pts | 0} pts · ${rankFor(ch.pts)}) ` +
-    `has called you out.<br>Settle it in the arena.`;
+export async function showIncomingChallenge(ghostDef, ch, onAccept) {
+  const you = myFighterDef();
+  await Promise.all([ensurePhoto(ghostDef.photo), ensurePhoto(you.photo)]);   // photos ready before the one-shot render
+  renderChallengeCard($('challengeCard'),
+    { def: ghostDef, name: ghostDef.name, sub: `${ghostDef.company} · ${ch.pts | 0} PTS · ${rankFor(ch.pts)}` },
+    { def: you, name: myFighterName(), sub: 'DEFEND YOUR HONOR' });
+  $('btn-accept').textContent = '🥊 ACCEPT CHALLENGE';
   $('btn-accept').onclick = () => { audio.sfx('fight'); closeModals(); onAccept(); };
   openModal('modal-incoming');
 }

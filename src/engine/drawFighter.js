@@ -24,6 +24,24 @@ export function getPhoto(dataUrl) {
   return img.complete && img.naturalWidth ? img : null;
 }
 
+// Warm the cache and resolve once the photo is decoded — call before rendering
+// a one-shot canvas (e.g. the challenge card) so the photo shows on first paint.
+export function ensurePhoto(dataUrl) {
+  return new Promise((resolve) => {
+    if (!dataUrl) return resolve(null);
+    let img = photoCache.get(dataUrl);
+    if (img && img.complete) return resolve(img.naturalWidth ? img : null);
+    if (!img) {
+      img = new Image();
+      img.onload = () => { if (onPhotoReady) onPhotoReady(); };
+      img.src = dataUrl;
+      photoCache.set(dataUrl, img);
+    }
+    img.addEventListener('load', () => resolve(img.naturalWidth ? img : null), { once: true });
+    img.addEventListener('error', () => resolve(null), { once: true });
+  });
+}
+
 function capsule(ctx, x1, y1, x2, y2, w, color, outline = true) {
   ctx.lineCap = 'round';
   if (outline) {
