@@ -202,9 +202,58 @@ let draft = null;
 
 function newDraft() {
   return Save.profile ? { ...Save.profile } : {
-    name: '', company: '', photo: null, baseId: 'ava',
+    name: '', company: '', photo: null, baseId: 'jobz',
     c1: '#5865f2', c2: '#ffd23f', special: 'pitchdeck',
+    skin: null, hair: null,
   };
+}
+
+// ---- photo → fighter coloring (all on-device) ----
+const DEFAULT_SUIT = '#5865f2';
+function lum([r, g, b]) { return 0.299 * r + 0.587 * g + 0.114 * b; }
+function medianCh(vals) { vals.sort((a, b) => a - b); return vals[vals.length >> 1]; }
+function rgbHex([r, g, b]) {
+  return '#' + [r, g, b].map(v => Math.max(0, Math.min(255, v | 0)).toString(16).padStart(2, '0')).join('');
+}
+// Sample skin / hair / clothing tones from a face-framed crop. The crop is
+// centered on the face (see the crop modal), so fixed sample regions are
+// reliable: mid = skin, top = hair, bottom corners = shoulders/clothing.
+function samplePhotoColors(source) {
+  const S = 64;
+  const c = document.createElement('canvas');
+  c.width = c.height = S;
+  const ctx = c.getContext('2d', { willReadFrequently: true });
+  ctx.drawImage(source, 0, 0, S, S);
+  const d = ctx.getImageData(0, 0, S, S).data;
+  const at = (fx, fy) => {
+    const i = (Math.round(fy * (S - 1)) * S + Math.round(fx * (S - 1))) * 4;
+    return [d[i], d[i + 1], d[i + 2]];
+  };
+  const med = (regions) => [
+    medianCh(regions.map(p => p[0])), medianCh(regions.map(p => p[1])), medianCh(regions.map(p => p[2])),
+  ];
+  const skin = med([[0.5, 0.52], [0.42, 0.5], [0.58, 0.5], [0.5, 0.44], [0.5, 0.6], [0.4, 0.58], [0.6, 0.58], [0.46, 0.47], [0.54, 0.47]].map(([x, y]) => at(x, y)));
+  const hair = med([[0.5, 0.08], [0.4, 0.1], [0.6, 0.1], [0.5, 0.14], [0.34, 0.14], [0.66, 0.14]].map(([x, y]) => at(x, y)));
+  const cloth = med([[0.12, 0.92], [0.88, 0.92], [0.22, 0.97], [0.78, 0.97], [0.5, 0.96]].map(([x, y]) => at(x, y)));
+  return { skin, hair, cloth };
+}
+// Apply sampled colors to the draft. Skin always (drives the hands). Hair only
+// when it reads as actual hair (darker than the face — else it's background/bald).
+// Clothing only fills the suit if the player hasn't picked their own color yet.
+function applyPhotoColors(source) {
+  const { skin, hair, cloth } = samplePhotoColors(source);
+  draft.skin = rgbHex(skin);
+  draft.hair = lum(hair) < lum(skin) - 12 ? rgbHex(hair) : null;
+  if (!draft.c1 || draft.c1.toLowerCase() === DEFAULT_SUIT) {
+    const clothHex = rgbHex(cloth);
+    // ignore near-black/near-white shirts that would read as a void
+    if (lum(cloth) > 28 && lum(cloth) < 232) {
+      draft.c1 = clothHex;
+      $('inp-c1').value = clothHex;
+      draft.c2 = rgbHex([255, 210, 63]);   // keep a bright accent so it pops
+      $('inp-c2').value = '#ffd23f';
+    }
+  }
 }
 
 export function renderProfile() {
@@ -380,11 +429,12 @@ function wireCrop() {
     const src = cropSrcSize();
     out.getContext('2d').drawImage(crop.img, crop.cx - src / 2, crop.cy - src / 2, src, src, 0, 0, S, S);
     draft.photo = out.toDataURL('image/jpeg', 0.85);
+    applyPhotoColors(out);                  // skin/hair/outfit derived from the photo
     crop.img = null;
     closeModals();
     renderAvatarPreview();
     renderStyleGrid();
-    toast('📷 Face locked in — looking dangerous.');
+    toast('📷 Face locked in — fighter matched to your look.');
     audio.sfx('select');
   };
 }

@@ -161,7 +161,16 @@ export function buildCustomFighter(profile) {
     tagline: 'Player-founded. Player-funded.',
     special: profile.special || base.special,
     photo: profile.photo || null,
-    c: { ...base.c, suit: profile.c1 || base.c.suit, suit2: shade(profile.c1 || base.c.suit, -28), accent: profile.c2 || base.c.accent },
+    // skin/hair come from the uploaded photo when available, so hands + head
+    // coloring match the person instead of the generic base founder
+    c: {
+      ...base.c,
+      skin: profile.skin || base.c.skin,
+      hair: profile.hair || base.c.hair,
+      suit: profile.c1 || base.c.suit,
+      suit2: shade(profile.c1 || base.c.suit, -28),
+      accent: profile.c2 || base.c.accent,
+    },
   };
 }
 
