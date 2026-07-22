@@ -71,12 +71,15 @@ Touch pads appear automatically on phones/tablets (or force them with `?touch=1`
 
 ## Enabling sign-in (owner checklist, ~5 min)
 
-Email links are **already enabled** on the Supabase project; OAuth needs credentials. In the [Supabase dashboard](https://supabase.com/dashboard/project/orgjgkatnxvkaleopaja):
+The game runs on its **own dedicated Supabase project** (`uec-game`, ref `oqzxkzkyiiahxmppgrkn`), isolated from other Aurmada projects. Sign-in needs the OAuth providers switched on. In the [Supabase dashboard](https://supabase.com/dashboard/project/oqzxkzkyiiahxmppgrkn):
 
-1. **Authentication → URL Configuration** — set Site URL to `https://firdous-aurmada.github.io/uec-ultimate-entrepreneur-challenge/` and add it (plus `http://localhost:4173`) to Redirect URLs.
-2. **Authentication → Providers → Google** — paste a Client ID/Secret from Google Cloud Console (authorized redirect URI: `https://orgjgkatnxvkaleopaja.supabase.co/auth/v1/callback`).
-3. **Authentication → Providers → Azure** — same with a Microsoft Entra app registration.
-4. Flip `AUTH.REQUIRED` to `true` in `src/auth.js` and push — the game is now sign-in-gated.
+1. **Authentication → URL Configuration** — set Site URL to `https://firdous-aurmada.github.io/uec-ultimate-entrepreneur-challenge/` and add it (plus `http://localhost:4173/**`) to Redirect URLs. **When you get a custom domain, add it here too** — the app code already uses whatever origin it's served from, so no code change is needed, only this allow-list entry.
+2. **Authentication → Providers → Email** — enable (magic links work with no extra setup).
+3. **Authentication → Providers → Google** — paste a Client ID/Secret from Google Cloud Console (authorized redirect URI: `https://oqzxkzkyiiahxmppgrkn.supabase.co/auth/v1/callback`).
+4. **Authentication → Providers → Azure** — same with a Microsoft Entra app registration (same callback URI).
+5. Flip `AUTH.REQUIRED` to `true` in `src/auth.js` and push — the game is now sign-in-gated.
+
+> Billing: `uec-game` is a paid project (~$10/mo compute) so it stays always-on for live sign-in — no idle auto-pause.
 
 ## What's new in v1.3
 

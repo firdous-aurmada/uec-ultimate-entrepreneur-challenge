@@ -12,8 +12,10 @@
 // never touches the network.
 // ---------------------------------------------------------------------------
 
-const SUPABASE_URL = 'https://orgjgkatnxvkaleopaja.supabase.co';
-const SUPABASE_KEY = 'sb_publishable_iOm_lizIzw3kYsa1VSJn_A_ZzO6ihGG';
+// Dedicated "uec-game" Supabase project (isolated from aurmada-main-site).
+// Publishable key — safe to ship in client code; row-level security guards data.
+const SUPABASE_URL = 'https://oqzxkzkyiiahxmppgrkn.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_hA-O1-vWIa40YOlyy3d0mA_Mf0zCrkO';
 
 export const STEP = 1 / 60;          // fixed simulation timestep
 export const INPUT_DELAY = 10;       // frames of input delay (~166 ms) — absorbs send pacing + latency
@@ -61,7 +63,8 @@ function loadClient() {
   if (!sbPromise) {
     sbPromise = import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm')
       .then(({ createClient }) => createClient(SUPABASE_URL, SUPABASE_KEY, {
-        auth: { persistSession: false },
+        // persist so sign-in survives reloads; detect the OAuth redirect fragment
+        auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true },
         realtime: { params: { eventsPerSecond: 25 } },
       }));
   }
