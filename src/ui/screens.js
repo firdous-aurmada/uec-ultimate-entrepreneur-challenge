@@ -381,7 +381,9 @@ function renderLookRows() {
 
 function renderAvatarPreview() {
   drawPortrait($('avatarPreview'), buildCustomFighter(draft));
+  $('dock-name').textContent = (draft.name || '').trim().toUpperCase() || 'YOUR FOUNDER';
 }
+
 
 function renderCareer() {
   const s = Save.stats;
@@ -528,7 +530,10 @@ function wireCrop() {
 }
 
 function wireProfile() {
-  $('inp-name').oninput = (e) => { draft.name = e.target.value; };
+  $('inp-name').oninput = (e) => {
+    draft.name = e.target.value;
+    $('dock-name').textContent = draft.name.trim().toUpperCase() || 'YOUR FOUNDER';
+  };
   $('inp-company').oninput = (e) => { draft.company = e.target.value; };
   $('inp-c1').oninput = (e) => { draft.c1 = e.target.value; renderStyleGrid(); renderAvatarPreview(); };
   $('inp-c2').oninput = (e) => { draft.c2 = e.target.value; renderStyleGrid(); renderAvatarPreview(); };

@@ -238,23 +238,32 @@
 
   <!-- ============ PROFILE ============ -->
   <section id="scr-profile" class="screen scroll">
-    <header class="scr-head">
-      <button class="btn btn-back" data-back>← BACK</button>
-      <h1 class="scr-title">FOUNDER PROFILE</h1>
-      <div class="head-spacer"></div>
-    </header>
+    <!-- Header + live preview stick together as one unit, so your fighter
+         stays on screen while you scroll the options — change a layer, see it
+         immediately. Grouping them avoids measuring the header height. -->
+    <div class="profile-sticky">
+      <header class="scr-head">
+        <button class="btn btn-back" data-back>← BACK</button>
+        <h1 class="scr-title">FOUNDER PROFILE</h1>
+        <div class="head-spacer"></div>
+      </header>
+      <div class="dock-wrap">
+        <div class="avatar-dock">
+          <div class="avatar-frame"><canvas id="avatarPreview" width="200" height="200"></canvas></div>
+          <div class="avatar-btns">
+            <div class="dock-name" id="dock-name">YOUR FOUNDER</div>
+            <div class="dock-actions">
+              <label class="btn btn-sm" for="photoInput">📷 PHOTO</label>
+              <input type="file" id="photoInput" accept="image/*" hidden>
+              <button id="btn-photo-clear" class="btn btn-sm btn-ghost">✕ REMOVE</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
     <div class="profile-body">
       <div class="panel">
         <div class="panel-title">IDENTITY</div>
-        <div class="avatar-row">
-          <div class="avatar-frame"><canvas id="avatarPreview" width="200" height="200"></canvas></div>
-          <div class="avatar-btns">
-            <label class="btn btn-sm" for="photoInput">📷 UPLOAD PHOTO</label>
-            <input type="file" id="photoInput" accept="image/*" hidden>
-            <button id="btn-photo-clear" class="btn btn-sm btn-ghost">✕ REMOVE</button>
-            <div class="hint">Your photo becomes your fighter's face.</div>
-          </div>
-        </div>
         <label class="field"><span>FOUNDER NAME</span><input id="inp-name" maxlength="18" placeholder="e.g. Jordan Blaze"></label>
         <label class="field"><span>COMPANY / STARTUP</span><input id="inp-company" maxlength="22" placeholder="e.g. Blaze Robotics"></label>
       </div>
