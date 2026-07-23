@@ -1,14 +1,12 @@
 // Sign-in via Supabase Auth: Google, Microsoft (Azure) and email magic links.
 //
-// AUTH.REQUIRED gates the whole game behind sign-in. It ships OFF because the
-// OAuth providers and redirect URLs must first be enabled in the Supabase
-// dashboard (a ~5 minute, owner-only task — see README → "Enabling sign-in").
-// Until then the Sign-In screen is reachable from the title and everything
-// works the moment providers are switched on. Flip REQUIRED to true to
-// enforce the gate.
+// AUTH.REQUIRED gates the whole game behind sign-in. It is ON: the providers
+// and redirect URLs are live in the Supabase dashboard. Flip it to false only
+// to re-open guest play (see README → "Enabling sign-in").
 export const AUTH = { REQUIRED: true };
 
 import { getSupabase } from './net/online.js';
+import { DEBUG } from './config.js';
 
 let session = null;
 const listeners = new Set();
@@ -24,6 +22,16 @@ export function onAuthChange(cb) {
 
 export function currentUser() {
   return session?.user || null;
+}
+
+// Debug-only (?debug=1): fake a signed-in user so the auth-gated flows — the
+// profile gate, first-run onboarding, deferred invites — are testable without
+// completing a real OAuth round-trip. Inert unless DEBUG is on.
+export function __debugSignIn(user) {
+  if (!DEBUG) return false;
+  session = user ? { user } : null;
+  emit();
+  return true;
 }
 
 export async function initAuth() {

@@ -11,7 +11,7 @@ const DEFAULTS = () => ({
   stats: { wins: 0, losses: 0, kos: 0, streak: 0, bestStreak: 0, points: 0, matches: 0 },
   settings: { volume: 80, music: true, sfx: true },
   tutorialSeen: false,
-  lastFighter: 'ava',
+  lastRival: 'random',     // you always fight as yourself; this is who you faced
   lastDifficulty: 'founder',
 });
 
@@ -52,8 +52,8 @@ export const Save = {
     this.persist();
   },
 
-  rememberSelection(fighterId, difficulty) {
-    if (fighterId) this.data.lastFighter = fighterId;
+  rememberSelection(rivalId, difficulty) {
+    if (rivalId) this.data.lastRival = rivalId;
     if (difficulty) this.data.lastDifficulty = difficulty;
     this.persist();
   },
@@ -127,7 +127,7 @@ export function buildChallengeLink() {
     v: 1,
     n: p?.name || 'A mystery founder',
     co: p?.company || 'Stealth Startup',
-    f: p?.baseId || Save.data.lastFighter || 'b-neo',
+    f: p?.baseId || DEFAULT_BASE_ID,
     sp: p?.special || null,
     pts: Save.stats.points || 0,
     u: currentUser()?.id || undefined,   // lets the recipient fetch the real photo/colors

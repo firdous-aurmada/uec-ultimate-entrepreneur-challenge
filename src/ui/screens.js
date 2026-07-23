@@ -20,23 +20,27 @@ let A = null;   // actions provided by main.js
 
 export const sel = {
   mode: 'solo',
-  phase: 0,
-  p1: 'ava',
-  p2: null,
+  p1: 'custom',         // always you — there is no "choose your fighter" any more
+  p2: null,             // your rival: a roster fighter, 'random', or the live peer
   arena: 'random',
   difficulty: 'founder',
   ghost: null,          // { def, difficulty } for accepted challenges / rival fights
 };
 
+// You always fight as yourself, so the grid picks your RIVAL, never you.
 function tileDefs() {
   const list = FIGHTERS.map(f => ({ id: f.id, def: f, badge: f.cameo ? 'CAMEO' : null }));
-  if (Save.profile) list.push({ id: 'custom', def: buildCustomFighter(Save.profile), badge: 'YOU' });
   list.push({ id: 'random', def: null, badge: null });
   return list;
 }
 
+// The local player's fighter — always their own founder profile.
+export function playerDef() {
+  return Save.profile ? buildCustomFighter(Save.profile) : getFighter(DEFAULT_BASE_ID);
+}
+
 function resolveDef(id) {
-  if (id === 'custom') return buildCustomFighter(Save.profile);
+  if (id === 'custom') return playerDef();
   if (id === 'random') {
     const pool = FIGHTERS.map(f => f.id);
     return getFighter(pool[Math.floor(Math.random() * pool.length)]);
@@ -59,19 +63,18 @@ function drawRandomTile(canvas) {
 
 export function openSelect(mode) {
   sel.mode = mode;
-  sel.phase = 0;
-  sel.p2 = null;
+  sel.p1 = 'custom';
+  sel.p2 = mode === 'solo' ? (Save.data.lastRival || 'random') : null;
   if (!sel.ghost) sel.difficulty = Save.data.lastDifficulty || 'founder';
-  if (Save.profile && sel.p1 === 'ava' && Save.data.lastFighter) sel.p1 = Save.data.lastFighter;
   renderSelect();
   A.showScreen('scr-select');
 }
 
 function selectTitle() {
-  if (sel.mode === 'online') return '🔴 LIVE — CHOOSE YOUR FIGHTER';
-  if (sel.mode === 'versus') return sel.phase === 0 ? 'P1 — CHOOSE YOUR FIGHTER' : 'P2 — CHOOSE YOUR FIGHTER';
+  if (sel.mode === 'online') return '🔴 LIVE — PICK YOUR ARENA';
+  if (sel.mode === 'versus') return 'CHOOSE THE CHALLENGER (P2)';
   if (sel.ghost) return `FACE ${sel.ghost.def.name}!`;
-  return 'CHOOSE YOUR FIGHTER';
+  return 'CHOOSE YOUR RIVAL';
 }
 
 function renderSelect() {
@@ -82,16 +85,18 @@ function renderSelect() {
   document.querySelector('#arena-strip').parentElement.style.display =
     (sel.mode === 'online' && net?.role === 'guest') ? 'none' : '';
 
+  // The rival grid is meaningless when the opponent is already decided — a live
+  // peer or the founder who challenged you.
+  const rivalFixed = sel.mode === 'online' || !!sel.ghost;
+  const gridWrap = $('rival-row');
+  if (gridWrap) gridWrap.style.display = rivalFixed ? 'none' : '';
+
   const grid = $('fighter-grid');
   grid.innerHTML = '';
-  for (const t of tileDefs()) {
+  for (const t of rivalFixed ? [] : tileDefs()) {
     const tile = document.createElement('div');
     tile.className = 'f-tile';
-    if (t.id === sel.p1 && !(sel.mode === 'versus' && sel.phase === 1)) tile.classList.add('sel');
-    if (sel.mode === 'versus') {
-      if (t.id === sel.p1) tile.classList.add('sel');
-      if (t.id === sel.p2) tile.classList.add('sel2');
-    }
+    if (t.id === sel.p2) tile.classList.add('sel');
     const c = document.createElement('canvas');
     c.width = c.height = 280;
     if (t.def) drawPortrait(c, t.def); else drawRandomTile(c);
@@ -108,9 +113,7 @@ function renderSelect() {
     }
     tile.onclick = () => {
       audio.sfx('select');
-      if (sel.mode === 'versus' && sel.phase === 1) sel.p2 = t.id;
-      else sel.p1 = t.id;
-      if (sel.mode === 'versus' && sel.phase === 0) sel.phase = 1;
+      sel.p2 = t.id;
       renderSelect();
     };
     grid.appendChild(tile);
@@ -142,9 +145,9 @@ function renderSelect() {
     $('btn-fight').textContent = locked ? '✓ READY — WAITING FOR RIVAL…' : 'LOCK IN ➤';
     return;
   }
-  const ready = sel.mode !== 'versus' || (sel.p1 && sel.p2);
+  const ready = !!sel.ghost || !!sel.p2;
   $('btn-fight').disabled = !ready;
-  $('btn-fight').textContent = sel.mode === 'versus' && sel.phase === 1 && !sel.p2 ? 'P2 — PICK…' : 'FIGHT ➤';
+  $('btn-fight').textContent = ready ? 'FIGHT ➤' : 'PICK A RIVAL…';
 }
 
 export function refreshSelect() {
@@ -152,9 +155,12 @@ export function refreshSelect() {
 }
 
 function renderPreview() {
-  const focusId = (sel.mode === 'versus' && sel.phase === 1) ? (sel.p2 || sel.p1) : sel.p1;
-  const isRandom = focusId === 'random';
-  const def = isRandom ? null : resolveDef(focusId);
+  // Preview shows whoever you're choosing: your rival normally, the challenger
+  // when one is fixed, and yourself in live mode (where you only pick an arena).
+  let def;
+  if (sel.ghost) def = sel.ghost.def;
+  else if (sel.mode === 'online') def = playerDef();
+  else def = sel.p2 === 'random' || !sel.p2 ? null : resolveDef(sel.p2);
   const pv = $('preview-portrait');
   if (def) drawPortrait(pv, def); else drawRandomTile(pv);
   $('pv-name').textContent = def ? def.name : 'RANDOM';
@@ -171,7 +177,7 @@ function renderPreview() {
 
 function onFight() {
   audio.sfx('fight');
-  const p1Def = resolveDef(sel.p1);
+  const p1Def = playerDef();          // you are always you
   if (sel.mode === 'online') {
     A.onlinePick(p1Def, sel.arena);
     renderSelect();
@@ -179,20 +185,17 @@ function onFight() {
   }
   let p2Def, difficulty = sel.difficulty, isChallenge = false;
 
-  if (sel.mode === 'versus') {
-    p2Def = resolveDef(sel.p2);
-  } else if (sel.ghost) {
+  if (sel.ghost) {
     p2Def = sel.ghost.def;
     difficulty = sel.ghost.difficulty;
     isChallenge = !!sel.ghost.isChallenge;
     sel.ghost = null;
   } else {
-    const pool = FIGHTERS.filter(f => f.id !== (p1Def.id === 'custom' ? null : p1Def.id));
-    p2Def = pool[Math.floor(Math.random() * pool.length)];
+    p2Def = resolveDef(sel.p2 || 'random');
   }
 
   const arena = sel.arena === 'random' ? randomArena() : getArena(sel.arena);
-  Save.rememberSelection(sel.p1 === 'custom' ? 'custom' : (sel.p1 === 'random' ? null : sel.p1), sel.mode === 'solo' ? difficulty : null);
+  Save.rememberSelection(sel.p2, sel.mode === 'solo' ? difficulty : null);
   A.startMatch({ mode: sel.mode, p1Def, p2Def, arena, difficulty, isChallenge });
 }
 
@@ -481,6 +484,7 @@ function wireProfile() {
   };
   $('btn-save-profile').onclick = () => {
     if (!draft.name.trim()) { toast('Give your founder a name first!'); $('inp-name').focus(); return; }
+    const wasFirst = !Save.profile;     // they were held here by the profile gate
     Save.saveProfile({ ...draft, name: draft.name.trim(), company: draft.company.trim() });
     updateTitleChip();
     audio.sfx('victory');
@@ -490,6 +494,8 @@ function wireProfile() {
         ? '☁️ Profile synced to your account.'
         : '⚠️ Cloud sync failed — will retry on your next sign-in.'));
     }
+    // First founder: the gate was holding them here, so let them out.
+    if (wasFirst) A.onFirstProfile?.();
   };
   $('btn-invite').onclick = () => openInvite();
   $('btn-reset').onclick = () => {
@@ -713,7 +719,7 @@ export function openInvite() {
 
 // The recipient's own fighter for the right side of a challenge card.
 function myFighterDef() {
-  return Save.profile ? buildCustomFighter(Save.profile) : getFighter(DEFAULT_BASE_ID);
+  return playerDef();
 }
 function myFighterName() {
   return Save.profile ? (Save.profile.name || 'YOU').toUpperCase() : 'YOU';

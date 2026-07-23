@@ -67,6 +67,14 @@ Touch pads appear automatically on phones/tablets (or force them with `?touch=1`
 
 **Parry:** tap block at the instant a hit lands (0.12 s window) — the attacker staggers and you gain energy. Grabs beat parries; parries beat everything else.
 
+## What's new in v1.7
+
+- ⚖️ **You always fight as yourself.** "Choose your fighter" is gone — the select screen now picks your **rival**. Your own founder is the only fighter you ever control, so ranked points can only ever be earned as you.
+- 📊 **Every player has identical stats** — `1.00 speed / 1.00 power / 100 HP`. Base characters are pure cosmetics. Previously a player inherited their look's stats, which spread `0.90–1.20` power: a wardrobe choice was worth up to a 33 % damage swing on a ranked ladder. Varied stats remain, but only on AI rivals.
+- 🔐 **A founder profile is now required**, not suggested. New signups are routed straight into the builder and can't reach the arena until they've made themselves.
+- 📐 **[The math is fully documented](docs/GAME-MATH.md)** — damage formula, combo scaling, meter economy, both points ladders, and the rank table, all with worked examples.
+- 🔢 **Version is shown on the title screen** and lives in one place (`VERSION` in `src/config.js`).
+
 ## What's new in v1.6
 
 - 🖐 **Slap** — a new fastest-and-weakest basic (4 dmg, 4-frame startup) that sits below punch on the combo ladder, with its own sharp-crack sound and open-hand pose. Purely for disrespect, mechanically for starting longer strings.
@@ -127,7 +135,7 @@ The game runs on its **own dedicated Supabase project** (`uec-game`, ref `oqzxkz
 |---|---|
 | ![Unicorn Mode brawl](shots/unicorn-brawl.jpg) | ![Pitch Deck Strike volley](shots/pitch-deck.jpg) |
 
-Everyone shares 🦄 **Unicorn Mode** at full meter. Fighters have distinct speed/power/HP stats and AI personalities (aggression, jumpiness, preferred range) across three difficulties: **Rookie / Contender / Champion**.
+Everyone shares 🦄 **Unicorn Mode** at full meter. These roster fighters are **AI rivals only** — you always fight as your own founder. They have distinct speed/power/HP stats and AI personalities (aggression, jumpiness, preferred range) across three difficulties: **Rookie / Contender / Champion**. Human players all share one identical stat line; see **[docs/GAME-MATH.md](docs/GAME-MATH.md)**.
 
 **Arenas (6, all animated):** The Boardroom · Demo Day · The Startup Garage · The Stock Exchange · The Unicorn Club · The VC Summit — with live tickers, sweeping spotlights, bouncing crowds, disco floors, and data-driven billboard slots (see *Sponsorships* below).
 

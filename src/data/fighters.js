@@ -1,5 +1,10 @@
 // The default roster — original, fictional founders only.
 // Each fighter: identity, palette, body styling, stats, and a signature special.
+//
+// Roster stats vary on purpose, but ONLY ever as AI opponents. Human players
+// always get PLAYER_STATS, so nobody gains an edge from a cosmetic pick.
+
+import { PLAYER_STATS } from '../config.js';
 
 export const SPECIALS = {
   pitchdeck: {
@@ -236,6 +241,8 @@ export function buildCustomFighter(profile) {
     tagline: 'Player-founded. Player-funded.',
     special: profile.special || base.special,
     photo: profile.photo || null,
+    stats: { ...PLAYER_STATS },   // look is cosmetic; every player hits the same
+
     // skin/hair come from the uploaded photo when available, so hands + head
     // coloring match the person instead of the generic base founder
     c: {
@@ -262,6 +269,8 @@ export function buildGhostFighter(ch) {
     title: 'CHALLENGER',
     special: ch.sp && SPECIALS[ch.sp] ? ch.sp : base.special,
     photo: ch.photo || null,
+    stats: { ...PLAYER_STATS },   // a ghost is another human — same footing
+
     c: {
       ...base.c,
       skin: ch.skin || base.c.skin,

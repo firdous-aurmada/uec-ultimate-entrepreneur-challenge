@@ -1,6 +1,6 @@
 // Boot, screen router, match lifecycle, render loop, menu background.
 
-import { STAGE, DEBUG, rankFor } from './config.js';
+import { STAGE, DEBUG, VERSION, rankFor } from './config.js';
 import { Save, parseChallengeFromURL, buildChallengeLink } from './state.js';
 import { FIGHTERS, DEFAULT_BASE_ID, getFighter, buildCustomFighter, buildGhostFighter } from './data/fighters.js';
 import { randomArena, getArena } from './data/arenas.js';
@@ -14,10 +14,10 @@ import { hud } from './ui/hud.js';
 import {
   initScreens, openSelect, sel, toast, updateTitleChip, showIncomingChallenge,
   showShareCard, openInvite, openModal, closeModals, renderProfile, renderLeaderboard,
-  showIncomingLive, setLiveStatus, refreshSelect, confirmDialog,
+  showIncomingLive, setLiveStatus, refreshSelect, confirmDialog, playerDef,
 } from './ui/screens.js';
 import { shouldShowTutorial, showTutorial } from './ui/tutorial.js';
-import { AUTH, initAuth, onAuthChange, signInGoogle, signInMicrosoft, signInEmail, signOut, currentUser, userHandle } from './auth.js';
+import { AUTH, initAuth, onAuthChange, signInGoogle, signInMicrosoft, signInEmail, signOut, currentUser, userHandle, __debugSignIn } from './auth.js';
 import { syncProfileUp, reportOnlineMatch, fetchProfile } from './net/cloud.js';
 import {
   NetSession, MaskController, makeRoomId, padToMask,
@@ -100,9 +100,18 @@ function identity() {
 
 // ---------------------------------------------------------------- router
 
+// Screens a signed-in player may visit before they've built their founder.
+const PRE_PROFILE_OK = new Set(['scr-auth', 'scr-profile', 'scr-help', 'scr-about']);
+
 function showScreen(id) {
   // hard sign-in gate (only once providers are configured — see src/auth.js)
   if (AUTH.REQUIRED && !currentUser() && id !== 'scr-auth') id = 'scr-auth';
+  // profile gate: you fight AS YOURSELF, so a founder profile isn't optional.
+  // Anything else would put an unnamed, faceless player on the global ladder.
+  else if (AUTH.REQUIRED && currentUser() && !Save.profile && !PRE_PROFILE_OK.has(id)) {
+    id = 'scr-profile';
+    renderProfile();
+  }
   document.querySelectorAll('.screen').forEach(s => s.classList.toggle('active', s.id === id));
   input.enabled = id === 'scr-fight';
   if (id !== 'scr-fight') {
@@ -250,10 +259,8 @@ function renderResults() {
 }
 
 function quickFight() {
-  const p = Save.profile;
-  const p1Def = p ? buildCustomFighter(p)
-    : getFighter(Save.data.lastFighter && Save.data.lastFighter !== 'custom' ? Save.data.lastFighter : 'ava');
-  const pool = FIGHTERS.filter(f => f.id !== (p1Def.id === 'custom' ? p1Def.baseId : p1Def.id));
+  const p1Def = playerDef();                    // always you
+  const pool = FIGHTERS.filter(f => f.id !== p1Def.baseId);
   const p2Def = pool[Math.floor(Math.random() * pool.length)];
   const difficulty = Save.data.tutorialSeen ? (Save.data.lastDifficulty || 'founder') : 'intern';
   startMatch({ mode: 'solo', p1Def, p2Def, arena: randomArena(), difficulty, isChallenge: false });
@@ -835,7 +842,15 @@ function boot() {
     onlinePick,
     netInfo: () => (net ? { role: net.role, pickLocked: netPickLocked } : null),
     onModalClosed: () => { /* settings/invite closed — nothing to resume */ },
+    // Their first founder just went in — release them from the profile gate and
+    // deliver any invite that arrived while they were still building.
+    onFirstProfile: () => {
+      showScreen('scr-title');
+      maybeShowPendingInvite();
+    },
   });
+
+  $('app-version').textContent = VERSION;   // single source of truth: config.js
 
   // block pinch + double-tap zoom (game chrome, not form fields)
   document.addEventListener('gesturestart', (e) => e.preventDefault());
@@ -899,14 +914,16 @@ function boot() {
     if (session && document.getElementById('scr-auth').classList.contains('active')) showScreen('scr-title');
     if (session) {
       syncProfileUp();              // local profile follows the account up to the cloud
-      if (pendingChallenge || pendingLive) {
-        maybeShowPendingInvite();
-      } else if (!Save.profile && !firstTimeShown) {
-        // first-time flow: signed in but no founder yet → create one, then fight
-        firstTimeShown = true;
-        renderProfile();
+      if (!Save.profile) {
+        // First time in: the profile gate in showScreen() already routes them to
+        // the builder — this just explains why they're staring at it.
         showScreen('scr-profile');
-        toast('👋 Welcome, founder! Set up your fighter, then hit the arena.');
+        if (!firstTimeShown) {
+          firstTimeShown = true;
+          toast('👋 Welcome, founder! Build your fighter — you fight as yourself.');
+        }
+      } else if (pendingChallenge || pendingLive) {
+        maybeShowPendingInvite();
       }
     }
   });
@@ -953,6 +970,9 @@ function boot() {
       setEnergy(i, v) { currentGame.fighters[i].energy = v; },
       setTimer(v) { currentGame.timer = v; },
       skipSplash() { clearTimeout(splashTimer); $('vsSplash').onclick?.(); },
+      // simulate sign-in/out so the auth-gated flows are testable without OAuth
+      signInAs(user = { id: 'test-uid', email: 'test@example.com' }) { return __debugSignIn(user); },
+      signOutTest() { return __debugSignIn(null); },
       get net() { return net; },
       get netPhase() { return netPhase; },
       // pump the lockstep driver manually (rAF is throttled in headless tests)

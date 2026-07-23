@@ -66,7 +66,7 @@
           <div class="chip-rank" id="chipRank"></div>
         </div>
       </div>
-      <div class="title-footer">v1.4 · parody founders · all in good fun</div>
+      <div class="title-footer"><span id="app-version">v1.7</span> · parody founders · all in good fun</div>
     </div>
   </section>
 
@@ -97,12 +97,14 @@
   <section id="scr-select" class="screen">
     <header class="scr-head">
       <button class="btn btn-back" data-back>← BACK</button>
-      <h1 id="select-title" class="scr-title">CHOOSE YOUR FIGHTER</h1>
+      <h1 id="select-title" class="scr-title">CHOOSE YOUR RIVAL</h1>
       <div class="head-spacer"></div>
     </header>
     <div class="select-body">
       <div class="select-left">
-        <div id="fighter-grid" class="fighter-grid"></div>
+        <div id="rival-row">
+          <div id="fighter-grid" class="fighter-grid"></div>
+        </div>
         <div class="pick-row">
           <div class="pick-label">ARENA</div>
           <div id="arena-strip" class="arena-strip"></div>
@@ -216,7 +218,7 @@
       <div id="result-points" class="result-points hidden"></div>
       <div class="btn-row result-btns">
         <button id="btn-rematch" class="btn btn-primary">🔁 REMATCH</button>
-        <button id="btn-changefighter" class="btn">🎭 CHANGE FIGHTER</button>
+        <button id="btn-changefighter" class="btn">🎭 CHANGE RIVAL</button>
       </div>
       <div class="share-strip">
         <span class="share-label">📣 FLEX IT →</span>
@@ -380,11 +382,17 @@
       </div>
       <div class="panel">
         <div class="panel-title">🔴 PLAY WITH FRIENDS</div>
-        <p><b>Live match:</b> Challenges → <b>Create Live Room</b> → send the link. You'll be pinged the second your rival joins, you each pick a fighter (host picks the arena), and you fight in real time — rematches fire when <b>both</b> players accept. <b>Async call-out:</b> share your challenge link any time and friends battle your fighter's <b>AI ghost</b> whenever they open it. Every share button on the results screen doubles as a call-out — brag responsibly.</p>
+        <p><b>Live match:</b> Challenges → <b>Create Live Room</b> → send the link. You'll be pinged the second your rival joins, you each lock in (the host picks the arena), and the two of you fight as yourselves in real time — rematches fire when <b>both</b> players accept. <b>Async call-out:</b> share your challenge link any time and friends battle your fighter's <b>AI ghost</b> whenever they open it. Every share button on the results screen doubles as a call-out — brag responsibly.</p>
       </div>
       <div class="panel">
-        <div class="panel-title">🏆 RANKED POINTS</div>
-        <p>Solo AI fights, call-outs and live matches are ranked: <b>win</b> +20 × difficulty (Rookie ×1 · Contender ×1.5 · Champion ×2.5 · Call-outs &amp; Live ×2) plus +5 per KO round and a streak bonus. A loss still earns +3 for showing up — very lean-startup of you.</p>
+        <div class="panel-title">⚖️ EVERYONE FIGHTS AS THEMSELVES</div>
+        <p>There's no character select — <b>you always fight as your own founder</b>, and you choose your <b>rival</b> instead. Every player has <b>identical stats: 1.00 speed, 1.00 power, 100 HP</b>. Your base character, colours and photo are <b>pure cosmetics</b> — they change how you look, never how hard you hit.</p>
+        <p>Stats also <b>never grow with rank</b>. A DECACORN and a first-day GARAGE DREAMER bring exactly the same tools. Climbing the ladder buys you reputation, not power. <b>Only the AI rivals</b> have varied speed/power/HP — that's what makes each of them feel different to fight.</p>
+      </div>
+      <div class="panel">
+        <div class="panel-title">🏆 RANKED POINTS — TWO LADDERS</div>
+        <p><b>Local (vs AI):</b> <b>win</b> = 20 × difficulty (Rookie ×1 · Contender ×1.5 · Champion ×2.5 · call-outs ×2) + 5 per KO round + a streak bonus capped at 15. A loss still earns +3 for showing up — very lean-startup of you. These points live on your device.</p>
+        <p><b>Global (🔴 LIVE only):</b> a real win over a real human is a flat <b>+40</b>, +5 per KO round, + the same streak bonus; the loser gets +3. Beating the AI never moves the global board, and points only count once <b>both</b> players report the same result — so the ladder can't be faked.</p>
       </div>
     </div>
   </section>

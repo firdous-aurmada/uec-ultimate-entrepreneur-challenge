@@ -1,5 +1,14 @@
 // Central tuning for the whole game. All gameplay numbers live here.
 
+// Bump this on every release — it's rendered on the title screen.
+export const VERSION = 'v1.7';
+
+// Every player fights on identical footing. Your base character is pure
+// cosmetics: it decides how you LOOK, never how hard you hit. Ranked points
+// have to measure the player, not which silhouette they happened to click.
+// (The roster keeps varied stats — but only ever as AI opponents.)
+export const PLAYER_STATS = { speed: 1.0, power: 1.0, hp: 100 };
+
 export const STAGE = {
   W: 960,
   H: 540,
