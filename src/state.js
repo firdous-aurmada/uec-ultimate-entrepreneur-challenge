@@ -3,6 +3,7 @@
 
 import { SAVE_KEY, POINTS, AI_LEVELS, rankFor } from './config.js';
 import { SEED_PLAYERS } from './data/seed.js';
+import { DEFAULT_BASE_ID } from './data/fighters.js';
 import { currentUser } from './auth.js';
 
 const DEFAULTS = () => ({
@@ -96,7 +97,7 @@ export const Save = {
       const s = this.data.stats;
       rows.push({
         id: 'you',
-        fighter: this.data.profile.baseId || 'ava',
+        fighter: this.data.profile.baseId || DEFAULT_BASE_ID,
         name: (this.data.profile.name || 'YOU').toUpperCase(),
         company: (this.data.profile.company || 'STEALTH STARTUP').toUpperCase(),
         photo: this.data.profile.photo || null,

@@ -10,6 +10,7 @@
 import { getSupabase } from './online.js';
 import { currentUser } from '../auth.js';
 import { Save } from '../state.js';
+import { DEFAULT_BASE_ID } from '../data/fighters.js';
 
 // Push the local profile's identity (never stats) up to the cloud.
 export async function syncProfileUp() {
@@ -24,7 +25,7 @@ export async function syncProfileUp() {
       id: user.id,
       handle,
       company: (p.company || '').trim().slice(0, 22) || null,
-      base_id: p.baseId || 'jobz',
+      base_id: p.baseId || DEFAULT_BASE_ID,
       c1: /^#[0-9a-fA-F]{6}$/.test(p.c1 || '') ? p.c1 : null,
       c2: /^#[0-9a-fA-F]{6}$/.test(p.c2 || '') ? p.c2 : null,
       special: p.special || null,

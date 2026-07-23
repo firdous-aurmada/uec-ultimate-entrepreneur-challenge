@@ -1,4 +1,4 @@
-// First-fight onboarding: three quick cards, then straight into the action.
+// First-fight onboarding: five quick cards, then straight into the action.
 
 import { Save } from '../state.js';
 import { audio } from '../engine/audio.js';
@@ -14,10 +14,22 @@ const SLIDES = [
   },
   {
     emoji: '👊',
-    title: 'STRIKE & CHAIN',
+    title: 'THREE STRIKES',
     body: () => isTouchDevice()
-      ? '<b>👊 Punch</b> is fast, <b>🦶 Kick</b> hits harder — and when a hit <b>connects</b>, chain it: <b>punch ×3 → kick → special</b>. Hold <b>🛡</b> to block; throws can\'t be blocked!'
-      : '<b>J</b> = quick punch, <b>K</b> = heavy kick — and when a hit <b>connects</b>, chain it: <b>punch ×3 → kick → special</b>. Hold <b>↓</b> (or S) to block; throws can\'t be blocked — jump away!',
+      ? 'Three basic attacks, weakest to strongest: <b>🖐 Slap</b> (fastest), <b>👊 Punch</b>, <b>🦶 Kick</b> (hardest). Slap starts a combo, kick ends one.'
+      : 'Three basic attacks, weakest to strongest: <b>H</b> = <b>🖐 Slap</b> (fastest), <b>J</b> = <b>👊 Punch</b>, <b>K</b> = <b>🦶 Kick</b> (hardest). Slap starts a combo, kick ends one.',
+  },
+  {
+    emoji: '🔗',
+    title: 'CHAIN THEM UP',
+    body: () => 'One rule: when an attack <b>lands</b>, you can cancel it into the <b>same move or a stronger one</b> — never a weaker one. So <b>🖐🖐 → 👊👊👊 → 🦶🦶 → ⚡</b> all flows, but kick can\'t go back to punch. Just climb the ladder and finish with your special.',
+  },
+  {
+    emoji: '🛡',
+    title: 'BLOCK, PARRY, PUNISH',
+    body: () => isTouchDevice()
+      ? 'Hold <b>🛡</b> to block. <b>Tap it the instant their hit lands</b> and you <b>PARRY</b> — they stagger, you gain energy, and the counter is free. Throws beat blocks, so jump away from those.'
+      : 'Hold <b>↓</b> (or S) to block. <b>Tap it the instant their hit lands</b> and you <b>PARRY</b> — they stagger, you gain energy, and the counter is free. Throws beat blocks, so jump away from those.',
   },
   {
     emoji: '⚡',

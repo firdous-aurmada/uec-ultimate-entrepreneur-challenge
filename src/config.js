@@ -81,9 +81,8 @@ export const BLOCK = {
 };
 
 // Chain combos: attacks cancel into the next tier ON HIT (whiffs stay punishable).
-// punch ×3 → kick → special / bomb / Unicorn. Later hits deal scaled damage.
+// slap → punch → kick → special / C&D / Unicorn. Later hits deal scaled damage.
 export const COMBO = {
-  MAX_JABS: 3,                          // punches per string
   SCALING: [1, 0.85, 0.7, 0.6, 0.5, 0.45, 0.4],  // damage mult by victim's chain depth
   JAB_CHAIN_KB: 0.55,                  // chained light hits shove less, so strings stay in range
   MILESTONES: { 3: 'COMBO!', 5: 'SYNERGY!', 7: 'DISRUPTED!', 10: 'ACQUIRED!' },

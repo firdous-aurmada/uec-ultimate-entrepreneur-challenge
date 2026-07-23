@@ -50,18 +50,36 @@ Win **2 of 3 rounds** (60 s each): empty your rival's health bar or lead when th
 |---|---|---|---|---|
 | Move | ← → or A D | A D | ← → | ◀ ▶ |
 | Jump | ↑ or W | W | ↑ | ▲ |
-| Block (hold) | ↓ or S | S | ↓ | 🛡 |
+| Block / parry | ↓ or S | S | ↓ | 🛡 |
+| Slap | H or X | X | H | 🖐 |
 | Punch | J or C | C | J | 👊 |
 | Kick | K or V | V | K | 🦶 |
 | Special | L or B | B | L | ⚡ |
+| Cease & Desist | I or F | F | I | ⚖️ |
+| Acqui-Hire (steal) | M or T | T | M | 💸 |
+| Dash | O or R | R | O | 💨 |
 | Unicorn Mode | U or G | G | U | 🦄 |
 | Pause | Esc / P | | | ⏸ |
 
 Touch pads appear automatically on phones/tablets (or force them with `?touch=1`).
 
+**Combos — one rule.** When an attack **lands**, cancel it into the *same move or a stronger one* — never a weaker one. The ladder is 🖐 slap → 👊 punch → 🦶 kick → ⚡ finisher, with caps of 2 slaps / 3 punches / 2 kicks per string, so `🖐🖐 → 👊👊👊 → 🦶🦶 → ⚡` is a legal 8-hit route. Kick can't drop back to punch. Later hits deal scaled damage, and 3 / 5 / 7 / 10 hits pop **COMBO! / SYNERGY! / DISRUPTED! / ACQUIRED!**
+
+**Parry:** tap block at the instant a hit lands (0.12 s window) — the attacker staggers and you gain energy. Grabs beat parries; parries beat everything else.
+
+## What's new in v1.6
+
+- 🖐 **Slap** — a new fastest-and-weakest basic (4 dmg, 4-frame startup) that sits below punch on the combo ladder, with its own sharp-crack sound and open-hand pose. Purely for disrespect, mechanically for starting longer strings.
+- 🔗 **Magic-series combos** — chains are now rank-based (slap → punch → kick): cancel into the same move up to its cap or anything stronger, never weaker. Routes run to 8+ hits.
+- 📜 **The story** — an **About** screen laying out the lore: venture capital ran dry, so founders settle it in the ring and the winner takes whatever is left.
+- 🧍 **16 base characters** — generic build-your-founder silhouettes for custom profiles (the parody roster stays as opponents), with no name labels on the picker.
+- 🖼 **VS challenge cards** — an incoming challenge now shows both founders' real photos facing off with a **VS** in the middle.
+- 🎚 **Difficulty renamed** to **Rookie / Contender / Champion**, and Steve Jobz became **Steve Nojobs**.
+- 📧 **Private email capture** — signed-up emails land in a `user_emails` table that only the owner can read, deliberately kept out of the world-readable `profiles` table.
+
 ## What's new in v1.4
 
-- 🕶 **Famous-founder roster** — the whole cast is now parody legends: **Lizbeth Holmez** (Theramos), **Adam Weumann** (WeWerk), **Steve Jobz** (Pear), **Kim Koindashian** (SkimzCoin), **Cathie Woodz** (ARKK Capital), **Carl Icahnt** (Icahnt Holdings) + the cameo tier (Elo Ma, Jeff Bozo, Scam Alt). 100% satire, 0% affiliation.
+- 🕶 **Famous-founder roster** — the whole cast is now parody legends: **Lizbeth Holmez** (Theramos), **Adam Weumann** (WeWerk), **Steve Nojobs** (Pear), **Kim Koindashian** (SkimzCoin), **Cathie Woodz** (ARKK Capital), **Carl Icahnt** (Icahnt Holdings) + the cameo tier (Elo Ma, Jeff Bozo, Scam Alt). 100% satire, 0% affiliation.
 - 🥊 **Combat feel pass** — punches/kicks are meaningfully faster (5-frame punch startup), with anticipation wind-ups, harder overshoot, motion-smear arcs and heavier hitstop. Mashing feels *good* now.
 - ⚖️ **Cease & Desist** replaces the bomb: hurl legal paperwork in an arc (25 energy). You've been served.
 - 💸 **Acqui-Hire** — new universal steal: raid their team at close range and siphon 15 energy into your meter (free, 3.5 s cooldown, blockable/parryable). Chains out of punches for maximum disrespect.
@@ -100,7 +118,7 @@ The game runs on its **own dedicated Supabase project** (`uec-game`, ref `oqzxkz
 |---|---|---|
 | **Lizbeth Holmez** · The Visionary | Theramos | 🔄 **Pivot Punch** — vanishes mid-claim, reappears fist-first |
 | **Adam Weumann** · The Burner | WeWerk | 🔥 **Burn Rate Blast** — point-blank $47B inferno |
-| **Steve Jobz** · The Keynote | Pear | 📊 **Pitch Deck Strike** — one more thing: 3 razor slides |
+| **Steve Nojobs** · The Keynote | Pear | 📊 **Pitch Deck Strike** — one more thing: 3 razor slides |
 | **Kim Koindashian** · The Influencer | SkimzCoin | 📈 **Growth Hack** — viral rush that locks in a 4-hit flurry |
 | **Cathie Woodz** · The Believer | ARKK Capital | 💰 **Funding Round** — buys every dip, rains gold |
 | **Carl Icahnt** · The Raider | Icahnt Holdings | 🦈 **Hostile Takeover** — unblockable command grab |
@@ -109,7 +127,7 @@ The game runs on its **own dedicated Supabase project** (`uec-game`, ref `oqzxkz
 |---|---|
 | ![Unicorn Mode brawl](shots/unicorn-brawl.jpg) | ![Pitch Deck Strike volley](shots/pitch-deck.jpg) |
 
-Everyone shares 🦄 **Unicorn Mode** at full meter. Fighters have distinct speed/power/HP stats and AI personalities (aggression, jumpiness, preferred range) across three difficulties: **Intern / Founder / Mogul**.
+Everyone shares 🦄 **Unicorn Mode** at full meter. Fighters have distinct speed/power/HP stats and AI personalities (aggression, jumpiness, preferred range) across three difficulties: **Rookie / Contender / Champion**.
 
 **Arenas (6, all animated):** The Boardroom · Demo Day · The Startup Garage · The Stock Exchange · The Unicorn Club · The VC Summit — with live tickers, sweeping spotlights, bouncing crowds, disco floors, and data-driven billboard slots (see *Sponsorships* below).
 

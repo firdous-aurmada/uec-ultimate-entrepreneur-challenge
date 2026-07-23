@@ -2,7 +2,7 @@
 
 import { STAGE, DEBUG, rankFor } from './config.js';
 import { Save, parseChallengeFromURL, buildChallengeLink } from './state.js';
-import { FIGHTERS, getFighter, buildCustomFighter, buildGhostFighter } from './data/fighters.js';
+import { FIGHTERS, DEFAULT_BASE_ID, getFighter, buildCustomFighter, buildGhostFighter } from './data/fighters.js';
 import { randomArena, getArena } from './data/arenas.js';
 import { audio, installAudioUnlock } from './engine/audio.js';
 import { input, HumanController, isTouchDevice } from './engine/input.js';
@@ -371,7 +371,7 @@ function defToSpec(def) {
     const p = Save.profile;
     return {
       kind: 'custom', name: p.name, company: p.company || 'Stealth Startup',
-      baseId: p.baseId || 'ava', c1: p.c1, c2: p.c2, special: p.special, photo: p.photo || null,
+      baseId: p.baseId || DEFAULT_BASE_ID, c1: p.c1, c2: p.c2, special: p.special, photo: p.photo || null,
     };
   }
   return { kind: 'roster', id: def.id };

@@ -571,7 +571,13 @@ async function renderGlobalBoard() {
   const myId = currentUser()?.id;
   rows.forEach((r, i) => {
     const base = getFighter(r.base_id);
-    const def = { ...base, c: { ...base.c, suit: r.c1 || base.c.suit, accent: r.c2 || base.c.accent } };
+    // skin/hair come from the rival's photo-derived palette, so their board
+    // avatar matches the person, not the stock base character.
+    const def = { ...base, c: {
+      ...base.c,
+      suit: r.c1 || base.c.suit, accent: r.c2 || base.c.accent,
+      skin: r.skin || base.c.skin, hair: r.hair || base.c.hair,
+    } };
     list.appendChild(lbRow(i, def, {
       name: r.handle, company: r.company || 'Stealth Startup', points: r.points,
       wins: r.wins, losses: r.losses, kos: r.kos, streak: r.streak,
