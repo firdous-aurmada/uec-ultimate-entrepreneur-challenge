@@ -2,7 +2,7 @@
 
 import { STAGE, DEBUG, VERSION, rankFor } from './config.js';
 import { Save, parseChallengeFromURL, buildChallengeLink } from './state.js';
-import { FIGHTERS, DEFAULT_BASE_ID, getFighter, buildCustomFighter, buildGhostFighter } from './data/fighters.js';
+import { FIGHTERS, DEFAULT_BASE_ID, pickLook, getFighter, buildCustomFighter, buildGhostFighter } from './data/fighters.js';
 import { randomArena, getArena } from './data/arenas.js';
 import { audio, installAudioUnlock } from './engine/audio.js';
 import { input, HumanController, isTouchDevice } from './engine/input.js';
@@ -78,6 +78,7 @@ async function presentChallenge(ch) {
         pts: prof.points ?? ch.pts,
         photo: prof.photo || null, skin: prof.skin || null, hair: prof.hair || null,
         c1: prof.c1 || null, c2: prof.c2 || null,
+        ...(prof.look || {}),          // their hair / headwear / outfit choices
       };
     }
   }
@@ -379,6 +380,8 @@ function defToSpec(def) {
     return {
       kind: 'custom', name: p.name, company: p.company || 'Stealth Startup',
       baseId: p.baseId || DEFAULT_BASE_ID, c1: p.c1, c2: p.c2, special: p.special, photo: p.photo || null,
+      // skin/hair/look too, or your rival fights a differently-coloured you
+      skin: p.skin || null, hair: p.hair || null, ...pickLook(p),
     };
   }
   return { kind: 'roster', id: def.id };
@@ -389,6 +392,7 @@ function specToDef(spec) {
     return buildCustomFighter({
       name: spec.name, company: spec.company, baseId: spec.baseId,
       c1: spec.c1, c2: spec.c2, special: spec.special, photo: spec.photo || null,
+      skin: spec.skin || null, hair: spec.hair || null, ...pickLook(spec),
     });
   }
   return getFighter(spec.id);

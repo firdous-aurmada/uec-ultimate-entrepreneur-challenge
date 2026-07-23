@@ -294,6 +294,30 @@ function drawHair(ctx, cx, cy, r, def, t) {
     for (const [ox, oy, s] of [[-0.62, -0.62, 0.46], [-0.2, -0.86, 0.5], [0.28, -0.84, 0.48], [0.66, -0.58, 0.42], [0, -0.62, 0.55]]) {
       blob(ctx, () => { ctx.arc(cx + r * ox, cy + r * oy, r * s, 0, 7); }, c.hair);
     }
+  } else if (style === 'afro') {
+    // big round halo well clear of the brow
+    blob(ctx, () => { ctx.arc(cx, cy - r * 0.42, r * 1.32, 0, 7); }, c.hair);
+  } else if (style === 'long') {
+    // crown plus two lengths falling past the jaw
+    blob(ctx, () => { ctx.arc(cx, cy - r * 0.26, r * 1.04, Math.PI * 0.94, Math.PI * 2.06); }, c.hair);
+    for (const sgn of [-1, 1]) {
+      blob(ctx, () => {
+        ctx.moveTo(cx + sgn * r * 0.74, cy - r * 0.66);
+        ctx.quadraticCurveTo(cx + sgn * r * 1.3, cy + r * 0.3, cx + sgn * r * 1.02, cy + r * 1.32);
+        ctx.lineTo(cx + sgn * r * 0.68, cy + r * 1.22);
+        ctx.quadraticCurveTo(cx + sgn * r * 0.94, cy + r * 0.25, cx + sgn * r * 0.6, cy - r * 0.5);
+        ctx.closePath();
+      }, c.hair);
+    }
+  } else if (style === 'buzz') {
+    // very close crop — a thin shadow following the skull
+    blob(ctx, () => {
+      ctx.arc(cx, cy - r * 0.1, r * 0.96, Math.PI * 1.06, Math.PI * 1.94);
+      ctx.closePath();
+    }, c.hair);
+  } else if (style === 'topknot') {
+    blob(ctx, () => { ctx.arc(cx, cy - r * 0.24, r * 1.0, Math.PI * 0.98, Math.PI * 2.02); }, c.hair);
+    blob(ctx, () => { ctx.arc(cx + r * 0.05, cy - r * 1.16, r * 0.34, 0, 7); }, c.hair);
   } else if (style === 'bald') {
     // proudly bald: just a shine
     ctx.strokeStyle = 'rgba(255,255,255,0.5)';
@@ -301,6 +325,105 @@ function drawHair(ctx, cx, cy, r, def, t) {
     ctx.beginPath();
     ctx.arc(cx - r * 0.25, cy - r * 0.45, r * 0.42, Math.PI * 1.15, Math.PI * 1.6);
     ctx.stroke();
+  }
+}
+
+// Headwear sits ABOVE everything — including an uploaded photo — because a hat
+// on a real face has to read as a hat, not get clipped away by the face circle.
+function drawHeadwear(ctx, cx, cy, r, def) {
+  const c = def.c;
+  const h = def.headwear;
+  if (!h || h === 'none') return;
+  // Eyes sit at ~cy on a drawn face and on an auto-framed photo crop alike, so
+  // every piece here stays above the brow line (~cy - r*0.4). Hats that ride
+  // down over the eyes was the single worst thing about the old avatars.
+  const BROW = cy - r * 0.42;
+  if (h === 'headband') {
+    ctx.strokeStyle = c.accent; ctx.lineWidth = r * 0.22;
+    ctx.beginPath(); ctx.arc(cx, cy, r + 0.5, Math.PI * 1.16, Math.PI * 1.84); ctx.stroke();
+    ctx.strokeStyle = OUTLINE; ctx.lineWidth = 1.6;
+    ctx.beginPath(); ctx.arc(cx, cy + r * 0.11, r + 0.5, Math.PI * 1.18, Math.PI * 1.82); ctx.stroke();
+  } else if (h === 'cap') {
+    blob(ctx, () => {                                   // crown
+      ctx.moveTo(cx - r * 1.02, BROW);
+      ctx.quadraticCurveTo(cx - r * 1.0, cy - r * 1.5, cx, cy - r * 1.48);
+      ctx.quadraticCurveTo(cx + r * 1.0, cy - r * 1.5, cx + r * 1.02, BROW);
+      ctx.closePath();
+    }, c.suit2);
+    blob(ctx, () => {                                   // brim, forward and clear of the eyes
+      ctx.moveTo(cx + r * 0.1, BROW - r * 0.06);
+      ctx.quadraticCurveTo(cx + r * 1.5, BROW - r * 0.2, cx + r * 1.62, BROW + r * 0.1);
+      ctx.quadraticCurveTo(cx + r * 1.2, BROW + r * 0.24, cx + r * 0.1, BROW + r * 0.16);
+      ctx.closePath();
+    }, shade(c.suit2, -16));
+    ctx.fillStyle = c.accent;
+    ctx.beginPath(); ctx.arc(cx, cy - r * 1.06, r * 0.16, 0, 7); ctx.fill();
+  } else if (h === 'beanie') {
+    blob(ctx, () => {
+      ctx.moveTo(cx - r * 1.04, BROW);
+      ctx.quadraticCurveTo(cx - r * 1.02, cy - r * 1.56, cx, cy - r * 1.54);
+      ctx.quadraticCurveTo(cx + r * 1.02, cy - r * 1.56, cx + r * 1.04, BROW);
+      ctx.closePath();
+    }, c.suit);
+    blob(ctx, () => {                                   // folded cuff, above the brow
+      ctx.roundRect(cx - r * 1.08, BROW - r * 0.26, r * 2.16, r * 0.3, r * 0.1);
+    }, c.accent);
+    blob(ctx, () => { ctx.arc(cx, cy - r * 1.62, r * 0.19, 0, 7); }, c.accent);   // bobble
+  } else if (h === 'bandana') {
+    blob(ctx, () => {
+      ctx.moveTo(cx - r * 1.02, BROW - r * 0.02);
+      ctx.quadraticCurveTo(cx, cy - r * 1.44, cx + r * 1.02, BROW - r * 0.02);
+      ctx.quadraticCurveTo(cx, BROW - r * 0.3, cx - r * 1.02, BROW - r * 0.02);
+      ctx.closePath();
+    }, c.accent);
+    blob(ctx, () => {                                   // knot tail, swept back
+      ctx.moveTo(cx - r * 0.96, BROW - r * 0.1);
+      ctx.lineTo(cx - r * 1.52, BROW + r * 0.02);
+      ctx.lineTo(cx - r * 1.38, BROW + r * 0.3);
+      ctx.lineTo(cx - r * 0.9, BROW + r * 0.12);
+      ctx.closePath();
+    }, shade(c.accent, -18));
+  }
+}
+
+// Glasses/shades/visor. Skipped over an uploaded photo — the real face already
+// has whatever the person actually wears, and drawn lenses never line up.
+function drawEyewear(ctx, cx, cy, r, def) {
+  const e = def.eyewear || (['visor', 'glasses', 'shades'].includes(def.accessory) ? def.accessory : 'none');
+  if (!e || e === 'none') return;
+  drawAccessory(ctx, cx, cy, r, { ...def, accessory: e });
+}
+
+function drawFacialHair(ctx, cx, cy, r, def) {
+  const c = def.c;
+  const fh = def.facialHair || (def.accessory === 'stubble' ? 'stubble' : 'none');
+  if (!fh || fh === 'none') return;
+  if (fh === 'stubble') {
+    ctx.fillStyle = 'rgba(30,30,40,0.25)';
+    ctx.beginPath(); ctx.arc(cx, cy + r * 0.5, r * 0.55, 0, Math.PI); ctx.fill();
+  } else if (fh === 'moustache') {
+    blob(ctx, () => {
+      ctx.moveTo(cx - r * 0.34, cy + r * 0.26);
+      ctx.quadraticCurveTo(cx, cy + r * 0.1, cx + r * 0.38, cy + r * 0.26);
+      ctx.quadraticCurveTo(cx, cy + r * 0.44, cx - r * 0.34, cy + r * 0.26);
+      ctx.closePath();
+    }, c.hair);
+  } else if (fh === 'beard') {
+    blob(ctx, () => {
+      ctx.moveTo(cx - r * 0.86, cy + r * 0.02);
+      ctx.quadraticCurveTo(cx - r * 0.7, cy + r * 1.16, cx + r * 0.06, cy + r * 1.18);
+      ctx.quadraticCurveTo(cx + r * 0.78, cy + r * 1.12, cx + r * 0.9, cy + r * 0.02);
+      ctx.quadraticCurveTo(cx + r * 0.5, cy + r * 0.52, cx + r * 0.02, cy + r * 0.5);
+      ctx.quadraticCurveTo(cx - r * 0.5, cy + r * 0.5, cx - r * 0.86, cy + r * 0.02);
+      ctx.closePath();
+    }, c.hair);
+  } else if (fh === 'goatee') {
+    blob(ctx, () => {
+      ctx.moveTo(cx - r * 0.3, cy + r * 0.46);
+      ctx.quadraticCurveTo(cx + r * 0.04, cy + r * 1.06, cx + r * 0.34, cy + r * 0.46);
+      ctx.quadraticCurveTo(cx + r * 0.04, cy + r * 0.62, cx - r * 0.3, cy + r * 0.46);
+      ctx.closePath();
+    }, c.hair);
   }
 }
 
@@ -346,10 +469,19 @@ function drawAccessory(ctx, cx, cy, r, def) {
   }
 }
 
-// Draws head at (cx, cy) with radius r. Photo face replaces skin/face/hair.
+// Draws head at (cx, cy) with radius r.
+//
+// A photo only replaces the FACE, never the whole head — hair is drawn behind
+// it (slightly oversized so it frames the circular crop) and headwear on top.
+// Drawing the photo alone is what used to make uploaded faces look bald.
 function drawHead(ctx, def, cx, cy, r, face, t, unicorn) {
   const photo = def.photo ? getPhoto(def.photo) : null;
   if (photo) {
+    ctx.save();
+    ctx.translate(cx, cy); ctx.scale(1.1, 1.1); ctx.translate(-cx, -cy);
+    drawHair(ctx, cx, cy, r, def, t);
+    ctx.restore();
+
     ctx.save();
     ctx.imageSmoothingQuality = 'high';
     ctx.beginPath(); ctx.arc(cx, cy, r, 0, 7); ctx.closePath(); ctx.clip();
@@ -357,14 +489,17 @@ function drawHead(ctx, def, cx, cy, r, face, t, unicorn) {
     ctx.restore();
     ctx.strokeStyle = OUTLINE; ctx.lineWidth = 3.5;
     ctx.beginPath(); ctx.arc(cx, cy, r, 0, 7); ctx.stroke();
-    // founder headband
-    ctx.strokeStyle = def.c.accent; ctx.lineWidth = 5;
-    ctx.beginPath(); ctx.arc(cx, cy, r + 0.5, Math.PI * 1.18, Math.PI * 1.82); ctx.stroke();
+
+    drawHeadwear(ctx, cx, cy, r, def);
+    if (def.accessory === 'earrings') drawAccessory(ctx, cx, cy, r, def);
   } else {
     blob(ctx, () => { ctx.arc(cx, cy, r, 0, 7); }, def.c.skin);
     drawFace(ctx, cx, cy, r, face, def.c);
+    drawFacialHair(ctx, cx, cy, r, def);
     drawHair(ctx, cx, cy, r, def, t);
-    drawAccessory(ctx, cx, cy, r, def);
+    drawEyewear(ctx, cx, cy, r, def);
+    drawHeadwear(ctx, cx, cy, r, def);
+    if (def.accessory === 'earrings' || def.accessory === 'brooch') drawAccessory(ctx, cx, cy, r, def);
   }
   if (unicorn) {
     // golden horn
@@ -401,7 +536,9 @@ function drawTorso(ctx, def, P) {
       for (let i = -3; i <= 3; i++) {
         ctx.beginPath(); ctx.moveTo(i * 7, topY + 2); ctx.lineTo(i * 7, botY + 4); ctx.stroke();
       }
-      // tie
+    }
+    // suit and pinstripe wear a tie; a blazer is worn open
+    if (def.outfit === 'pinstripe' || def.outfit === 'suit') {
       blob(ctx, () => {
         ctx.moveTo(-3, topY + 14); ctx.lineTo(3, topY + 14); ctx.lineTo(1, topY + 38); ctx.lineTo(-1, topY + 38); ctx.closePath();
       }, c.accent);
@@ -555,6 +692,87 @@ export function drawFighter(ctx, f, t) {
 // ---------------------------------------------------------------- portraits
 
 // Bust portrait onto a square canvas 2d context (UI panels, HUD, cards).
+// Portraits are where players actually look at themselves — the profile
+// preview, leaderboard rows and challenge cards. Without this every outfit
+// collapsed into "has a collar" / "doesn't", so the choice was invisible.
+function drawPortraitNeckline(ctx, def, S, k) {
+  const O = def.outfit;
+  const white = '#f4f6ff';
+  const shoulders = () => {
+    ctx.moveTo(S * 0.1, S * 1.05);
+    ctx.quadraticCurveTo(S * 0.12, S * 0.68, S * 0.5, S * 0.66);
+    ctx.quadraticCurveTo(S * 0.88, S * 0.68, S * 0.9, S * 1.05);
+    ctx.closePath();
+  };
+  const vCollar = (fill) => blob(ctx, () => {
+    ctx.moveTo(S * 0.4, S * 0.67); ctx.lineTo(S * 0.5, S * 0.87); ctx.lineTo(S * 0.6, S * 0.67); ctx.closePath();
+  }, fill);
+
+  if (O === 'pinstripe') {
+    ctx.save();
+    ctx.beginPath(); shoulders(); ctx.clip();
+    ctx.strokeStyle = 'rgba(255,255,255,0.32)'; ctx.lineWidth = 1.3 * k;
+    for (let x = S * 0.13; x < S * 0.92; x += S * 0.075) {
+      ctx.beginPath(); ctx.moveTo(x, S * 0.6); ctx.lineTo(x, S * 1.06); ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  if (O === 'blazer' || O === 'suit' || O === 'pinstripe') {
+    vCollar(white);
+    if (O === 'suit') {                                   // tie down the shirt
+      blob(ctx, () => {
+        ctx.moveTo(S * 0.5, S * 0.75); ctx.lineTo(S * 0.545, S * 0.82);
+        ctx.lineTo(S * 0.525, S * 1.04); ctx.lineTo(S * 0.475, S * 1.04);
+        ctx.lineTo(S * 0.455, S * 0.82); ctx.closePath();
+      }, def.c.accent);
+    }
+  } else if (O === 'vest') {
+    vCollar(white);                                       // shirt under the vest
+    blob(ctx, () => {                                     // vest opening
+      ctx.moveTo(S * 0.36, S * 0.7); ctx.lineTo(S * 0.5, S * 0.98);
+      ctx.lineTo(S * 0.64, S * 0.7); ctx.lineTo(S * 0.6, S * 0.68);
+      ctx.lineTo(S * 0.5, S * 0.9); ctx.lineTo(S * 0.4, S * 0.68); ctx.closePath();
+    }, shade(def.c.suit, -30));
+  } else if (O === 'turtleneck') {
+    blob(ctx, () => {
+      ctx.roundRect(S * 0.36, S * 0.62, S * 0.28, S * 0.16, S * 0.05);
+    }, shade(def.c.suit, 20));
+  } else if (O === 'hoodie') {
+    blob(ctx, () => {                                     // hood behind the head
+      ctx.moveTo(S * 0.2, S * 0.86);
+      ctx.quadraticCurveTo(S * 0.14, S * 0.34, S * 0.5, S * 0.3);
+      ctx.quadraticCurveTo(S * 0.86, S * 0.34, S * 0.8, S * 0.86);
+      ctx.quadraticCurveTo(S * 0.5, S * 0.7, S * 0.2, S * 0.86);
+      ctx.closePath();
+    }, shade(def.c.suit, -22));
+    ctx.strokeStyle = white; ctx.lineWidth = 2.2 * k; ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(S * 0.44, S * 0.76); ctx.lineTo(S * 0.42, S * 0.98);
+    ctx.moveTo(S * 0.56, S * 0.76); ctx.lineTo(S * 0.58, S * 0.98);
+    ctx.stroke();
+  } else if (O === 'bomber') {
+    blob(ctx, () => {                                     // ribbed collar band
+      ctx.roundRect(S * 0.3, S * 0.68, S * 0.4, S * 0.1, S * 0.04);
+    }, def.c.accent);
+    ctx.strokeStyle = shade(def.c.suit, -34); ctx.lineWidth = 2 * k;
+    ctx.beginPath(); ctx.moveTo(S * 0.5, S * 0.78); ctx.lineTo(S * 0.5, S * 1.05); ctx.stroke();
+  } else if (O === 'henley') {
+    blob(ctx, () => {                                     // placket
+      ctx.roundRect(S * 0.44, S * 0.68, S * 0.12, S * 0.24, S * 0.03);
+    }, shade(def.c.suit, 26));
+    ctx.fillStyle = white;
+    for (const y of [0.74, 0.83]) { ctx.beginPath(); ctx.arc(S * 0.5, S * y, 1.6 * k, 0, 7); ctx.fill(); }
+  } else if (O === 'tee') {
+    blob(ctx, () => {                                     // crew neck
+      ctx.moveTo(S * 0.38, S * 0.67);
+      ctx.quadraticCurveTo(S * 0.5, S * 0.8, S * 0.62, S * 0.67);
+      ctx.quadraticCurveTo(S * 0.5, S * 0.73, S * 0.38, S * 0.67);
+      ctx.closePath();
+    }, shade(def.c.suit, 30));
+  }
+}
+
 export function drawPortrait(canvas, def, opts = {}) {
   const ctx = canvas.getContext('2d');
   const S = canvas.width;
@@ -586,11 +804,7 @@ export function drawPortrait(canvas, def, opts = {}) {
     ctx.quadraticCurveTo(S * 0.88, S * 0.68, S * 0.9, S * 1.05);
     ctx.closePath();
   }, def.c.suit);
-  if (def.outfit === 'blazer' || def.outfit === 'suit' || def.outfit === 'pinstripe') {
-    blob(ctx, () => {
-      ctx.moveTo(S * 0.42, S * 0.67); ctx.lineTo(S * 0.5, S * 0.85); ctx.lineTo(S * 0.58, S * 0.67); ctx.closePath();
-    }, '#f4f6ff');
-  }
+  drawPortraitNeckline(ctx, def, S, k);
   ctx.save();
   ctx.translate(0, 0);
   const headR = S * 0.24;

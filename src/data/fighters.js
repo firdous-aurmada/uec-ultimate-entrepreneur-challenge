@@ -227,6 +227,55 @@ export function getFighter(id) {
   return ALL_BY_ID.get(id) || FIGHTERS[0];
 }
 
+// ---- LOOK CUSTOMISATION --------------------------------------------------
+// Everything a player can change about their founder. All of it is purely
+// cosmetic — see PLAYER_STATS in config.js: nothing here touches speed,
+// power or HP. Anything left unset falls back to the chosen base character.
+export const LOOKS = {
+  hairStyle: [
+    { id: 'short', name: 'SHORT' }, { id: 'buzz', name: 'BUZZ' },
+    { id: 'neat', name: 'NEAT' }, { id: 'slick', name: 'SLICK' },
+    { id: 'curly', name: 'CURLY' }, { id: 'afro', name: 'AFRO' },
+    { id: 'bob', name: 'BOB' }, { id: 'long', name: 'LONG' },
+    { id: 'ponytail', name: 'PONYTAIL' }, { id: 'topknot', name: 'TOP KNOT' },
+    { id: 'puffs', name: 'PUFFS' }, { id: 'bald', name: 'BALD' },
+  ],
+  headwear: [
+    { id: 'none', name: 'NONE' }, { id: 'headband', name: 'HEADBAND' },
+    { id: 'cap', name: 'CAP' }, { id: 'beanie', name: 'BEANIE' },
+    { id: 'bandana', name: 'BANDANA' },
+  ],
+  eyewear: [
+    { id: 'none', name: 'NONE' }, { id: 'glasses', name: 'GLASSES' },
+    { id: 'shades', name: 'SHADES' }, { id: 'visor', name: 'AR VISOR' },
+  ],
+  facialHair: [
+    { id: 'none', name: 'NONE' }, { id: 'stubble', name: 'STUBBLE' },
+    { id: 'moustache', name: 'MOUSTACHE' }, { id: 'goatee', name: 'GOATEE' },
+    { id: 'beard', name: 'BEARD' },
+  ],
+  outfit: [
+    { id: 'blazer', name: 'BLAZER' }, { id: 'suit', name: 'SUIT' },
+    { id: 'pinstripe', name: 'PINSTRIPE' }, { id: 'hoodie', name: 'HOODIE' },
+    { id: 'turtleneck', name: 'TURTLENECK' }, { id: 'tee', name: 'TEE' },
+    { id: 'bomber', name: 'BOMBER' }, { id: 'vest', name: 'VEST' },
+    { id: 'henley', name: 'HENLEY' },
+  ],
+};
+
+export const LOOK_FIELDS = Object.keys(LOOKS);
+
+// Picks the valid look overrides out of a profile / challenge payload.
+export function pickLook(src) {
+  const out = {};
+  if (!src) return out;
+  for (const k of LOOK_FIELDS) {
+    const v = src[k];
+    if (v && LOOKS[k].some(o => o.id === v)) out[k] = v;
+  }
+  return out;
+}
+
 export const DEFAULT_BASE_ID = 'b-neo';
 
 // Builds a fighter definition for a user profile (custom colors/special/photo).
@@ -234,6 +283,7 @@ export function buildCustomFighter(profile) {
   const base = getFighter(profile.baseId || DEFAULT_BASE_ID);
   return {
     ...base,
+    ...pickLook(profile),        // explicit choices beat the base character
     id: 'custom',
     name: (profile.name || 'YOU').toUpperCase(),
     title: 'CHALLENGER',
@@ -263,6 +313,7 @@ export function buildGhostFighter(ch) {
   const base = getFighter(ch.f);
   return {
     ...base,
+    ...pickLook(ch),             // so a challenge card shows THEIR look
     id: 'ghost-' + base.id,
     name: (ch.n || 'RIVAL').toUpperCase(),
     company: (ch.co || 'RIVAL VENTURES').toUpperCase(),

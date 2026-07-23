@@ -26,8 +26,10 @@ export const PLAYER_STATS = { speed: 1.0, power: 1.0, hp: 100 };
 ```
 
 Every human fights on exactly this line: **1.00 speed, 1.00 power, 100 HP**.
-Your base character, your colours and your photo are **pure cosmetics** — they
-decide how you look, never how hard you hit. That is enforced in one place:
+Your base character, hair, headwear, eyewear, facial hair, outfit, colours and
+photo are **pure cosmetics** — they decide how you look, never how hard you
+hit. There is no stat attached to any look option, and no "meta" build to
+discover. That is enforced in one place:
 
 ```js
 // src/data/fighters.js — buildCustomFighter() and buildGhostFighter()

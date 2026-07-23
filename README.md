@@ -67,6 +67,14 @@ Touch pads appear automatically on phones/tablets (or force them with `?touch=1`
 
 **Parry:** tap block at the instant a hit lands (0.12 s window) — the attacker staggers and you gain energy. Grabs beat parries; parries beat everything else.
 
+## What's new in v1.8
+
+- 💇 **Your photo no longer erases your fighter.** Uploading a face used to replace the *entire* head, so `drawHair` and accessories were skipped and everyone came out bald and generic. A photo now replaces only the **face**: hair renders behind it (slightly oversized, so it frames the crop) and headwear renders on top.
+- 🎨 **A real look customiser** — five independent layers in Founder Profile: **hair** (12 styles), **headwear** (cap, beanie, bandana, headband), **eyewear** (glasses, shades, AR visor), **facial hair** (stubble, moustache, goatee, beard) and **outfit** (9). With hair/suit/accent colours that's **10,800 combinations** before colours, and a 🎲 **SURPRISE ME** button. Every option is verified to render distinctly.
+- 🧢 **Headwear never covers your eyes.** Everything is anchored above the brow line — hats riding down over the face was the worst thing about the old avatars.
+- 👔 **Outfits are finally visible in portraits.** All nine used to collapse into "has a collar" or "doesn't" on the profile preview, leaderboard rows and challenge cards; each now has its own neckline (tie, pinstripes, hood + drawstrings, ribbed bomber collar, henley placket, crew neck, vest…).
+- ☁️ **Your look follows your account** — synced to a whitelisted `look` column, so leaderboard avatars, challenge cards and live opponents all see the fighter you actually built. Live matches now also carry your photo-derived skin/hair, which they previously dropped.
+
 ## What's new in v1.7
 
 - ⚖️ **You always fight as yourself.** "Choose your fighter" is gone — the select screen now picks your **rival**. Your own founder is the only fighter you ever control, so ranked points can only ever be earned as you.

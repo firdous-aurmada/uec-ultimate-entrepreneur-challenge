@@ -1,7 +1,7 @@
 // All menu screens + modals: fighter select, profile (photo upload → avatar),
 // challenges & invite links, leaderboard, help, settings/pause, share card.
 
-import { FIGHTERS, BASE_CHARACTERS, DEFAULT_BASE_ID, SPECIALS, UNICORN_META, getFighter, buildCustomFighter } from '../data/fighters.js';
+import { FIGHTERS, BASE_CHARACTERS, DEFAULT_BASE_ID, SPECIALS, UNICORN_META, LOOKS, LOOK_FIELDS, pickLook, getFighter, buildCustomFighter } from '../data/fighters.js';
 import { ARENAS, getArena, randomArena } from '../data/arenas.js';
 import { Save, buildChallengeLink } from '../state.js';
 import { rankFor, AI_LEVELS } from '../config.js';
@@ -208,6 +208,7 @@ function newDraft() {
     name: '', company: '', photo: null, baseId: DEFAULT_BASE_ID,
     c1: '#5865f2', c2: '#ffd23f', special: 'pitchdeck',
     skin: null, hair: null,
+    // look layers stay unset until touched, so they inherit the base character
   };
 }
 
@@ -265,6 +266,7 @@ export function renderProfile() {
   $('inp-company').value = draft.company || '';
   $('inp-c1').value = draft.c1 || '#5865f2';
   $('inp-c2').value = draft.c2 || '#ffd23f';
+  $('inp-hair').value = draft.hair || getFighter(draft.baseId || DEFAULT_BASE_ID).c.hair;
 
   const spSel = $('inp-special');
   spSel.innerHTML = '';
@@ -278,6 +280,7 @@ export function renderProfile() {
   $('special-desc').textContent = SPECIALS[spSel.value].desc;
 
   renderStyleGrid();
+  renderLookRows();
   renderAvatarPreview();
   renderCareer();
 
@@ -305,9 +308,75 @@ function renderStyleGrid() {
     c.width = c.height = 180;
     drawPortrait(c, f);
     tile.appendChild(c);
-    tile.onclick = () => { audio.sfx('click'); draft.baseId = f.id; renderStyleGrid(); renderAvatarPreview(); };
+    tile.onclick = () => {
+      audio.sfx('click');
+      draft.baseId = f.id;
+      renderStyleGrid();
+      renderLookRows();     // unset layers follow the new base character
+      renderAvatarPreview();
+    };
     grid.appendChild(tile);
   }
+}
+
+// Which layer each row edits, and what to call it on screen.
+const LOOK_ROWS = [
+  { key: 'hairStyle', label: 'HAIR' },
+  { key: 'headwear', label: 'HEADWEAR' },
+  { key: 'eyewear', label: 'EYEWEAR' },
+  { key: 'facialHair', label: 'FACIAL' },
+  { key: 'outfit', label: 'OUTFIT' },
+];
+
+// Eyewear and facial hair are drawn on a *drawn* face. Over an uploaded photo
+// they'd float free of the real features, so the renderer skips them and we
+// grey the rows out rather than offering a control that does nothing.
+function looksDisabledByPhoto(key) {
+  return !!draft.photo && (key === 'eyewear' || key === 'facialHair');
+}
+
+// What a layer resolves to when the player hasn't touched it. Mirrors the
+// renderer's own fallback, which reads the base character's legacy `accessory`
+// field — otherwise the row reads NONE while the avatar clearly wears glasses.
+function baseLookValue(base, key) {
+  if (key === 'eyewear') return ['visor', 'glasses', 'shades'].includes(base.accessory) ? base.accessory : 'none';
+  if (key === 'facialHair') return base.accessory === 'stubble' ? 'stubble' : 'none';
+  return base[key] || 'none';
+}
+
+function renderLookRows() {
+  const host = $('look-rows');
+  host.innerHTML = '';
+  const base = getFighter(draft.baseId || DEFAULT_BASE_ID);
+  for (const { key, label } of LOOK_ROWS) {
+    const row = document.createElement('div');
+    row.className = 'pick-row' + (looksDisabledByPhoto(key) ? ' disabled' : '');
+    const lab = document.createElement('div');
+    lab.className = 'pick-label';
+    lab.textContent = label;
+    row.appendChild(lab);
+    const strip = document.createElement('div');
+    strip.className = 'arena-strip';
+    // unset → whatever the chosen base character already wears
+    const current = draft[key] || baseLookValue(base, key);
+    for (const opt of LOOKS[key]) {
+      const b = document.createElement('button');
+      b.className = 'a-tile' + (current === opt.id ? ' sel' : '');
+      b.textContent = opt.name;
+      b.onclick = () => {
+        audio.sfx('click');
+        draft[key] = opt.id;
+        renderLookRows();
+        renderAvatarPreview();
+      };
+      strip.appendChild(b);
+    }
+    row.appendChild(strip);
+    host.appendChild(row);
+  }
+  $('look-hint').textContent = draft.photo
+    ? 'Your photo is your face — hair sits behind it and headwear on top. Eyewear and facial hair come from the photo itself.'
+    : 'Customise every layer — all cosmetic, none of it changes your stats.';
 }
 
 function renderAvatarPreview() {
@@ -449,9 +518,11 @@ function wireCrop() {
     applyPhotoColors(out);                  // skin/hair/outfit derived from the photo
     crop.img = null;
     closeModals();
+    if (draft.hair) $('inp-hair').value = draft.hair;
     renderAvatarPreview();
     renderStyleGrid();
-    toast('📷 Face locked in — fighter matched to your look.');
+    renderLookRows();     // photo now drives the face; hint + disabled rows update
+    toast('📷 Face locked in — now pick your hair and headwear below.');
     audio.sfx('select');
   };
 }
@@ -461,6 +532,17 @@ function wireProfile() {
   $('inp-company').oninput = (e) => { draft.company = e.target.value; };
   $('inp-c1').oninput = (e) => { draft.c1 = e.target.value; renderStyleGrid(); renderAvatarPreview(); };
   $('inp-c2').oninput = (e) => { draft.c2 = e.target.value; renderStyleGrid(); renderAvatarPreview(); };
+  $('inp-hair').oninput = (e) => { draft.hair = e.target.value; renderAvatarPreview(); };
+  $('btn-look-random').onclick = () => {
+    audio.sfx('select');
+    for (const { key } of LOOK_ROWS) {
+      if (looksDisabledByPhoto(key)) continue;
+      const opts = LOOKS[key];
+      draft[key] = opts[Math.floor(Math.random() * opts.length)].id;
+    }
+    renderLookRows();
+    renderAvatarPreview();
+  };
   $('inp-special').onchange = (e) => {
     draft.special = e.target.value;
     $('special-desc').textContent = SPECIALS[draft.special].desc;
@@ -480,6 +562,7 @@ function wireProfile() {
     draft.photo = null;
     renderAvatarPreview();
     renderStyleGrid();
+    renderLookRows();          // eyewear / facial hair become editable again
     audio.sfx('back');
   };
   $('btn-save-profile').onclick = () => {
@@ -579,7 +662,7 @@ async function renderGlobalBoard() {
     const base = getFighter(r.base_id);
     // skin/hair come from the rival's photo-derived palette, so their board
     // avatar matches the person, not the stock base character.
-    const def = { ...base, c: {
+    const def = { ...base, ...pickLook(r.look), c: {
       ...base.c,
       suit: r.c1 || base.c.suit, accent: r.c2 || base.c.accent,
       skin: r.skin || base.c.skin, hair: r.hair || base.c.hair,

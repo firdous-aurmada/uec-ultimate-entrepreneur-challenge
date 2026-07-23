@@ -10,7 +10,7 @@
 import { getSupabase } from './online.js';
 import { currentUser } from '../auth.js';
 import { Save } from '../state.js';
-import { DEFAULT_BASE_ID } from '../data/fighters.js';
+import { DEFAULT_BASE_ID, pickLook } from '../data/fighters.js';
 
 // Push the local profile's identity (never stats) up to the cloud.
 export async function syncProfileUp() {
@@ -32,6 +32,9 @@ export async function syncProfileUp() {
       photo: p.photo && p.photo.length < 100000 && p.photo.startsWith('data:image/') ? p.photo : null,
       skin: /^#[0-9a-fA-F]{6}$/.test(p.skin || '') ? p.skin : null,
       hair: /^#[0-9a-fA-F]{6}$/.test(p.hair || '') ? p.hair : null,
+      // pickLook() whitelists against the catalogue, so nothing arbitrary lands
+      // in a world-readable column
+      look: (() => { const l = pickLook(p); return Object.keys(l).length ? l : null; })(),
     });
     return !error;
   } catch (e) {

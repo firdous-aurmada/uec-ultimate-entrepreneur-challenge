@@ -540,6 +540,15 @@ label.btn { display: inline-block; }
 .about-cta { display: flex; flex-direction: column; align-items: center; gap: 8px; margin-top: 6px; }
 .about-cta .btn { width: 100%; max-width: 340px; }
 
+/* Look customiser: reuses .pick-row / .arena-strip / .a-tile from the select screen */
+.look-panel { display: flex; flex-direction: column; gap: 10px; }
+.look-panel #look-rows { display: flex; flex-direction: column; gap: 8px; }
+.look-panel .pick-row { align-items: flex-start; }
+/* wider than the select screen's 62px — "HEADWEAR" overflowed into the chips */
+.look-panel .pick-label { padding-top: 7px; width: 82px; letter-spacing: 1px; }
+.look-panel .pick-row.disabled { opacity: .38; pointer-events: none; }
+#btn-look-random { align-self: flex-start; }
+
 .soon-teaser {
   margin-top: 4px; padding: 10px 12px; border-radius: 12px;
   background: linear-gradient(90deg, rgba(123,92,255,.16), rgba(41,217,255,.10));
