@@ -267,6 +267,20 @@ function quickFight() {
   startMatch({ mode: 'solo', p1Def, p2Def, arena: randomArena(), difficulty, isChallenge: false });
 }
 
+// Arcade continue: straight into a fresh fight vs a new random rival, no menus.
+// Keeps the current difficulty and avoids repeating the rival you just faced.
+function nextFight() {
+  if (net) { net.sendQuit('left'); endNetSession(); }
+  const p1Def = playerDef();
+  const lastRivalId = lastResult?.defs?.[1 - (lastResult.localIdx ?? 0)]?.baseId
+    || lastResult?.defs?.[1 - (lastResult.localIdx ?? 0)]?.id;
+  let pool = FIGHTERS.filter(f => f.id !== p1Def.baseId && f.id !== lastRivalId);
+  if (!pool.length) pool = FIGHTERS.filter(f => f.id !== p1Def.baseId);
+  const p2Def = pool[Math.floor(Math.random() * pool.length)];
+  const difficulty = Save.data.lastDifficulty || 'founder';
+  startMatch({ mode: 'solo', p1Def, p2Def, arena: randomArena(), difficulty, isChallenge: false });
+}
+
 function quitMatch() {
   closeModals();
   currentGame = null;
@@ -869,6 +883,12 @@ function boot() {
   $('btn-quit').onclick = () => { audio.sfx('back'); quitMatch(); };
 
   // results buttons
+  $('btn-next').onclick = () => { audio.sfx('fight'); nextFight(); };
+  $('btn-fight-live').onclick = () => {
+    audio.sfx('select');
+    if (net) { net.sendQuit('left'); endNetSession(); }
+    createLiveRoom();                    // spin up a live room to fight a real player
+  };
   $('btn-rematch').onclick = () => {
     audio.sfx('fight');
     if (lastResult?.mode === 'online') requestOnlineRematch();

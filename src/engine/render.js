@@ -6,13 +6,66 @@ import { drawFighter } from './drawFighter.js';
 
 const { W, H, FLOOR } = STAGE;
 
+// ---- cinematic stage lighting (v2.0 art pass) -----------------------------
+// A backdrop grade pushes the arena back and cool, so the lit fighters read as
+// the foreground; a scene light + vignette over the top unifies everything.
+// One system, applied to every arena — each arena keeps its own art underneath.
+
+function drawStageGrade(ctx, t) {
+  // atmospheric haze rising off the floor + a top spotlight cone
+  ctx.save();
+  const key = ctx.createRadialGradient(W / 2, -60, 60, W / 2, 120, 640);
+  key.addColorStop(0, 'rgba(255,244,214,0.10)');
+  key.addColorStop(1, 'rgba(255,244,214,0)');
+  ctx.fillStyle = key;
+  ctx.fillRect(0, 0, W, H);
+  // cool depth wash on the lower third so fighters pop off the backdrop
+  const haze = ctx.createLinearGradient(0, FLOOR - 140, 0, FLOOR + 60);
+  haze.addColorStop(0, 'rgba(18,26,60,0)');
+  haze.addColorStop(1, 'rgba(10,14,34,0.42)');
+  ctx.fillStyle = haze;
+  ctx.fillRect(0, FLOOR - 140, W, 200);
+  ctx.restore();
+}
+
+function drawStageLight(ctx) {
+  // subtle top key glow
+  ctx.save();
+  ctx.globalCompositeOperation = 'soft-light';
+  const g = ctx.createLinearGradient(0, 0, 0, H);
+  g.addColorStop(0, 'rgba(255,238,205,0.5)');
+  g.addColorStop(0.5, 'rgba(255,255,255,0)');
+  g.addColorStop(1, 'rgba(6,8,22,0.6)');
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, W, H);
+  ctx.restore();
+  // vignette frames the action
+  ctx.save();
+  const v = ctx.createRadialGradient(W / 2, H * 0.46, H * 0.32, W / 2, H * 0.5, H * 0.92);
+  v.addColorStop(0, 'rgba(0,0,0,0)');
+  v.addColorStop(1, 'rgba(3,4,12,0.5)');
+  ctx.fillStyle = v;
+  ctx.fillRect(0, 0, W, H);
+  ctx.restore();
+}
+
+// Contact shadow — softer, wider, layered so fighters feel planted on the floor.
 function drawShadow(ctx, f) {
   const airK = Math.max(0, Math.min(1, (FLOOR - f.y) / 260));
   const s = 1 - airK * 0.45;
-  ctx.fillStyle = `rgba(0,0,0,${0.32 * (1 - airK * 0.5)})`;
+  ctx.save();
+  ctx.filter = 'blur(3px)';
+  ctx.fillStyle = `rgba(0,0,0,${0.30 * (1 - airK * 0.5)})`;
   ctx.beginPath();
-  ctx.ellipse(f.x, FLOOR + 10, 44 * s, 9 * s, 0, 0, 7);
+  ctx.ellipse(f.x, FLOOR + 11, 50 * s, 11 * s, 0, 0, 7);
   ctx.fill();
+  ctx.filter = 'none';
+  // tight core shadow directly under the feet
+  ctx.fillStyle = `rgba(0,0,0,${0.28 * (1 - airK * 0.6)})`;
+  ctx.beginPath();
+  ctx.ellipse(f.x, FLOOR + 11, 26 * s, 6 * s, 0, 0, 7);
+  ctx.fill();
+  ctx.restore();
 }
 
 function drawAfterimage(ctx, g) {
@@ -132,6 +185,7 @@ export function renderGame(ctx, game) {
   ctx.translate(game.fx.shakeX, game.fx.shakeY);
 
   game.arena.draw(ctx, t);
+  drawStageGrade(ctx, t);           // push the backdrop back + haze
 
   for (const d of game.drops) drawDrop(ctx, d, t);
   for (const f of game.fighters) drawShadow(ctx, f);
@@ -147,6 +201,7 @@ export function renderGame(ctx, game) {
 
   for (const p of game.projectiles) drawProjectile(ctx, p, t);
 
+  drawStageLight(ctx);              // top key glow + vignette over the whole scene
   game.fx.draw(ctx);
   ctx.restore();
 

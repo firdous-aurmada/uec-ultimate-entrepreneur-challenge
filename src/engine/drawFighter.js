@@ -42,10 +42,14 @@ export function ensurePhoto(dataUrl) {
   });
 }
 
+// INK scales the black outline weight. Bumped >1 while rendering the shaded
+// fighter buffer for the bolder inked look; stays 1 for portraits/flat mode.
+let INK = 1;
+
 function capsule(ctx, x1, y1, x2, y2, w, color, outline = true) {
   ctx.lineCap = 'round';
   if (outline) {
-    ctx.strokeStyle = OUTLINE; ctx.lineWidth = w + 5;
+    ctx.strokeStyle = OUTLINE; ctx.lineWidth = w + 5 * INK;
     ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
   }
   ctx.strokeStyle = color; ctx.lineWidth = w;
@@ -57,7 +61,7 @@ function blob(ctx, drawPath, fill) {
   drawPath();
   ctx.fillStyle = fill;
   ctx.strokeStyle = OUTLINE;
-  ctx.lineWidth = 3.5;
+  ctx.lineWidth = 3.5 * INK;
   ctx.lineJoin = 'round';
   ctx.fill();
   ctx.stroke();
@@ -608,14 +612,72 @@ function drawBriefcase(ctx, x, y, accent) {
   blob(ctx, () => { ctx.roundRect(x - 8, y - 22, 16, 8, 3); }, '#57391f');
 }
 
+// ---- Street-Fighter-style shading -----------------------------------------
+// The fighter is rendered once into an offscreen buffer, then a cel-shading +
+// directional-light pass is composited over the whole silhouette at once. Doing
+// it as a post-pass (not per-shape) means it's pose-independent: every current
+// and future animation frame gets the same lit-from-above, warm-key/cool-fill
+// look for free. Toggle with STYLE.shaded so we can A/B the old flat look.
+export const STYLE = { shaded: true };
+const SS = 2, BUF_OX = 130, BUF_OY = 250, BUF_W = 280, BUF_H = 300;
+let _buf = null, _tmp = null;
+function fighterBuffer() {
+  if (!_buf && typeof document !== 'undefined') {
+    _buf = document.createElement('canvas');
+    _buf.width = BUF_W * SS; _buf.height = BUF_H * SS;
+    _tmp = document.createElement('canvas');
+    _tmp.width = BUF_W * SS; _tmp.height = BUF_H * SS;
+  }
+  return _buf;
+}
+function shadeBuffer(b) {
+  const W = _buf.width, H = _buf.height, oy = BUF_OY * SS, ox = BUF_OX * SS;
+
+  // ---- rim light: a warm crescent on the upper-key edge of the silhouette ----
+  // built as (white silhouette) minus (white silhouette shifted toward shadow),
+  // which leaves just the lit contour.
+  const tc = _tmp.getContext('2d');
+  tc.setTransform(1, 0, 0, 1, 0, 0);
+  tc.clearRect(0, 0, W, H);
+  tc.globalCompositeOperation = 'source-over';
+  tc.drawImage(_buf, 0, 0);
+  tc.globalCompositeOperation = 'source-in';
+  tc.fillStyle = '#fff5df'; tc.fillRect(0, 0, W, H);   // warm-white silhouette
+  tc.globalCompositeOperation = 'destination-out';
+  tc.drawImage(_buf, -5 * SS, 6 * SS);                 // carve → rim on upper-right
+
+  // ---- form + directional shading, clipped to the fighter ----
+  b.save();
+  b.globalCompositeOperation = 'source-atop';
+  const g = b.createLinearGradient(0, oy - 178 * SS, 0, oy + 8 * SS);
+  g.addColorStop(0, 'rgba(255,243,216,0.32)');
+  g.addColorStop(0.44, 'rgba(255,255,255,0)');
+  g.addColorStop(1, 'rgba(5,5,16,0.52)');
+  b.fillStyle = g; b.fillRect(0, 0, W, H);
+  const g2 = b.createLinearGradient(ox - 84 * SS, 0, ox + 84 * SS, 0);
+  g2.addColorStop(0, 'rgba(26,42,104,0.30)');
+  g2.addColorStop(0.5, 'rgba(0,0,0,0)');
+  g2.addColorStop(1, 'rgba(255,166,72,0.17)');
+  b.fillStyle = g2; b.fillRect(0, 0, W, H);
+  b.restore();
+
+  // ---- add the rim on top, additively (kept restrained so heads don't halo) ----
+  b.save();
+  b.globalCompositeOperation = 'lighter';
+  b.globalAlpha = 0.42;
+  b.drawImage(_tmp, 0, 0);
+  b.restore();
+}
+
 // Main world-space fighter draw. f: Fighter instance.
 export function drawFighter(ctx, f, t) {
   const def = f.def;
   const P = computePose(f, t);
+  const c = def.c;
   ctx.save();
   ctx.translate(f.x, f.y);
 
-  // unicorn aura behind body
+  // unicorn aura behind body (world space, never shaded)
   if (f.unicornT > 0) {
     const hue = (t * 260) % 360;
     const g = ctx.createRadialGradient(0, -74, 8, 0, -74, 108);
@@ -626,33 +688,43 @@ export function drawFighter(ctx, f, t) {
   }
 
   ctx.scale(f.facing, 1);
-  if (P.rot) {
-    ctx.translate(0, 0);
-    ctx.rotate(P.rot);
-  }
-  if (f.flashT > 0 && FILTER_OK) ctx.filter = 'brightness(2.2) saturate(0.4)';
+  if (P.rot) ctx.rotate(P.rot);
 
-  const c = def.c;
+  const buf = STYLE.shaded ? fighterBuffer() : null;
+  // Render the body either into the shading buffer (local, upright, facing +x)
+  // or straight to the world ctx when shading is off.
+  let g = ctx;
+  if (buf) {
+    g = buf.getContext('2d');
+    g.setTransform(1, 0, 0, 1, 0, 0);
+    g.clearRect(0, 0, buf.width, buf.height);
+    g.save();
+    g.scale(SS, SS);
+    g.translate(BUF_OX, BUF_OY);
+    INK = 1.32;                 // bolder ink for the buffer render only
+  } else if (f.flashT > 0 && FILTER_OK) {
+    ctx.filter = 'brightness(2.2) saturate(0.4)';
+  }
+
   const hitJitter = f.state === 'hitstun' ? (Math.random() - 0.5) * 3 : 0;
-  ctx.translate(hitJitter, 0);
+  g.translate(hitJitter, 0);
 
   // back arm, back leg
-  capsule(ctx, -10, P.shoulderY + 8, P.armB.x, P.armB.y, 13, c.suit2);
-  blob(ctx, () => { ctx.arc(P.armB.x, P.armB.y, 8.5, 0, 7); }, c.skin);
-  capsule(ctx, -8, P.hipY, P.legB.x, P.legB.y - 6, 15, c.pants);
-  blob(ctx, () => { ctx.roundRect(P.legB.x - 9, P.legB.y - 9, 26, 10, 5); }, c.shoe);
+  capsule(g, -10, P.shoulderY + 8, P.armB.x, P.armB.y, 13, c.suit2);
+  blob(g, () => { g.arc(P.armB.x, P.armB.y, 8.5, 0, 7); }, c.skin);
+  capsule(g, -8, P.hipY, P.legB.x, P.legB.y - 6, 15, c.pants);
+  blob(g, () => { g.roundRect(P.legB.x - 9, P.legB.y - 9, 26, 10, 5); }, c.shoe);
 
   // torso (with lean)
-  ctx.save();
+  g.save();
   if (P.bodyLean) {
-    ctx.translate(0, P.hipY);
-    ctx.rotate(P.bodyLean * 0.6);
-    ctx.translate(0, -P.hipY);
+    g.translate(0, P.hipY);
+    g.rotate(P.bodyLean * 0.6);
+    g.translate(0, -P.hipY);
   }
-  drawTorso(ctx, def, P);
-  // head
-  drawHead(ctx, def, P.headX + (P.bodyLean * 26), P.headY, 22, P.face, t, f.unicornT > 0);
-  ctx.restore();
+  drawTorso(g, def, P);
+  drawHead(g, def, P.headX + (P.bodyLean * 26), P.headY, 22, P.face, t, f.unicornT > 0);
+  g.restore();
 
   // motion smear behind the striking limb (sells the speed)
   if (f.state === 'attack' && f.attack && (f.attack.kind === 'punch' || f.attack.kind === 'kick')) {
@@ -665,25 +737,35 @@ export function drawFighter(ctx, f, t) {
       const ty = isKick ? P.legF.y - 6 : P.armF.y;
       const rad = Math.hypot(tx - ox, ty - oy);
       const ang = Math.atan2(ty - oy, tx - ox);
-      ctx.save();
-      ctx.globalAlpha = 0.3;
-      ctx.fillStyle = c.accent;
-      ctx.beginPath();
-      ctx.arc(ox, oy, rad, ang - 0.85, ang + 0.06);
-      ctx.arc(ox, oy, rad * 0.45, ang + 0.06, ang - 0.85, true);
-      ctx.closePath();
-      ctx.fill();
-      ctx.restore();
+      g.save();
+      g.globalAlpha = 0.3;
+      g.fillStyle = c.accent;
+      g.beginPath();
+      g.arc(ox, oy, rad, ang - 0.85, ang + 0.06);
+      g.arc(ox, oy, rad * 0.45, ang + 0.06, ang - 0.85, true);
+      g.closePath();
+      g.fill();
+      g.restore();
     }
   }
 
   // front leg, front arm
-  capsule(ctx, 8, P.hipY, P.legF.x, P.legF.y - 6, 15, c.pants);
-  blob(ctx, () => { ctx.roundRect(P.legF.x - 7, P.legF.y - 9, 26, 10, 5); }, c.shoe);
-  capsule(ctx, 10, P.shoulderY + 8, P.armF.x, P.armF.y, 13, c.suit);
-  blob(ctx, () => { ctx.arc(P.armF.x, P.armF.y, 9, 0, 7); }, c.skin);
+  capsule(g, 8, P.hipY, P.legF.x, P.legF.y - 6, 15, c.pants);
+  blob(g, () => { g.roundRect(P.legF.x - 7, P.legF.y - 9, 26, 10, 5); }, c.shoe);
+  capsule(g, 10, P.shoulderY + 8, P.armF.x, P.armF.y, 13, c.suit);
+  blob(g, () => { g.arc(P.armF.x, P.armF.y, 9, 0, 7); }, c.skin);
 
-  if (P.briefcase) drawBriefcase(ctx, 34, -92, c.accent);
+  if (P.briefcase) drawBriefcase(g, 34, -92, c.accent);
+
+  if (buf) {
+    INK = 1;                   // reset before shading/blit
+    g.restore();               // undo scale/translate
+    shadeBuffer(g);            // cel-shade the whole silhouette at once
+    ctx.save();
+    if (f.flashT > 0 && FILTER_OK) ctx.filter = 'brightness(2.2) saturate(0.4)';
+    ctx.drawImage(buf, 0, 0, buf.width, buf.height, -BUF_OX, -BUF_OY, BUF_W, BUF_H);
+    ctx.restore();
+  }
 
   ctx.filter = 'none';
   ctx.restore();
@@ -814,8 +896,36 @@ export function drawPortrait(canvas, def, opts = {}) {
   ctx.translate(0, 0);
   drawHead(ctx, def, 0, 0, 22, opts.face || 'idle', opts.t || 1, !!opts.unicorn);
   ctx.restore();
-  ctx.restore();
-  // frame
+
+  // ---- cinematic light, matching the in-fight fighter shading (v2.0) ----
+  // Still inside the rounded-rect clip, so it lights the whole bust + backdrop
+  // as one image instead of looking like a sticker on a panel.
+  // Kept deliberately light: portraits are small and often dark-suited, so a
+  // heavy grade turns Steve/Carl/Elo into mud. Enough to feel lit, not enough
+  // to lose the outfit.
+  const lit = ctx.createLinearGradient(0, 0, 0, S);
+  lit.addColorStop(0, 'rgba(255,243,216,0.15)');
+  lit.addColorStop(0.5, 'rgba(255,255,255,0)');
+  lit.addColorStop(1, 'rgba(5,5,16,0.20)');
+  ctx.fillStyle = lit;
+  ctx.fillRect(0, 0, S, S);
+  const side = ctx.createLinearGradient(0, 0, S, 0);
+  side.addColorStop(0, 'rgba(26,42,104,0.16)');
+  side.addColorStop(0.55, 'rgba(0,0,0,0)');
+  side.addColorStop(1, 'rgba(255,166,72,0.13)');
+  ctx.fillStyle = side;
+  ctx.fillRect(0, 0, S, S);
+  // corner vignette so the bust sits in its frame
+  const vig = ctx.createRadialGradient(S / 2, S * 0.46, S * 0.34, S / 2, S * 0.5, S * 0.82);
+  vig.addColorStop(0, 'rgba(0,0,0,0)');
+  vig.addColorStop(1, 'rgba(3,4,12,0.30)');
+  ctx.fillStyle = vig;
+  ctx.fillRect(0, 0, S, S);
+  ctx.restore();   // release the rounded-rect clip
+
+  // frame: dark ink + a subtle inner gold sheen to match the arcade chrome
   ctx.strokeStyle = 'rgba(5,7,15,0.9)'; ctx.lineWidth = 3 * k;
   ctx.beginPath(); ctx.roundRect(1.5 * k, 1.5 * k, S - 3 * k, S - 3 * k, 11 * k); ctx.stroke();
+  ctx.strokeStyle = 'rgba(255,210,63,0.20)'; ctx.lineWidth = 1.2 * k;
+  ctx.beginPath(); ctx.roundRect(3.6 * k, 3.6 * k, S - 7.2 * k, S - 7.2 * k, 9 * k); ctx.stroke();
 }
