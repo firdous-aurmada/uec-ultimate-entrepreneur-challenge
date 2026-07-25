@@ -67,6 +67,19 @@ Touch pads appear automatically on phones/tablets (or force them with `?touch=1`
 
 **Parry:** tap block at the instant a hit lands (0.12 s window) — the attacker staggers and you gain energy. Grabs beat parries; parries beat everything else.
 
+## What's new in v2.0 — the art pass
+
+A full visual overhaul taking style cues from classic arcade fighters, in the game's own identity. **100% original**: no Street Fighter characters, logos, named moves, sounds or artwork — genre conventions only, the same originality rule the roster follows for Mortal Kombat.
+
+- 🎨 **Cel-shaded fighters** — each fighter renders into an offscreen buffer, then a shading pass composites a form shadow, a warm-key/cool-fill directional split and a rim light across the whole silhouette at once. Because it's a *post-pass* rather than per-shape, it's **pose-independent**: every current and future animation frame is lit for free, with no per-frame art. Ink outlines thicken to match.
+- 💡 **Cinematic stage lighting** — every arena gets a backdrop haze that pushes it back, a top key glow, a vignette that frames the action, and blurred layered contact shadows so fighters feel planted instead of pasted on.
+- 🏛 **Arena depth** — a foreground layer drawn *in front* of the fighters, driven by each arena's own `mood`: crowd silhouettes with phone lights for Demo Day and the Unicorn Club, framing pillars for the Stock Exchange and VC Summit, a grounding floor shelf elsewhere.
+- 🥊 **Punchier animation** — squash & stretch anchored at the feet, a deeper anticipation coil before every strike, stretch on release, jump rise/fall deformation, and a hard recoil snap on impact. Hitbox timing is untouched — it all comes from `ATTACKS` config, so the feel changed and the balance didn't.
+- 🖼 **UI cohesion** — glossy gold-edged health bars, framed HUD portraits, dimensional buttons and panels, and a lighting pass on every portrait bust (kept deliberately light: a heavy grade turned the dark-suited fighters to mud at portrait size).
+- 🎲 **The run continues** — after every fight: **NEXT FIGHT** (a fresh random rival, skipping the one you just fought), **FIGHT LIVE** (opens a live room to fight a real player) or **REMATCH**. No trip back to the menu between fights.
+
+Perf cost of the whole pass: **~0.3 ms/frame**, roughly 98% headroom at 60 fps.
+
 ## What's new in v1.8
 
 - 💇 **Your photo no longer erases your fighter.** Uploading a face used to replace the *entire* head, so `drawHair` and accessories were skipped and everyone came out bald and generic. A photo now replaces only the **face**: hair renders behind it (slightly oversized, so it frames the crop) and headwear renders on top.

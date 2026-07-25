@@ -77,11 +77,13 @@ const ease = {
 
 // Returns limb targets in local space (+x = facing direction, y up = negative, origin at feet).
 function computePose(f, t) {
+  // sx/sy = squash & stretch, applied around the feet in drawFighter. Purely
+  // visual weight — hitboxes come from ATTACKS timing, never from the pose.
   const P = {
     hipY: -66, shoulderY: -114, headX: 0, headY: -134, rot: 0, crouch: 0,
     armF: { x: 30, y: -98 }, armB: { x: 18, y: -90 },
     legF: { x: 15, y: 0 }, legB: { x: -14, y: 0 },
-    face: 'idle', briefcase: false, bodyLean: 0,
+    face: 'idle', briefcase: false, bodyLean: 0, sx: 1, sy: 1,
   };
   const bob = Math.sin(t * 4 + (f.side === 0 ? 0 : 1.7)) * 2.2;
   const st = f.state;
@@ -100,16 +102,33 @@ function computePose(f, t) {
     P.legF = { x: 18, y: -26 }; P.legB = { x: -6, y: -16 };
     P.armF = { x: 36, y: -120 }; P.armB = { x: -20, y: -112 };
     P.bodyLean = 0.1;
+    // stretch on the way up, squash as gravity takes over — reads as real air time
+    const rise = Math.max(-1, Math.min(1, -f.vy / 700));
+    P.sy = 1 + 0.10 * rise; P.sx = 1 - 0.08 * rise;
   } else if (st === 'attack') {
     const atk = f.attack;
     const total = atk.startup + atk.active + atk.recovery;
     const k = Math.min(1, f.stateT / total);
-    const hitK = f.stateT < atk.startup
-      ? (f.stateT / atk.startup) * -0.18                     // anticipation: coil back
-      : f.stateT < atk.startup + atk.active
-        ? 0.18 + 0.94 * ease.outBack(Math.min(1, (f.stateT - atk.startup) / atk.active))
+    const inStartup = f.stateT < atk.startup;
+    const inActive = !inStartup && f.stateT < atk.startup + atk.active;
+    const antK = inStartup ? f.stateT / atk.startup : 0;      // 0→1 through the wind-up
+    const hitK = inStartup
+      ? antK * -0.30                                          // anticipation: deeper coil back
+      : inActive
+        ? 0.30 + 1.06 * ease.outBack(Math.min(1, (f.stateT - atk.startup) / atk.active))
         : 1 - ease.inQuad((f.stateT - atk.startup - atk.active) / atk.recovery);
     P.face = 'angry';
+    // Whole-body commitment: coil down + back on the wind-up, then drive up and
+    // through on the strike. This is what makes a hit feel like it has weight.
+    if (inStartup) {
+      P.sx = 1 + 0.07 * antK; P.sy = 1 - 0.07 * antK;         // squash: gathering
+      P.hipY += 5 * antK;
+      P.headX -= 3 * antK;
+    } else if (inActive) {
+      const ext = Math.min(1, (f.stateT - atk.startup) / atk.active);
+      P.sx = 1 - 0.05 * ext; P.sy = 1 + 0.06 * ext;           // stretch: releasing
+      P.hipY -= 3 * ext;
+    }
     if (atk.kind === 'kick') {
       const reach = (atk.reach || 100) * 0.92;
       P.legF = { x: 6 + reach * hitK, y: -70 * hitK - (f.airborne ? 20 : 0) };
@@ -165,10 +184,13 @@ function computePose(f, t) {
     P.briefcase = true; P.face = 'block'; P.bodyLean = -0.06;
   } else if (st === 'hitstun') {
     const k = Math.min(1, f.stateT * 10);
-    P.bodyLean = -0.3 * k;
-    P.headX = -6 * k; P.headY += 4 * k;
+    // snap hard on impact, then settle — the recoil sells the hit landing
+    const impact = Math.max(0, 1 - f.stateT * 14);
+    P.bodyLean = -0.3 * k - 0.22 * impact;
+    P.headX = -6 * k - 7 * impact; P.headY += 4 * k;
     P.armF = { x: 4, y: -66 }; P.armB = { x: -26, y: -102 };
     P.legF = { x: 22, y: 0 }; P.legB = { x: -20, y: 0 };
+    P.sx = 1 + 0.13 * impact; P.sy = 1 - 0.13 * impact;   // squash on contact
     P.face = 'hurt';
   } else if (st === 'ko') {
     const k = Math.min(1, f.stateT / 0.45);
@@ -708,6 +730,8 @@ export function drawFighter(ctx, f, t) {
 
   const hitJitter = f.state === 'hitstun' ? (Math.random() - 0.5) * 3 : 0;
   g.translate(hitJitter, 0);
+  // squash & stretch, anchored at the feet so the fighter never floats
+  if (P.sx !== 1 || P.sy !== 1) g.scale(P.sx, P.sy);
 
   // back arm, back leg
   capsule(g, -10, P.shoulderY + 8, P.armB.x, P.armB.y, 13, c.suit2);

@@ -28,6 +28,46 @@ function drawStageGrade(ctx, t) {
   ctx.restore();
 }
 
+// Foreground depth layer, drawn in FRONT of the fighters so the action sits
+// inside the scene rather than on top of a flat backdrop. Driven by the
+// arena's own `mood`, so each stage keeps its identity from one system.
+function drawForeground(ctx, arena, t) {
+  const mood = arena?.mood || 'dark';
+  ctx.save();
+  if (mood === 'hype' || mood === 'party') {
+    // packed crowd silhouettes with the odd phone light held up
+    ctx.fillStyle = 'rgba(3,4,12,0.94)';
+    ctx.fillRect(0, H - 26, W, 26);
+    for (let x = -20; x < W + 40; x += 52) {
+      const bob = Math.sin(t * 1.6 + x * 0.05) * 3;
+      const y = H - 24 + bob;
+      ctx.fillStyle = 'rgba(3,4,12,0.94)';
+      ctx.beginPath(); ctx.arc(x, y + 20, 20, Math.PI, 0); ctx.fill();
+      ctx.beginPath(); ctx.arc(x, y + 1, 11, 0, 7); ctx.fill();
+      if ((x / 52 | 0) % 3 === 0) {
+        ctx.fillStyle = 'rgba(255,224,130,0.85)';
+        ctx.fillRect(x - 2, y - 9, 4, 8);
+      }
+    }
+  } else if (mood === 'tense' || mood === 'epic') {
+    // out-of-focus pillars framing the arena
+    ctx.fillStyle = 'rgba(4,6,16,0.82)';
+    ctx.fillRect(0, 0, 26, H);
+    ctx.fillRect(W - 26, 0, 26, H);
+    ctx.fillStyle = 'rgba(255,255,255,0.04)';
+    ctx.fillRect(18, 0, 5, H);
+    ctx.fillRect(W - 23, 0, 5, H);
+  } else {
+    // dark / lofi: a soft foreground floor shelf for grounding
+    const g = ctx.createLinearGradient(0, H - 30, 0, H);
+    g.addColorStop(0, 'rgba(3,4,12,0)');
+    g.addColorStop(1, 'rgba(3,4,12,0.85)');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, H - 30, W, 30);
+  }
+  ctx.restore();
+}
+
 function drawStageLight(ctx) {
   // subtle top key glow
   ctx.save();
@@ -201,6 +241,7 @@ export function renderGame(ctx, game) {
 
   for (const p of game.projectiles) drawProjectile(ctx, p, t);
 
+  drawForeground(ctx, game.arena, t);   // depth layer in front of the fighters
   drawStageLight(ctx);              // top key glow + vignette over the whole scene
   game.fx.draw(ctx);
   ctx.restore();
