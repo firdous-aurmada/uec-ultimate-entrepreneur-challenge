@@ -163,6 +163,8 @@ function reallyStartMatch(cfg) {
   // touch pads: solo only (2P shares one keyboard)
   const touch = isTouchDevice() || new URLSearchParams(location.search).has('touch');
   $('touchControls').classList.toggle('hidden', !(touch && cfg.mode !== 'versus'));
+  // touch shows every button already — the controls card would just cover them
+  document.body.classList.toggle('touch-active', touch && cfg.mode !== 'versus');
 
   // VS splash
   const vs = $('vsSplash');
@@ -481,6 +483,7 @@ function startOnlineMatch(cfg) {
   $('netStatus').classList.remove('hidden');
   const touch = isTouchDevice() || new URLSearchParams(location.search).has('touch');
   $('touchControls').classList.toggle('hidden', !touch);
+  document.body.classList.toggle('touch-active', !!touch);
 
   const vs = $('vsSplash');
   drawPortrait($('vsFace1'), hostDef);
@@ -889,6 +892,8 @@ function boot() {
   document.addEventListener('dblclick', (e) => {
     if (!e.target.closest('input, textarea')) e.preventDefault();
   });
+
+  $('btn-title-live').onclick = () => { audio.sfx('select'); createLiveRoom(); };
 
   input.onPause = togglePause;
   $('btn-moves').onclick = () => { audio.sfx('click'); $('movesCard').classList.toggle('hidden'); };
