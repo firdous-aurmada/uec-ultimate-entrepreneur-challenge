@@ -383,9 +383,20 @@ export class Game {
     if (sp.type === 'rush') this.audio.sfx('rush');
   }
 
-  onSpecialDenied(f) {
+  // A button that appears to "do nothing" is the worst feel in a fighter.
+  // Every rejected input now says why, right above the fighter's head.
+  onSpecialDenied(f, kind) {
     this.audio.sfx('back');
-    this.hud.denyMeter(this.fighters.indexOf(f));
+    const i = this.fighters.indexOf(f);
+    this.hud.denyMeter(i);
+    const need = { special: METER.SPECIAL_COST, bomb: METER.BOMB_COST, super: METER.SUPER_COST };
+    let msg = null;
+    if (kind === 'steal') msg = `💸 RECHARGING ${f.stealCD.toFixed(1)}s`;
+    else if (kind === 'dash') msg = `💨 RECHARGING ${f.dashCD.toFixed(1)}s`;
+    else if (need[kind] !== undefined) {
+      msg = `NEED ${Math.ceil(need[kind] - f.energy)} MORE ⚡`;
+    }
+    if (msg && this.fx.popup) this.fx.popup(f.x, f.y - 178, msg, '#ff8f8f');
   }
 
   spawnSlide(owner, i) {
@@ -620,7 +631,7 @@ export class Game {
     }
     if (!this.hintFlags.combo && this.maxCombo[0] >= 3) {
       this.hintFlags.combo = true;
-      this.hud.hint('🔥 COMBO! Keep hitting — punch, punch, punch, then 🦶, then ⚡!');
+      this.hud.hint('🔥 COMBO! Keep hitting — punch, punch, punch, then 👟, then ⚡!');
     }
   }
 

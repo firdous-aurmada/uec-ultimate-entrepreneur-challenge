@@ -95,10 +95,12 @@ export const COMBO = {
   SCALING: [1, 0.85, 0.7, 0.6, 0.5, 0.45, 0.4],  // damage mult by victim's chain depth
   JAB_CHAIN_KB: 0.55,                  // chained light hits shove less, so strings stay in range
   MILESTONES: { 3: 'COMBO!', 5: 'SYNERGY!', 7: 'DISRUPTED!', 10: 'ACQUIRED!' },
-  // Magic series: cancel a landed basic into the SAME move (up to its cap) or
-  // any HIGHER-ranked basic, then a finisher. slap → punch → kick → special.
-  RANK: { slap: 0, punch: 1, kick: 2 },
-  CAP:  { slap: 2, punch: 3, kick: 2 },
+  // ONE RULE: when an attack lands, cancel it into ANY other basic — no ladder,
+  // no order to memorise. The old rank system (slap<punch<kick, per-move caps)
+  // was the "too complicated / wouldn't activate" complaint: players had to
+  // remember which move could follow which, and a wrong guess did nothing.
+  BASICS: ['slap', 'punch', 'kick'],
+  MAX_CHAIN: 5,          // basics per string before you must finish
 };
 
 export const ATTACKS = {

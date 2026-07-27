@@ -176,30 +176,58 @@
           <div class="vs-card vs-right"><canvas id="vsFace2" width="400" height="400"></canvas><div id="vsName2"></div></div>
         </div>
       </div>
+      <!-- Always-available controls reference during the fight (keyboard only;
+           on touch the buttons are already on screen). -->
+      <div id="movesRef" class="moves-ref">
+        <button id="btn-moves" class="icon-btn" title="Controls">🎮</button>
+        <div id="movesCard" class="moves-card hidden">
+          <div class="moves-title">CONTROLS</div>
+          <div class="moves-grid">
+            <span>Move</span><b>← → / A D</b>
+            <span>Jump</span><b>↑ / W</b>
+            <span>Crouch</span><b>↓ / S</b>
+            <span>📄 NDA (block/parry)</span><b>/ or Q</b>
+            <span>🖐 Slap</span><b>H / X</b>
+            <span>👊 Punch</span><b>J / C</b>
+            <span>👟 Kick</span><b>K / V</b>
+            <span>💸 Acqui-Hire</span><b>M / T</b>
+            <span>💨 Dash</span><b>O / R</b>
+            <span>⚖️ C&amp;D <i>25⚡</i></span><b>I / F</b>
+            <span>⚡ Special <i>50⚡</i></span><b>L / B</b>
+            <span>🦄 Unicorn <i>100⚡</i></span><b>U / G</b>
+          </div>
+          <div class="moves-foot">Land a hit → press any other attack to chain it. Up to 5, then finish with ⚡.</div>
+        </div>
+      </div>
       <button id="btn-pause" class="icon-btn" title="Pause">⏸</button>
       <div id="netStatus" class="hidden"><span class="live-dot ok"></span><span id="netStatusText">LIVE</span></div>
     </div>
+    <!-- Touch pad: D-pad left (with crouch), attacks right. Meter moves carry a
+         cost badge so it's obvious why one isn't firing yet. -->
     <div id="touchControls" class="touch hidden">
       <div class="t-left">
         <div class="t-row">
           <button class="tbtn t-up" data-k="up">▲</button>
-          <button class="tbtn t-bomb" data-k="dash">💨</button>
+          <button class="tbtn t-dash" data-k="dash">💨</button>
         </div>
         <div class="t-row">
           <button class="tbtn" data-k="left">◀</button>
+          <button class="tbtn" data-k="down">▼</button>
           <button class="tbtn" data-k="right">▶</button>
         </div>
       </div>
       <div class="t-right">
-        <button class="tbtn t-block" data-k="block">🛡</button>
+        <div class="t-row t-defend">
+          <button class="tbtn t-block" data-k="block">📄<span class="tlab">NDA</span></button>
+          <button class="tbtn t-steal" data-k="steal">💸<span class="tlab">RAID</span></button>
+        </div>
         <div class="t-grid">
           <button class="tbtn t-atk" data-k="slap">🖐</button>
           <button class="tbtn t-atk" data-k="punch">👊</button>
-          <button class="tbtn t-atk" data-k="kick">🦶</button>
-          <button class="tbtn t-steal" data-k="steal">💸</button>
-          <button class="tbtn t-sp" data-k="special">⚡</button>
-          <button class="tbtn t-sp" data-k="super">🦄</button>
-          <button class="tbtn t-bomb" data-k="bomb">⚖️</button>
+          <button class="tbtn t-atk" data-k="kick">👟</button>
+          <button class="tbtn t-bomb" data-k="bomb">⚖️<span class="tcost">25</span></button>
+          <button class="tbtn t-sp" data-k="special">⚡<span class="tcost">50</span></button>
+          <button class="tbtn t-sp" data-k="super">🦄<span class="tcost">100</span></button>
         </div>
       </div>
     </div>
@@ -374,26 +402,25 @@
       </div>
       <div class="panel">
         <div class="panel-title">🔗 COMBOS — SUPER SIMPLE</div>
-        <p><b>A combo is just hitting them again before they can recover.</b> The golden rule: go <b>light → heavy</b>. Start with a fast move and keep escalating — follow this order:</p>
+        <p><b>Land a hit, then press any other attack.</b> That's the whole system — no order to memorise, no wrong answer.</p>
         <div class="combo-route">
-          <span class="cr-step">🖐</span><span class="cr-arrow">→</span>
-          <span class="cr-step">👊</span><span class="cr-arrow">→</span>
-          <span class="cr-step">🦶</span><span class="cr-arrow">→</span>
+          <span class="cr-step">🖐</span><span class="cr-arrow">/</span>
+          <span class="cr-step">👊</span><span class="cr-arrow">/</span>
+          <span class="cr-step">👟</span><span class="cr-arrow">×5 →</span>
           <span class="cr-step big">⚡</span>
         </div>
-        <p class="combo-route-caption">Slap → Punch → Kick → Special. Light to heavy. That's it.</p>
+        <p class="combo-route-caption">Any mix of the three, up to 5 hits, then finish. Mash freely.</p>
         <ul class="combo-tips">
-          <li>🖐 <b>The Slap is your fastest opener</b> — smack them, then flow up into punches. Cheeky and quick.</li>
-          <li>🥊 <b>Or just mash Punch</b> up close — the timing is forgiving; the game waits for your hit to land before firing the next move.</li>
-          <li>🔁 <b>Repeat then escalate:</b> Slap ×2, Punch ×3, Kick ×2 — then jump to a heavier move (never go backwards).</li>
-          <li>🏁 <b>Finish big:</b> end the string with your <b>⚡ Special</b>, <b>⚖️ C&amp;D</b>, <b>💸 Acqui-Hire</b>, or full <b>🦄 Unicorn</b>.</li>
-          <li>💥 The <b>HITS</b> counter shows your combo — bigger = more damage &amp; more style. Try: <b>🖐🖐 👊👊👊 🦶🦶 ⚡</b>.</li>
-          <li>🌬️ <b>Miss the first hit?</b> No combo — a swing that hits nothing leaves you open, so land that opener.</li>
+          <li>🔀 <b>Any order works.</b> 👊👊👟, 🖐👟👊, 👟👟🖐 — all legal. Kick can now go back to punch.</li>
+          <li>🥊 <b>Mashing is fine</b> — the game waits for your hit to land before firing the next move, so you can't out-run it.</li>
+          <li>🏁 <b>Finish big:</b> cap the string with <b>⚡ Special</b>, <b>⚖️ C&amp;D</b>, <b>💸 Acqui-Hire</b> or full <b>🦄 Unicorn</b>.</li>
+          <li>💥 The <b>HITS</b> counter tracks your combo — later hits do scale down, so a finisher beats a 6th jab.</li>
+          <li>🌬️ <b>Miss the first hit?</b> No chain — a swing that hits nothing leaves you open, so land the opener.</li>
         </ul>
       </div>
       <div class="panel">
-        <div class="panel-title">🛡 DEFENSE &amp; METER</div>
-        <p><b>Block</b> (hold) cuts damage to 15% chip — and chip can never finish you. You can't block a <b>Hostile Takeover</b> — jump away instead. <b>💨 Dash</b> (free, short cooldown) closes gaps or escapes corners and cancels straight into attacks. <b>PARRY:</b> tap block at the very last instant to turn an attack away — the attacker staggers and you pocket energy. Grabs beat parries. <b>Energy</b>: +12 when you land a hit, +8 when you take one — spend it 💣&nbsp;25 · ⚡&nbsp;50 · 🦄&nbsp;100. Unicorn Mode lasts 6 seconds: +35% damage, +25% speed, no chip taken. A <b>🛡 Legal Shield</b> briefcase absorbs one full hit — even a Takeover.</p>
+        <div class="panel-title">📄 DEFENSE &amp; METER</div>
+        <p><b>📄 NDA</b> (hold its own button — <b>/</b> or <b>Q</b>, never the crouch key) cuts damage to 15% chip, and chip can never finish you. <b>▼ Crouch</b> is separate: you duck under high attacks and can still attack from down there. You can't paper over a <b>Hostile Takeover</b> — jump away instead. <b>💨 Dash</b> (free, short cooldown) closes gaps or escapes corners and cancels straight into attacks. <b>PARRY:</b> tap block at the very last instant to turn an attack away — the attacker staggers and you pocket energy. Grabs beat parries. <b>Energy</b>: +12 when you land a hit, +8 when you take one — spend it 💣&nbsp;25 · ⚡&nbsp;50 · 🦄&nbsp;100. Unicorn Mode lasts 6 seconds: +35% damage, +25% speed, no chip taken. A <b>🛡 Legal Shield</b> briefcase absorbs one full hit — even a Takeover.</p>
       </div>
       <div class="panel">
         <div class="panel-title">⚡ SPECIAL ABILITIES</div>

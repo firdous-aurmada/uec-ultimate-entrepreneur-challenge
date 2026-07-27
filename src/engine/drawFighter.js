@@ -177,6 +177,13 @@ function computePose(f, t) {
     P.armF = { x: 40, y: -92 };
     P.armB = { x: -34, y: -78 };
     P.face = 'angry';
+  } else if (st === 'crouch') {
+    // low stance you can still attack from — knees bent, guard up, head down
+    P.hipY += 26; P.shoulderY += 22; P.headY += 26; P.headX = 3;
+    P.armF = { x: 24, y: -76 }; P.armB = { x: 6, y: -66 };
+    P.legF = { x: 24, y: 0 }; P.legB = { x: -20, y: 0 };
+    P.sx = 1.10; P.sy = 0.90;
+    P.bodyLean = 0.12;
   } else if (st === 'block') {
     P.crouch = 8; P.hipY += 8; P.headY += 10; P.shoulderY += 8;
     P.armF = { x: 26, y: -96 }; P.armB = { x: 24, y: -84 };

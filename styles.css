@@ -410,6 +410,24 @@ input, textarea { user-select: text; -webkit-user-select: text; }
 
 #btn-pause { position: absolute; top: 8px; right: 8px; z-index: 6; opacity: .85; }
 
+/* ---------- In-fight controls reference ---------- */
+.moves-ref { position: absolute; top: 8px; right: 60px; z-index: 7; }
+#btn-moves { opacity: .85; }
+.moves-card {
+  position: absolute; top: 50px; right: 0; width: min(320px, 78vw);
+  background: rgba(11,14,26,.96); border: 3px solid var(--gold); border-radius: 14px;
+  padding: 12px 14px; box-shadow: 0 14px 40px rgba(0,0,0,.7);
+}
+.moves-card.hidden { display: none; }
+.moves-title { font-weight: 900; font-style: italic; letter-spacing: 2px; color: var(--gold); font-size: 13px; margin-bottom: 8px; }
+.moves-grid { display: grid; grid-template-columns: 1fr auto; gap: 4px 10px; font-size: 12px; align-items: baseline; }
+.moves-grid span { color: var(--muted); }
+.moves-grid i { color: var(--cyan); font-style: normal; font-weight: 800; font-size: 10px; }
+.moves-grid b { color: var(--text); font-weight: 900; white-space: nowrap; }
+.moves-foot { margin-top: 9px; padding-top: 8px; border-top: 1px solid var(--line); color: var(--muted); font-size: 11px; line-height: 1.45; }
+/* touch already shows every button on screen — the card would just cover them */
+.touch-active .moves-ref { display: none; }
+
 /* ---------- Touch controls ---------- */
 .touch {
   position: fixed; left: 0; right: 0; bottom: 0; z-index: 40;
@@ -418,11 +436,28 @@ input, textarea { user-select: text; -webkit-user-select: text; }
   pointer-events: none;
 }
 .t-left, .t-right { display: flex; flex-direction: column; align-items: center; gap: 8px; pointer-events: auto; }
-.t-right { flex-direction: row; align-items: flex-end; gap: 8px; }
+.t-right { align-items: flex-end; gap: 8px; }
 .t-row { display: flex; gap: 8px; }
+.t-defend { justify-content: flex-end; }
 .t-grid { display: grid; grid-template-columns: repeat(3, auto); gap: 8px; }
 .t-bomb { background: rgba(255, 157, 26, 0.24); }
+.t-dash { background: rgba(255, 157, 26, 0.24); }
 .t-steal { background: rgba(87, 255, 138, 0.22); }
+/* cost badge: shows at a glance why a meter move isn't firing yet */
+.tbtn { position: relative; }
+.tcost {
+  position: absolute; right: 3px; bottom: 2px;
+  font-size: 10px; font-weight: 900; letter-spacing: 0;
+  color: var(--cyan); text-shadow: 1px 1px 0 #0a0c16; pointer-events: none;
+}
+.tlab {
+  position: absolute; bottom: 2px; left: 0; right: 0; text-align: center;
+  font-size: 9px; font-weight: 900; letter-spacing: 1px;
+  color: rgba(240,243,255,.75); text-shadow: 1px 1px 0 #0a0c16; pointer-events: none;
+}
+/* a meter move that's affordable right now glows so you know to use it */
+.tbtn.ready { border-color: var(--gold); box-shadow: 0 0 14px rgba(255,210,63,.6); }
+.tbtn.ready .tcost { color: var(--gold); }
 .tbtn {
   width: clamp(52px, 12vw, 68px); height: clamp(52px, 12vw, 68px);
   border-radius: 18px; border: 2px solid rgba(240,243,255,.35);

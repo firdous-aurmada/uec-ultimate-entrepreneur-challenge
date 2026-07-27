@@ -22,7 +22,13 @@ class HUD {
       announce: $('announce'),
       combo: [$('combo1'), $('combo2')],
       hint: $('hintToast'),
+      // touch buttons that cost meter — tagged with their cost so the HUD can
+      // light them the moment they become affordable
+      costBtns: [...document.querySelectorAll('#touchControls .tbtn')]
+        .filter(b => b.querySelector('.tcost'))
+        .map(b => { b.dataset.cost = b.querySelector('.tcost').textContent.trim(); return b; }),
     };
+    this.touch = document.getElementById('touchControls')?.classList.contains('hidden') === false;
     this.announceTimer = null;
     this.hintTimer = null;
   }
@@ -77,7 +83,18 @@ class HUD {
       this.el.en[i].classList.toggle('full', f.energy >= METER.MAX);
       const ready = f.energy >= METER.SPECIAL_COST;
       this.el.enTrack[i].classList.toggle('ready', ready);
-      if (ready) this.el.enSpark[i].textContent = f.energy >= METER.MAX ? '🦄 MAX' : '⚡ READY';
+      // Name the button to press, so a full meter is actionable and not a mystery.
+      if (ready) {
+        this.el.enSpark[i].textContent = f.energy >= METER.MAX
+          ? (this.touch ? '🦄 TAP UNICORN' : '🦄 MAX — U')
+          : (this.touch ? '⚡ TAP SPECIAL' : '⚡ READY — L');
+      }
+      // Light up whichever touch buttons the local player can actually afford.
+      if (i === 0 && this.el.costBtns) {
+        for (const b of this.el.costBtns) {
+          b.classList.toggle('ready', f.energy >= (+b.dataset.cost || 0));
+        }
+      }
 
       const pips = this.el.pips[i].children;
       for (let p = 0; p < pips.length; p++) {

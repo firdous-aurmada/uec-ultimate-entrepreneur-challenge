@@ -301,6 +301,20 @@ const netEvents = {
       openSelect('online');
     }
   },
+  // Socket dropped (backgrounding the tab to go send the link does this).
+  // We auto-rejoin, so tell the player it's recovering rather than dying.
+  onNetWobble(n) {
+    if (netPhase === 'waiting') setLiveStatus('wait', `Reconnecting to the room… (${n})`);
+    else if (!currentGame) toast('📶 Reconnecting…');
+  },
+  onNetBack() {
+    if (netPhase === 'waiting') setLiveStatus('wait', "Room is live — send the link. You'll know the second they join!");
+    else toast('📶 Back online.');
+  },
+  onNetDown() {
+    if (netPhase === 'waiting') setLiveStatus('wait', 'Lost the room — close this and start a new one.');
+    else abortOnline('Connection lost.');
+  },
   onPeerLeave() {
     if (netPhase === 'playing' || netPhase === 'picking' || netPhase === 'starting') {
       abortOnline('Your rival disconnected.');
@@ -877,6 +891,7 @@ function boot() {
   });
 
   input.onPause = togglePause;
+  $('btn-moves').onclick = () => { audio.sfx('click'); $('movesCard').classList.toggle('hidden'); };
   $('btn-pause').onclick = togglePause;
   $('btn-resume').onclick = togglePause;
   $('btn-restart').onclick = () => { audio.sfx('fight'); reallyStartMatch(currentSetup); };
@@ -974,6 +989,10 @@ function boot() {
 
   // auto-pause if the tab is hidden mid-fight (rAF throttling would stall it anyway)
   document.addEventListener('visibilitychange', () => {
+    // Coming back to the tab: the OS may have quietly killed our socket while
+    // the host was off in a messaging app sending the invite link. Verify and
+    // rejoin so the room is still there when the guest arrives.
+    if (!document.hidden && net) net.ensureAlive();
     if (DEBUG) return;                                  // test harness drives time manually
     if (document.hidden && currentGame && !currentGame.paused && !currentGame.finished
       && currentGame.state !== 'matchEnd'

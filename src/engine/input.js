@@ -3,33 +3,36 @@
 // Versus mode: WASD-cluster = P1, arrows-cluster = P2.
 
 function blankPad() {
-  return { left: false, right: false, up: false, block: false, slap: false, punch: false, kick: false, special: false, super: false, bomb: false, dash: false, steal: false };
+  return { left: false, right: false, up: false, down: false, block: false, slap: false, punch: false, kick: false, special: false, super: false, bomb: false, dash: false, steal: false };
 }
 
+// DOWN is CROUCH (you can still attack from it, fighting-game style).
+// Blocking moved to its own key — holding down used to enter block state and
+// swallow every other input, which is why "not all the controls work".
 const P1_KEYS = {
-  KeyA: 'left', KeyD: 'right', KeyW: 'up', KeyS: 'block',
+  KeyA: 'left', KeyD: 'right', KeyW: 'up', KeyS: 'down', KeyQ: 'block',
   KeyX: 'slap', KeyC: 'punch', KeyV: 'kick', KeyB: 'special', KeyG: 'super',
   KeyF: 'bomb', KeyR: 'dash', KeyT: 'steal',
 };
 const P2_KEYS = {
-  ArrowLeft: 'left', ArrowRight: 'right', ArrowUp: 'up', ArrowDown: 'block',
+  ArrowLeft: 'left', ArrowRight: 'right', ArrowUp: 'up', ArrowDown: 'down', Slash: 'block',
   KeyH: 'slap', KeyJ: 'punch', KeyK: 'kick', KeyL: 'special', KeyU: 'super',
   KeyI: 'bomb', KeyO: 'dash', KeyM: 'steal',
 };
 
 export const KEY_LABELS = {
   solo: [
-    ['Move', '← → / A D'], ['Jump', '↑ / W'], ['Block (hold)', '↓ / S'],
-    ['Slap 🖐', 'H / X'], ['Punch', 'J / C'], ['Kick', 'K / V'], ['Cease & Desist ⚖️', 'I / F'], ['Acqui-Hire 💸', 'M / T'],
-    ['Dash 💨', 'O / R'], ['Special', 'L / B'], ['Unicorn Mode', 'U / G'], ['Pause', 'Esc'],
+    ['Move', '← → / A D'], ['Jump', '↑ / W'], ['Crouch', '↓ / S'], ['NDA — block (hold) 📄', '/ or Q'],
+    ['Slap 🖐', 'H / X'], ['Punch 👊', 'J / C'], ['Kick 👟', 'K / V'], ['Cease & Desist ⚖️', 'I / F'], ['Acqui-Hire 💸', 'M / T'],
+    ['Dash 💨', 'O / R'], ['Special ⚡', 'L / B'], ['Unicorn Mode 🦄', 'U / G'], ['Pause', 'Esc'],
   ],
   p1: [
-    ['Move', 'A D'], ['Jump', 'W'], ['Block', 'S'],
-    ['Slap 🖐', 'X'], ['Punch', 'C'], ['Kick', 'V'], ['C&D ⚖️', 'F'], ['Acqui-Hire 💸', 'T'], ['Dash 💨', 'R'], ['Special', 'B'], ['Unicorn', 'G'],
+    ['Move', 'A D'], ['Jump', 'W'], ['Crouch', 'S'], ['NDA 📄', 'Q'],
+    ['Slap 🖐', 'X'], ['Punch 👊', 'C'], ['Kick 👟', 'V'], ['C&D ⚖️', 'F'], ['Acqui-Hire 💸', 'T'], ['Dash 💨', 'R'], ['Special ⚡', 'B'], ['Unicorn 🦄', 'G'],
   ],
   p2: [
-    ['Move', '← →'], ['Jump', '↑'], ['Block', '↓'],
-    ['Slap 🖐', 'H'], ['Punch', 'J'], ['Kick', 'K'], ['C&D ⚖️', 'I'], ['Acqui-Hire 💸', 'M'], ['Dash 💨', 'O'], ['Special', 'L'], ['Unicorn', 'U'],
+    ['Move', '← →'], ['Jump', '↑'], ['Crouch', '↓'], ['NDA 📄', '/'],
+    ['Slap 🖐', 'H'], ['Punch 👊', 'J'], ['Kick 👟', 'K'], ['C&D ⚖️', 'I'], ['Acqui-Hire 💸', 'M'], ['Dash 💨', 'O'], ['Special ⚡', 'L'], ['Unicorn 🦄', 'U'],
   ],
 };
 

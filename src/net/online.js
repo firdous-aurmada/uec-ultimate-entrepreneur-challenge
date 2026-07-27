@@ -128,18 +128,55 @@ export class NetSession {
       .on('broadcast', { event: 'rematch' }, () => this.ev.onRematchWanted?.());
 
     await new Promise((resolve, reject) => {
-      const timeout = setTimeout(() => reject(new Error('timeout')), 12000);
+      let settled = false;
+      const timeout = setTimeout(() => { settled = true; reject(new Error('timeout')); }, 12000);
       this.channel.subscribe(async (status) => {
         if (status === 'SUBSCRIBED') {
           clearTimeout(timeout);
           await this.channel.track({ ...this.me, role: this.role });
-          resolve();
+          this.retries = 0;
+          if (!settled) { settled = true; resolve(); }
         } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
           clearTimeout(timeout);
-          reject(new Error(status));
+          // Before we're connected this is a hard failure. AFTER we're
+          // connected it's a dropped socket — which is the normal case for a
+          // host who switches apps to send the invite link. Without a rejoin
+          // the room silently dies and the guest sees "no host here".
+          if (!settled) { settled = true; reject(new Error(status)); }
+          else this.scheduleRejoin();
         }
       });
     });
+  }
+
+  // Re-subscribe after a dropped socket, with backoff. Presence is re-tracked
+  // by connect(), so the peer sees us reappear instead of a dead room.
+  scheduleRejoin() {
+    if (this.closed || this.rejoinTimer) return;
+    this.retries = (this.retries || 0) + 1;
+    if (this.retries > 6) { this.ev.onNetDown?.(); return; }
+    const wait = Math.min(8000, 500 * Math.pow(2, this.retries - 1));
+    this.ev.onNetWobble?.(this.retries);
+    this.rejoinTimer = setTimeout(async () => {
+      this.rejoinTimer = null;
+      if (this.closed) return;
+      try {
+        try { await this.channel?.unsubscribe(); } catch (e) { /* already gone */ }
+        this.peer = null;
+        await this.connect();
+        this.ev.onNetBack?.();
+      } catch (e) {
+        this.scheduleRejoin();
+      }
+    }, wait);
+  }
+
+  // Called when the tab comes back to the foreground: verify we're still
+  // actually subscribed, and rejoin if the OS quietly killed the socket.
+  ensureAlive() {
+    if (this.closed) return;
+    const st = this.channel?.state;
+    if (st !== 'joined' && st !== 'joining') this.scheduleRejoin();
   }
 
   handlePresence() {
@@ -266,6 +303,7 @@ export class NetSession {
 
   async close() {
     this.closed = true;
+    if (this.rejoinTimer) { clearTimeout(this.rejoinTimer); this.rejoinTimer = null; }
     try { await this.channel?.unsubscribe(); } catch (e) { /* already gone */ }
     this.channel = null;
   }

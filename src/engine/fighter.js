@@ -81,13 +81,15 @@ export class Fighter {
       * (this.dmgBuffT > 0 ? DROPS.BUFF_DMG : 1);
   }
   get actionable() {
-    return this.state === 'idle' || this.state === 'walk' || this.state === 'jump' || this.state === 'block';
+    return this.state === 'idle' || this.state === 'walk' || this.state === 'jump'
+      || this.state === 'block' || this.state === 'crouch';
   }
 
   pressed(k) { return this.pad[k] && !this.prevPad[k]; }
 
   hurtbox() {
-    const h = this.airborne ? 120 : PHYS.BODY_H;
+    // crouching ducks you under high attacks — the reward for the stance
+    const h = this.airborne ? 120 : (this.crouching ? PHYS.BODY_H * 0.68 : PHYS.BODY_H);
     const w = PHYS.BODY_W;
     return { x: this.x - w / 2, y: this.y - h, w, h };
   }
@@ -110,6 +112,10 @@ export class Fighter {
     else this.controller.update(this, game);
     const pad = this.pad;
     const opp = game.other(this);
+
+    // Crouch is resolved once per frame so it can't go stale when an attack or
+    // a jump takes over the state machine mid-hold.
+    this.crouching = !!pad.down && this.grounded && this.state !== 'block';
 
     // timers
     this.flashT = Math.max(0, this.flashT - dt);
@@ -163,24 +169,18 @@ export class Fighter {
         if (a.hasHit && this.grounded && this.stateT >= a.startup && a.buffered) {
           const want = a.buffered;
           a.buffered = null;
-          const curRank = COMBO.RANK[a.kind];
-          const wantRank = COMBO.RANK[want];
-          if (curRank !== undefined && wantRank !== undefined) {
+          const isBasic = COMBO.BASICS.includes(a.kind);
+          const wantBasic = COMBO.BASICS.includes(want);
+          if (isBasic && wantBasic) {
             const n = a.chainN || 1;
-            if (want === a.kind && n < COMBO.CAP[want]) {
+            if (n < COMBO.MAX_CHAIN) {                           // any basic → any basic
               this.startAttack(want, game);
               this.attack.chainN = n + 1;
               if (want !== 'kick') this.x += this.facing * 12;   // slaps/jabs step in
               break;
             }
-            if (wantRank > curRank) {                            // escalate to a heavier basic
-              this.startAttack(want, game);
-              this.attack.chainN = 1;
-              break;
-            }
-            // downgrade (e.g. kick → punch) not allowed → falls through to recovery
-          } else if (curRank !== undefined) {                    // finishers from any basic
-            if (want === 'steal' && curRank <= 1 && this.stealCD <= 0) { this.startSteal(game); break; }
+          } else if (isBasic) {                                  // finishers from any basic
+            if (want === 'steal' && this.stealCD <= 0) { this.startSteal(game); break; }
             if (want === 'special' && this.energy >= METER.SPECIAL_COST) { this.startSpecial(game); break; }
             if (want === 'bomb' && this.energy >= METER.BOMB_COST) { this.startBomb(game); break; }
             if (want === 'super' && this.energy >= METER.SUPER_COST) {
@@ -213,26 +213,34 @@ export class Fighter {
         break;
       }
 
-      default: {  // idle / walk / jump / block — actionable
+      default: {  // idle / walk / jump / crouch / block — actionable
+        // Block is its own button now. Crouch (DOWN) is a stance you can still
+        // attack from, so holding down no longer disables the whole moveset.
         if (pad.block && this.grounded) {
           this.setState('block');
         } else if (this.state === 'block' && !pad.block) {
           this.setState('idle');
+        } else if (this.state !== 'block') {
+          if (this.crouching && this.state !== 'attack') this.setState('crouch');
+          else if (this.state === 'crouch' && !this.crouching) this.setState('idle');
         }
 
         if (this.state !== 'block') {
-          if (this.pressed('super') && this.energy >= METER.SUPER_COST) {
-            this.activateUnicorn(game);
+          if (this.pressed('super')) {
+            if (this.energy >= METER.SUPER_COST) this.activateUnicorn(game);
+            else game.onSpecialDenied(this, 'super');
           } else if (this.pressed('special')) {
             if (this.energy >= METER.SPECIAL_COST) this.startSpecial(game);
-            else game.onSpecialDenied(this);
+            else game.onSpecialDenied(this, 'special');
           } else if (this.pressed('bomb') && this.grounded) {
             if (this.energy >= METER.BOMB_COST) this.startBomb(game);
-            else game.onSpecialDenied(this);
-          } else if (this.pressed('steal') && this.grounded && this.stealCD <= 0) {
-            this.startSteal(game);
-          } else if (this.pressed('dash') && this.grounded && this.dashCD <= 0) {
-            this.startDash(game);
+            else game.onSpecialDenied(this, 'bomb');
+          } else if (this.pressed('steal') && this.grounded) {
+            if (this.stealCD <= 0) this.startSteal(game);
+            else game.onSpecialDenied(this, 'steal');
+          } else if (this.pressed('dash') && this.grounded) {
+            if (this.dashCD <= 0) this.startDash(game);
+            else game.onSpecialDenied(this, 'dash');
           } else if (this.pressed('slap') && !(this.airborne && this.airAttackUsed)) {
             this.startAttack('slap', game);
           } else if (this.pressed('punch') && !(this.airborne && this.airAttackUsed)) {

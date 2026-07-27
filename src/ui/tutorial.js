@@ -16,20 +16,20 @@ const SLIDES = [
     emoji: '👊',
     title: 'THREE STRIKES',
     body: () => isTouchDevice()
-      ? 'Three basic attacks, weakest to strongest: <b>🖐 Slap</b> (fastest), <b>👊 Punch</b>, <b>🦶 Kick</b> (hardest). Slap starts a combo, kick ends one.'
-      : 'Three basic attacks, weakest to strongest: <b>H</b> = <b>🖐 Slap</b> (fastest), <b>J</b> = <b>👊 Punch</b>, <b>K</b> = <b>🦶 Kick</b> (hardest). Slap starts a combo, kick ends one.',
+      ? 'Three basic attacks: <b>🖐 Slap</b> (fastest), <b>👊 Punch</b>, <b>👟 Kick</b> (hardest). Use <b>▼</b> to crouch — you can still attack from down there, and you duck under high shots.'
+      : 'Three basic attacks: <b>H</b> = <b>🖐 Slap</b> (fastest), <b>J</b> = <b>👊 Punch</b>, <b>K</b> = <b>👟 Kick</b> (hardest). Hold <b>↓</b> to crouch — you can still attack from down there, and you duck under high shots.',
   },
   {
     emoji: '🔗',
     title: 'CHAIN THEM UP',
-    body: () => 'One rule: when an attack <b>lands</b>, you can cancel it into the <b>same move or a stronger one</b> — never a weaker one. So <b>🖐🖐 → 👊👊👊 → 🦶🦶 → ⚡</b> all flows, but kick can\'t go back to punch. Just climb the ladder and finish with your special.',
+    body: () => 'One rule, no order to memorise: when an attack <b>lands</b>, hit <b>any other attack button</b> and it chains. 🖐 👊 👟 in any mix, up to <b>5</b>, then finish with <b>⚡</b>, <b>⚖️</b> or <b>💸</b>. Just keep pressing while you\'re connecting.',
   },
   {
-    emoji: '🛡',
-    title: 'BLOCK, PARRY, PUNISH',
+    emoji: '📄',
+    title: 'SERVE THE NDA',
     body: () => isTouchDevice()
-      ? 'Hold <b>🛡</b> to block. <b>Tap it the instant their hit lands</b> and you <b>PARRY</b> — they stagger, you gain energy, and the counter is free. Throws beat blocks, so jump away from those.'
-      : 'Hold <b>↓</b> (or S) to block. <b>Tap it the instant their hit lands</b> and you <b>PARRY</b> — they stagger, you gain energy, and the counter is free. Throws beat blocks, so jump away from those.',
+      ? 'Hold <b>📄 NDA</b> to shut their attack down to a scratch. <b>Tap it the instant their hit lands</b> and you <b>PARRY</b> — they stagger, you gain energy, and the counter is free. Hostile Takeovers ignore paperwork: jump those.'
+      : 'Hold <b>/</b> (or Q) to serve an <b>📄 NDA</b> and shut their attack down to a scratch. <b>Tap it the instant their hit lands</b> and you <b>PARRY</b> — they stagger, you gain energy, and the counter is free. Hostile Takeovers ignore paperwork: jump those.',
   },
   {
     emoji: '⚡',

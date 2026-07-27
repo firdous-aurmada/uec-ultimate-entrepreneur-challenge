@@ -98,7 +98,7 @@ Chip **can never KO** — it always leaves at least 1 HP.
 |---|---|---|---|---|---|---|---|---|
 | 🖐 **Slap** | H / X | 0.04 s (2.4 f) | 0.06 s | 0.12 s | **4** | 78 px | 70 | 0.20 s |
 | 👊 **Punch** | J / C | 0.05 s (3 f) | 0.06 s | 0.11 s | **7** | 84 px | 110 | 0.24 s |
-| 🦶 **Kick** | K / V | 0.10 s (6 f) | 0.08 s | 0.17 s | **12** | 106 px | 320 | 0.32 s |
+| 👟 **Kick** | K / V | 0.10 s (6 f) | 0.08 s | 0.17 s | **12** | 106 px | 320 | 0.32 s |
 
 The trade is deliberate: slap is **2.5× faster to start** than kick but does
 **a third** the damage. Fast moves open, slow moves close.
@@ -131,14 +131,14 @@ One rule: **when an attack lands, you may cancel it into the same move (up to
 its cap) or any stronger move. Never a weaker one.**
 
 ```
-RANK:  🖐 slap (0)  <  👊 punch (1)  <  🦶 kick (2)
+RANK:  🖐 slap (0)  <  👊 punch (1)  <  👟 kick (2)
 CAP:   slap ×2        punch ×3         kick ×2
 ```
 
 So the longest pure-basics route is **7 hits**, then a finisher:
 
 ```
-🖐🖐 → 👊👊👊 → 🦶🦶 → ⚡ special / ⚖️ C&D / 🦄 Unicorn
+🖐🖐 → 👊👊👊 → 👟👟 → ⚡ special / ⚖️ C&D / 🦄 Unicorn
 ```
 
 Kick cannot drop back to punch. Whiffs cancel nothing — miss and you eat the
@@ -161,8 +161,8 @@ SCALING = [1, 0.85, 0.7, 0.6, 0.5, 0.45, 0.4]   // indexed by victim's chain dep
 | 3 | 👊 Punch | 7 | × 0.70 | **5** |
 | 4 | 👊 Punch | 7 | × 0.60 | **4** |
 | 5 | 👊 Punch | 7 | × 0.50 | **4** |
-| 6 | 🦶 Kick | 12 | × 0.45 | **5** |
-| 7 | 🦶 Kick | 12 | × 0.40 | **5** |
+| 6 | 👟 Kick | 12 | × 0.45 | **5** |
+| 7 | 👟 Kick | 12 | × 0.40 | **5** |
 | 8 | 🔄 Pivot Punch | 16 | × 0.40 | **6** |
 | | | | **total** | **36** |
 

@@ -53,7 +53,7 @@ Win **2 of 3 rounds** (60 s each): empty your rival's health bar or lead when th
 | Block / parry | ↓ or S | S | ↓ | 🛡 |
 | Slap | H or X | X | H | 🖐 |
 | Punch | J or C | C | J | 👊 |
-| Kick | K or V | V | K | 🦶 |
+| Kick | K or V | V | K | 👟 |
 | Special | L or B | B | L | ⚡ |
 | Cease & Desist | I or F | F | I | ⚖️ |
 | Acqui-Hire (steal) | M or T | T | M | 💸 |
@@ -63,7 +63,7 @@ Win **2 of 3 rounds** (60 s each): empty your rival's health bar or lead when th
 
 Touch pads appear automatically on phones/tablets (or force them with `?touch=1`).
 
-**Combos — one rule.** When an attack **lands**, cancel it into the *same move or a stronger one* — never a weaker one. The ladder is 🖐 slap → 👊 punch → 🦶 kick → ⚡ finisher, with caps of 2 slaps / 3 punches / 2 kicks per string, so `🖐🖐 → 👊👊👊 → 🦶🦶 → ⚡` is a legal 8-hit route. Kick can't drop back to punch. Later hits deal scaled damage, and 3 / 5 / 7 / 10 hits pop **COMBO! / SYNERGY! / DISRUPTED! / ACQUIRED!**
+**Combos — one rule.** When an attack **lands**, cancel it into the *same move or a stronger one* — never a weaker one. The ladder is 🖐 slap → 👊 punch → 👟 kick → ⚡ finisher, with caps of 2 slaps / 3 punches / 2 kicks per string, so `🖐🖐 → 👊👊👊 → 👟👟 → ⚡` is a legal 8-hit route. Kick can't drop back to punch. Later hits deal scaled damage, and 3 / 5 / 7 / 10 hits pop **COMBO! / SYNERGY! / DISRUPTED! / ACQUIRED!**
 
 **Parry:** tap block at the instant a hit lands (0.12 s window) — the attacker staggers and you gain energy. Grabs beat parries; parries beat everything else.
 
