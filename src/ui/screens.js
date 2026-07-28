@@ -728,8 +728,6 @@ export function renderHelp() {
       k.split(' / ').map(x => `<span class="kbd">${x}</span>`).join('')
     }</div>`).join('');
   $('keys-solo').innerHTML = keys(KEY_LABELS.solo);
-  $('keys-p1').innerHTML = '<h4>PLAYER 1</h4>' + keys(KEY_LABELS.p1);
-  $('keys-p2').innerHTML = '<h4>PLAYER 2</h4>' + keys(KEY_LABELS.p2);
 
   const list = $('ability-list');
   list.innerHTML = '';
@@ -933,7 +931,6 @@ export function initScreens(actions) {
   // title nav
   $('btn-quick').onclick = () => { audio.sfx('fight'); A.quickFight(); };
   $('btn-arcade').onclick = () => { audio.sfx('select'); sel.ghost = null; openSelect('solo'); };
-  $('btn-2p').onclick = () => { audio.sfx('select'); sel.ghost = null; openSelect('versus'); };
   $('btn-challenges').onclick = () => { audio.sfx('select'); renderChallenges(); A.showScreen('scr-challenge'); };
   $('btn-leaderboard').onclick = () => { audio.sfx('select'); renderLeaderboard(); A.showScreen('scr-leaderboard'); };
   $('btn-profile').onclick = () => { audio.sfx('select'); renderProfile(); A.showScreen('scr-profile'); };

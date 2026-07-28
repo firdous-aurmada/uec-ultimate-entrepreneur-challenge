@@ -156,6 +156,16 @@ function computePose(f, t) {
       P.legF = { x: 15 + Math.sin(ph) * 20, y: -Math.max(0, Math.sin(ph + 1.5)) * 12 };
       P.legB = { x: -14 + Math.sin(ph + Math.PI) * 20, y: -Math.max(0, Math.sin(ph + Math.PI + 1.5)) * 12 };
       P.armF = { x: 48, y: -96 }; P.armB = { x: -30, y: -80 };
+    } else if (atk.kind === 'launch') {
+      // rising uppercut: fist punches skyward, body lifts off the back foot
+      const rise = Math.max(0, hitK);
+      P.armF = { x: 16 + 26 * rise, y: -120 - 74 * rise };
+      P.armB = { x: -20, y: -78 };
+      P.legF = { x: 14, y: -26 * rise };
+      P.legB = { x: -16, y: 0 };
+      P.hipY -= 30 * rise; P.shoulderY -= 22 * rise; P.headY -= 30 * rise;
+      P.bodyLean = -0.16 * rise;
+      P.sy = 1 + 0.10 * rise; P.sx = 1 - 0.07 * rise;
     } else if (atk.kind === 'slap') {
       // open-hand backhand: arm swings high and across, big shoulder rotation
       const reach = (atk.reach || 78) * 0.95;

@@ -1,7 +1,7 @@
 // Central tuning for the whole game. All gameplay numbers live here.
 
 // Bump this on every release — it's rendered on the title screen.
-export const VERSION = 'v2.1';
+export const VERSION = 'v2.2';
 
 // Every player fights on identical footing. Your base character is pure
 // cosmetics: it decides how you LOOK, never how hard you hit. Ranked points
@@ -99,11 +99,15 @@ export const COMBO = {
   // no order to memorise. The old rank system (slap<punch<kick, per-move caps)
   // was the "too complicated / wouldn't activate" complaint: players had to
   // remember which move could follow which, and a wrong guess did nothing.
-  BASICS: ['slap', 'punch', 'kick'],
+  BASICS: ['slap', 'punch', 'kick', 'launch'],
   MAX_CHAIN: 5,          // basics per string before you must finish
 };
 
 export const ATTACKS = {
+  // 🚀 LAUNCH — rising uppercut. The anti-air the game was missing: beats
+  // jump-ins, launches on hit so you can follow up, but whiffs hard if you
+  // throw it out at nothing (long recovery). Free, no meter.
+  launch: { startup: 0.06, active: 0.10, recovery: 0.28, dmg: 10, reach: 74,  hitY: -150, kb: 150, kbUp: -420, stun: 0.36, shake: 8,  words: ['LAUNCH!', 'SHIPPED!', 'LIFTOFF!'] },
   slap:  { startup: 0.04, active: 0.06, recovery: 0.12, dmg: 4,  reach: 78,  hitY: -112, kb: 70,  kbUp: 0,    stun: 0.20, shake: 4,  words: ['SLAP!', 'SMACK!', 'DISRESPECT!'] },
   punch: { startup: 0.05, active: 0.06, recovery: 0.11, dmg: 7,  reach: 84,  hitY: -104, kb: 110, kbUp: 0,    stun: 0.24, shake: 6,  words: ['POW!', 'JAB!', 'BAM!'] },
   kick:  { startup: 0.10, active: 0.08, recovery: 0.17, dmg: 12, reach: 106, hitY: -78,  kb: 320, kbUp: -120, stun: 0.32, shake: 9,  words: ['WHAM!', 'SMACK!', 'BOOM!'] },

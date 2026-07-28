@@ -42,6 +42,14 @@ export const Save = {
     this.persist();
   },
 
+  // Replace local ranked stats with the account's. The server owns these
+  // (only report_match() can write them), so the cloud row is authoritative —
+  // merging would let a stale device re-inflate points on every sign-in.
+  adoptCloudStats(s) {
+    this.data.stats = { ...this.data.stats, ...s };
+    this.persist();
+  },
+
   setSetting(key, val) {
     this.data.settings[key] = val;
     this.persist();

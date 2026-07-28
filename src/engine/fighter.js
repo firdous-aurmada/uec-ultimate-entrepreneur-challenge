@@ -159,7 +159,7 @@ export class Fighter {
         // buffer the next chain input even before this attack connects —
         // mashing must never drop a link
         if (!a.buffered) {
-          for (const k of ['slap', 'punch', 'kick', 'special', 'bomb', 'super', 'steal']) {
+          for (const k of ['launch', 'slap', 'punch', 'kick', 'special', 'bomb', 'super', 'steal']) {
             if (this.pressed(k)) { a.buffered = k; break; }
           }
         }
@@ -241,6 +241,8 @@ export class Fighter {
           } else if (this.pressed('dash') && this.grounded) {
             if (this.dashCD <= 0) this.startDash(game);
             else game.onSpecialDenied(this, 'dash');
+          } else if (this.pressed('launch') && this.grounded) {
+            this.startAttack('launch', game);
           } else if (this.pressed('slap') && !(this.airborne && this.airAttackUsed)) {
             this.startAttack('slap', game);
           } else if (this.pressed('punch') && !(this.airborne && this.airAttackUsed)) {

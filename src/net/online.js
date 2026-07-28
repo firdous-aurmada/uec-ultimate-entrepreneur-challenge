@@ -18,12 +18,20 @@ const SUPABASE_URL = 'https://oqzxkzkyiiahxmppgrkn.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_hA-O1-vWIa40YOlyy3d0mA_Mf0zCrkO';
 
 export const STEP = 1 / 60;          // fixed simulation timestep
-export const INPUT_DELAY = 10;       // frames of input delay (~166 ms) — absorbs send pacing + latency
-const SEND_MS = 60;                  // min wall-clock ms between input packets (~15/s, well under rate limits)
+// Input delay is felt directly as control lag, so it's kept as low as the
+// transport allows: packets now go out every ~33 ms (was 60), which means 6
+// frames covers batching + a normal one-way hop. Was 10 frames / 60 ms pacing
+// ≈ 226 ms of lag; this is ≈ 133 ms. Both peers run the same constants, so
+// lockstep determinism is unaffected. Late packets are still covered by the
+// resend-window + heal logic rather than by padding every input.
+export const INPUT_DELAY = 6;        // frames (~100 ms)
+const SEND_MS = 33;                  // ~30 packets/s — still well under Realtime rate limits
 const WINDOW_MAX = 60;               // max frames carried per packet
 const SYNC_EVERY = 120;              // frames between state-hash checks
 
-const BITS = ['left', 'right', 'up', 'block', 'punch', 'kick', 'special', 'super', 'bomb', 'dash', 'steal', 'slap'];
+// NOTE: every gameplay pad key must appear here or it never reaches the peer —
+// 'down' (crouch) was missing, so crouching didn't transmit in live matches.
+const BITS = ['left', 'right', 'up', 'down', 'block', 'launch', 'punch', 'kick', 'special', 'super', 'bomb', 'dash', 'steal', 'slap'];
 
 export function padToMask(pad) {
   let m = 0;
@@ -65,7 +73,8 @@ function loadClient() {
       .then(({ createClient }) => createClient(SUPABASE_URL, SUPABASE_KEY, {
         // persist so sign-in survives reloads; detect the OAuth redirect fragment
         auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true },
-        realtime: { params: { eventsPerSecond: 25 } },
+        // must exceed our send rate (1000/SEND_MS ≈ 30/s) or packets get throttled
+        realtime: { params: { eventsPerSecond: 50 } },
       }));
   }
   return sbPromise;
@@ -77,6 +86,71 @@ export function getSupabase() { return loadClient(); }
 export function makeRoomId() {
   const raw = (crypto.randomUUID ? crypto.randomUUID().replace(/-/g, '') : Math.random().toString(36).slice(2) + Date.now().toString(36));
   return raw.slice(0, 10);
+}
+
+// ---------------------------------------------------------------------------
+// MATCHMAKING LOBBY
+//
+// One shared presence channel. Everyone waiting announces themselves; every
+// client sees the same roster and independently runs the SAME pairing rule, so
+// two players agree on who fights whom and which room to meet in — no server
+// logic, no race to claim an opponent.
+//
+// Pairing: sort the roster by session id, take players in twos. The lower id
+// hosts. Room id is derived from both ids, so both sides compute it identically.
+// ---------------------------------------------------------------------------
+export const LOBBY_CHANNEL = 'uec-lobby-v1';
+
+export function pairFromRoster(roster, myId) {
+  const ids = roster.map(r => r.sid).filter(Boolean).sort();
+  const i = ids.indexOf(myId);
+  if (i < 0) return null;
+  const partnerIdx = i % 2 === 0 ? i + 1 : i - 1;   // 0↔1, 2↔3, …
+  const partner = ids[partnerIdx];
+  if (!partner) return null;                        // odd one out keeps waiting
+  const [a, b] = [myId, partner].sort();
+  return { partner, role: myId === a ? 'host' : 'guest', roomId: ('m' + a + b).slice(0, 24) };
+}
+
+export class LobbySession {
+  constructor({ me, onRoster }) {
+    this.me = me;
+    this.onRoster = onRoster;
+    this.sid = makeRoomId() + makeRoomId().slice(0, 4);   // unique per tab
+    this.channel = null;
+    this.closed = false;
+  }
+
+  async join() {
+    const sb = await loadClient();
+    this.channel = sb.channel(LOBBY_CHANNEL, {
+      config: { broadcast: { self: false }, presence: { key: this.sid } },
+    });
+    this.channel.on('presence', { event: 'sync' }, () => {
+      if (this.closed) return;
+      const state = this.channel.presenceState();
+      const roster = Object.values(state).map(arr => arr[0]).filter(Boolean);
+      this.onRoster?.(roster);
+    });
+    await new Promise((resolve, reject) => {
+      const to = setTimeout(() => reject(new Error('timeout')), 12000);
+      this.channel.subscribe(async (status) => {
+        if (status === 'SUBSCRIBED') {
+          clearTimeout(to);
+          await this.channel.track({ ...this.me, sid: this.sid });
+          resolve();
+        } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          clearTimeout(to); reject(new Error(status));
+        }
+      });
+    });
+  }
+
+  async leave() {
+    this.closed = true;
+    try { await this.channel?.unsubscribe(); } catch (e) { /* already gone */ }
+    this.channel = null;
+  }
 }
 
 export class NetSession {

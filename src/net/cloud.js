@@ -10,6 +10,7 @@
 import { getSupabase } from './online.js';
 import { currentUser } from '../auth.js';
 import { Save } from '../state.js';
+
 import { DEFAULT_BASE_ID, pickLook } from '../data/fighters.js';
 
 // Push the local profile's identity (never stats) up to the cloud.
@@ -48,11 +49,55 @@ export async function fetchProfile(id) {
   try {
     const sb = await getSupabase();
     const { data, error } = await sb.from('profiles')
-      .select('handle, company, base_id, c1, c2, special, photo, skin, hair, points')
+      .select('handle, company, base_id, c1, c2, special, photo, skin, hair, look, points')
       .eq('id', id).maybeSingle();
     return error ? null : data;
   } catch (e) {
     return null;
+  }
+}
+
+// Pull YOUR account down onto this device.
+//
+// Your account is the source of truth, not the browser you happen to be on:
+// stats used to live only in per-device localStorage, so the same founder
+// showed a different look and a different rank on phone vs laptop.
+// Returns true if anything was adopted.
+export async function syncProfileDown() {
+  const user = currentUser();
+  if (!user) return false;
+  try {
+    const sb = await getSupabase();
+    const { data, error } = await sb.from('profiles')
+      .select('handle, company, base_id, c1, c2, special, photo, skin, hair, look, wins, losses, kos, streak, best_streak, points, matches')
+      .eq('id', user.id).maybeSingle();
+    if (error || !data) return false;
+
+    // identity + look
+    const p = Save.profile || {};
+    Save.saveProfile({
+      ...p,
+      name: data.handle || p.name || 'Founder',
+      company: data.company ?? p.company ?? '',
+      baseId: data.base_id || p.baseId,
+      c1: data.c1 || p.c1, c2: data.c2 || p.c2,
+      special: data.special || p.special,
+      photo: data.photo ?? p.photo ?? null,
+      skin: data.skin ?? p.skin ?? null,
+      hair: data.hair ?? p.hair ?? null,
+      ...(data.look || {}),
+    });
+
+    // Ranked stats are server-owned (only report_match() can write them), so
+    // the cloud row always wins — never merge, or a stale device inflates them.
+    Save.adoptCloudStats({
+      wins: data.wins | 0, losses: data.losses | 0, kos: data.kos | 0,
+      streak: data.streak | 0, bestStreak: data.best_streak | 0,
+      points: data.points | 0, matches: data.matches | 0,
+    });
+    return true;
+  } catch (e) {
+    return false;
   }
 }
 

@@ -18,9 +18,9 @@ import {
 } from './ui/screens.js';
 import { shouldShowTutorial, showTutorial } from './ui/tutorial.js';
 import { AUTH, initAuth, onAuthChange, signInGoogle, signInMicrosoft, signInEmail, signOut, currentUser, userHandle, __debugSignIn } from './auth.js';
-import { syncProfileUp, reportOnlineMatch, fetchProfile } from './net/cloud.js';
+import { syncProfileUp, syncProfileDown, reportOnlineMatch, fetchProfile } from './net/cloud.js';
 import {
-  NetSession, MaskController, makeRoomId, padToMask,
+  NetSession, LobbySession, pairFromRoster, MaskController, makeRoomId, padToMask,
   STEP as NET_STEP,
 } from './net/online.js';
 
@@ -40,6 +40,7 @@ let netLocalIdx = 0;
 let netAccum = 0;
 let netPickLocked = false;
 let netArenaChoice = 'random';
+let netAuto = false;         // true when the match came from the auto-pair lobby
 let netRematch = { me: false, peer: false };
 let guestTag = null;
 
@@ -294,6 +295,14 @@ function quitMatch() {
 const netEvents = {
   onPeerJoin(meta) {
     audio.sfx('meterFull');
+    // Lobby match: nothing to choose, so re-send our pick (covers the race
+    // where one side locked in before the other had subscribed) and go.
+    if (netAuto && netPhase === 'picking') {
+      toast(`🥊 ${meta.n} is in — fight!`);
+      net?.sendPick(defToSpec(playerDef()));
+      maybeHostStart();
+      return;
+    }
     if (netPhase === 'waiting' || netPhase === 'picking') {
       netPhase = 'picking';
       netPickLocked = false;
@@ -352,12 +361,87 @@ const netEvents = {
 
 async function endNetSession() {
   netPhase = 'idle';
+  netAuto = false;
   $('netStatus').classList.add('hidden');
   if (net) {
     const n = net;
     net = null;
     await n.close();
   }
+}
+
+// ---- matchmaking lobby ----
+let lobby = null;
+let lobbyPairing = false;
+
+async function leaveLobby() {
+  lobbyPairing = false;
+  if (lobby) { const l = lobby; lobby = null; await l.leave(); }
+}
+
+function setLobbyStatus(kind, text, count) {
+  $('lobbyDot').classList.toggle('ok', kind === 'ok');
+  $('lobbyStatusText').textContent = text;
+  $('lobbyCount').textContent = count == null ? ''
+    : count <= 1 ? '1 founder in the lobby — you'
+    : `${count} founders in the lobby`;
+}
+
+async function enterLobby() {
+  await endNetSession();
+  await leaveLobby();
+  openModal('modal-lobby');
+  setLobbyStatus('wait', 'Joining the lobby…', null);
+
+  lobby = new LobbySession({
+    me: identity(),
+    onRoster: (roster) => {
+      if (!lobby || lobbyPairing) return;
+      const pair = pairFromRoster(roster, lobby.sid);
+      if (!pair) {
+        setLobbyStatus('wait', 'Waiting for fighters…', roster.length);
+        return;
+      }
+      // Both sides compute the same pair, the same roles and the same room id,
+      // so they meet without any handshake.
+      lobbyPairing = true;
+      const rival = roster.find(r => r.sid === pair.partner);
+      setLobbyStatus('ok', `Matched with ${rival?.n || 'a founder'} — entering the arena…`, roster.length);
+      startPairedMatch(pair);
+    },
+  });
+
+  try {
+    await lobby.join();
+  } catch (e) {
+    setLobbyStatus('wait', 'Could not reach the lobby — check your connection.', null);
+    await leaveLobby();
+  }
+}
+
+// Paired via the lobby: connect to the shared room and lock in immediately —
+// there's nothing left to choose (you always fight as yourself).
+//
+// We deliberately STAY tracked in the lobby until the match actually starts.
+// Leaving on pairing raced the partner's presence sync: the first player to
+// pair vanished from the roster before the second ever saw them, so the second
+// sat on "waiting for fighters" forever.
+async function startPairedMatch({ role, roomId }) {
+  net = new NetSession({ role, roomId, me: identity(), ev: netEvents });
+  netPhase = 'picking';
+  try {
+    await net.connect();
+  } catch (e) {
+    toast('Could not open the match room — try again.');
+    await endNetSession();
+    lobbyPairing = false;      // allow the next roster sync to re-pair us
+    return;
+  }
+  netAuto = true;
+  netArenaChoice = 'random';
+  netPickLocked = true;
+  net.sendPick(defToSpec(playerDef()));
+  maybeHostStart();
 }
 
 async function createLiveRoom() {
@@ -452,6 +536,7 @@ function maybeHostStart() {
 
 function startOnlineMatch(cfg) {
   clearTimeout(splashTimer);
+  leaveLobby();            // paired and playing — release our lobby slot
   closeModals();
   netPhase = 'playing';
   netRematch = { me: false, peer: false };
@@ -893,7 +978,8 @@ function boot() {
     if (!e.target.closest('input, textarea')) e.preventDefault();
   });
 
-  $('btn-title-live').onclick = () => { audio.sfx('select'); createLiveRoom(); };
+  $('btn-title-live').onclick = () => { audio.sfx('select'); enterLobby(); };
+  $('btn-lobby-cancel').onclick = () => { audio.sfx('back'); leaveLobby(); closeModals(); };
 
   input.onPause = togglePause;
   $('btn-moves').onclick = () => { audio.sfx('click'); $('movesCard').classList.toggle('hidden'); };
@@ -907,7 +993,7 @@ function boot() {
   $('btn-fight-live').onclick = () => {
     audio.sfx('select');
     if (net) { net.sendQuit('left'); endNetSession(); }
-    createLiveRoom();                    // spin up a live room to fight a real player
+    enterLobby();                        // auto-pair against a real player
   };
   $('btn-rematch').onclick = () => {
     audio.sfx('fight');
@@ -957,7 +1043,17 @@ function boot() {
     $('btn-auth-back').style.display = (AUTH.REQUIRED && !session) ? 'none' : '';
     if (session && document.getElementById('scr-auth').classList.contains('active')) showScreen('scr-title');
     if (session) {
-      syncProfileUp();              // local profile follows the account up to the cloud
+      // Pull the account down FIRST so this device adopts your real founder and
+      // rank (phone and laptop used to disagree because stats were per-device).
+      // Only push up if there was nothing in the cloud yet.
+      syncProfileDown().then((adopted) => {
+        if (adopted) {
+          updateTitleChip();
+          if ($('scr-profile').classList.contains('active')) renderProfile();
+        } else if (Save.profile) {
+          syncProfileUp();
+        }
+      });
       if (!Save.profile) {
         // First time in: the profile gate in showScreen() already routes them to
         // the builder — this just explains why they're staring at it.

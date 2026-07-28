@@ -47,7 +47,6 @@
         <button id="btn-title-live" class="btn btn-live btn-big">🌐 FIGHT A REAL PLAYER</button>
         <div class="btn-row">
           <button id="btn-arcade" class="btn">🥊 CHOOSE RIVAL</button>
-          <button id="btn-2p" class="btn">👥 LOCAL 2-PLAYER</button>
         </div>
         <div class="btn-row">
           <button id="btn-challenges" class="btn btn-sm">⚔️ CHALLENGES</button>
@@ -208,26 +207,28 @@
     <!-- Touch pad: D-pad left (with crouch), attacks right. Meter moves carry a
          cost badge so it's obvious why one isn't firing yet. -->
     <div id="touchControls" class="touch hidden">
+      <!-- D-pad as a proper inverted-T: ▲ centred directly above ▼, with ◀ ▶
+           either side. Same shape as a real controller, so it reads instantly. -->
       <div class="t-left">
-        <div class="t-row">
-          <button class="tbtn t-up" data-k="up">▲</button>
-          <button class="tbtn t-dash" data-k="dash">💨</button>
-        </div>
-        <div class="t-row">
-          <button class="tbtn" data-k="left">◀</button>
-          <button class="tbtn" data-k="down">▼</button>
-          <button class="tbtn" data-k="right">▶</button>
+        <div class="dpad">
+          <button class="tbtn d-up" data-k="up">▲</button>
+          <button class="tbtn d-left" data-k="left">◀</button>
+          <button class="tbtn d-down" data-k="down">▼</button>
+          <button class="tbtn d-right" data-k="right">▶</button>
         </div>
       </div>
       <div class="t-right">
         <div class="t-row t-defend">
           <button class="tbtn t-block" data-k="block">📄<span class="tlab">NDA</span></button>
+          <button class="tbtn t-dash" data-k="dash">💨<span class="tlab">DASH</span></button>
           <button class="tbtn t-steal" data-k="steal">💸<span class="tlab">RAID</span></button>
         </div>
+        <!-- 3×3: basics on top, 🚀 launch + meter moves below -->
         <div class="t-grid">
           <button class="tbtn t-atk" data-k="slap">🖐</button>
           <button class="tbtn t-atk" data-k="punch">👊</button>
           <button class="tbtn t-atk" data-k="kick">👟</button>
+          <button class="tbtn t-atk t-launch" data-k="launch">🚀</button>
           <button class="tbtn t-bomb" data-k="bomb">⚖️<span class="tcost">25</span></button>
           <button class="tbtn t-sp" data-k="special">⚡<span class="tcost">50</span></button>
           <button class="tbtn t-sp" data-k="super">🦄<span class="tcost">100</span></button>
@@ -392,16 +393,9 @@
         <p>Win <b>2 of 3 rounds</b>. Empty your rival's health bar or have more health when the 60-second bell rings. Landing and taking hits charges your <b>energy meter</b> — spend it on a <b>⚖️ Cease &amp; Desist (25)</b>, your <b>⚡ Special (50)</b> or go full <b>🦄 UNICORN MODE (100)</b> — or skip the meter entirely and <b>💸 Acqui-Hire</b> their energy for yourself. And race your rival to the <b>💼 mystery briefcases</b> that fall mid-round — every one hides a secret power.</p>
       </div>
       <div class="panel">
-        <div class="panel-title">⌨️ CONTROLS — SOLO</div>
+        <div class="panel-title">⌨️ CONTROLS</div>
         <div class="keys-grid" id="keys-solo"></div>
         <div class="hint">On phones &amp; tablets, on-screen pads appear automatically.</div>
-      </div>
-      <div class="panel">
-        <div class="panel-title">👥 CONTROLS — LOCAL 2-PLAYER</div>
-        <div class="cols-2">
-          <div class="keys-grid" id="keys-p1"></div>
-          <div class="keys-grid" id="keys-p2"></div>
-        </div>
       </div>
       <div class="panel">
         <div class="panel-title">🔗 COMBOS — SUPER SIMPLE</div>
@@ -409,15 +403,17 @@
         <div class="combo-route">
           <span class="cr-step">🖐</span><span class="cr-arrow">/</span>
           <span class="cr-step">👊</span><span class="cr-arrow">/</span>
-          <span class="cr-step">👟</span><span class="cr-arrow">×5 →</span>
+          <span class="cr-step">👟</span><span class="cr-arrow">/</span>
+          <span class="cr-step">🚀</span><span class="cr-arrow">×5 →</span>
           <span class="cr-step big">⚡</span>
         </div>
-        <p class="combo-route-caption">Any mix of the three, up to 5 hits, then finish. Mash freely.</p>
+        <p class="combo-route-caption">Any mix, up to 5 hits, then finish. Mash freely.</p>
         <ul class="combo-tips">
-          <li>🔀 <b>Any order works.</b> 👊👊👟, 🖐👟👊, 👟👟🖐 — all legal. Kick can now go back to punch.</li>
+          <li>🔀 <b>Any order works.</b> 👊👊👟, 🖐👟👊, 👟🚀👊 — all legal. There is no wrong sequence.</li>
           <li>🥊 <b>Mashing is fine</b> — the game waits for your hit to land before firing the next move, so you can't out-run it.</li>
+          <li>🚀 <b>Launch</b> is your anti-air and your juggle starter: it pops them into the air, so hit them again on the way down.</li>
           <li>🏁 <b>Finish big:</b> cap the string with <b>⚡ Special</b>, <b>⚖️ C&amp;D</b>, <b>💸 Acqui-Hire</b> or full <b>🦄 Unicorn</b>.</li>
-          <li>💥 The <b>HITS</b> counter tracks your combo — later hits do scale down, so a finisher beats a 6th jab.</li>
+          <li>💥 Later hits scale down, so a finisher beats a 6th jab.</li>
           <li>🌬️ <b>Miss the first hit?</b> No chain — a swing that hits nothing leaves you open, so land the opener.</li>
         </ul>
       </div>
@@ -545,8 +541,18 @@
       </div>
     </div>
 
+    <!-- Matchmaking lobby: everyone waiting lands here and gets auto-paired. -->
+    <div class="modal hidden" id="modal-lobby">
+      <div class="modal-title">🌐 FINDING A FIGHTER</div>
+      <div class="lobby-spinner" id="lobbySpinner">🥊</div>
+      <div class="live-status"><span class="live-dot" id="lobbyDot"></span><span id="lobbyStatusText">Joining the lobby…</span></div>
+      <div class="lobby-count" id="lobbyCount"></div>
+      <div class="hint center">Stay on this screen — you'll be matched automatically the moment another founder shows up.</div>
+      <button id="btn-lobby-cancel" class="btn btn-sm btn-ghost">CANCEL</button>
+    </div>
+
     <div class="modal hidden" id="modal-live">
-      <div class="modal-title">🔴 LIVE ROOM</div>
+      <div class="modal-title">🔴 PRIVATE ROOM</div>
       <div class="live-status"><span class="live-dot" id="liveDot"></span><span id="liveStatusText">Setting up the room…</span></div>
       <div class="link-row" id="liveLinkRow"><input id="liveLink" readonly><button id="btn-live-copy" class="btn btn-sm">COPY</button></div>
       <button id="btn-live-share" class="btn btn-sm">📤 SHARE…</button>
