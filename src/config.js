@@ -216,3 +216,41 @@ export const SAVE_KEY = 'uec-save-v1';
 
 export const DEBUG = typeof location !== 'undefined'
   && new URLSearchParams(location.search).has('debug');
+
+// ---------------------------------------------------------------------------
+// BODY PROPORTIONS
+//
+// Bounded knobs, all defaulting to 1.0. Clamped rather than free so hurtbox
+// and camera maths stay predictable and balance stays reasonable. Widening a
+// range later is safe; the clamp is the only thing enforcing it.
+// ---------------------------------------------------------------------------
+export const BODY = {
+  height:    [0.82, 1.22],   // overall scale
+  build:     [0.85, 1.25],   // torso + limb thickness
+  reach:     [0.88, 1.20],   // arm length; feeds effective move reach
+  stride:    [0.88, 1.18],   // leg length
+  shoulders: [0.85, 1.25],
+  head:      [0.90, 1.12],
+};
+
+// ---------------------------------------------------------------------------
+// POWER BUDGET
+//
+// v2.3 shipped Carl Icahnt at +58% damage AND +10% HP because nothing stopped
+// style multipliers from compounding. This makes that class of error
+// structurally impossible instead of something review has to catch.
+//
+// speed is weighted above 1.0 because movement advantage compounds with
+// everything else. startup/recovery sit below 1.0 to avoid double-counting
+// frame advantage. hurtbox is a REFUND — a bigger body is easier to hit, so
+// size is partly self-balancing.
+// ---------------------------------------------------------------------------
+export const BUDGET = {
+  W: {
+    dmg: 1.0, hp: 1.0, speed: 1.2, reach: 1.0,
+    startup: 0.7, recovery: 0.5,
+    bodyReach: 0.8, hurtbox: -0.6,
+  },
+  WARN: 8,     // |cost| above this warns
+  BLOCK: 15,   // |cost| above this blocks export
+};
