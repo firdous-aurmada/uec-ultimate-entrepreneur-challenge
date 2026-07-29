@@ -214,4 +214,5 @@ export function rankFor(points) {
 
 export const SAVE_KEY = 'uec-save-v1';
 
-export const DEBUG = new URLSearchParams(location.search).has('debug');
+export const DEBUG = typeof location !== 'undefined'
+  && new URLSearchParams(location.search).has('debug');
