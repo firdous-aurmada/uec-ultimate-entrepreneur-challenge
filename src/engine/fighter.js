@@ -3,6 +3,7 @@
 
 import { STAGE, PHYS, ATTACKS, METER, UNICORN, BOMB, DASH, DROPS, COMBO, STEAL, STYLES, PLAYER_STATS } from '../config.js';
 import { SPECIALS } from '../data/fighters.js';
+import { clampBody } from './proportions.js';
 
 function blankPad() {
   return { left: false, right: false, up: false, block: false, punch: false, kick: false, special: false, super: false };
@@ -11,6 +12,7 @@ function blankPad() {
 export class Fighter {
   constructor(def, side, controller) {
     this.def = def;
+    this.body = clampBody(def.body);
     this.side = side;                       // 0 = left start, 1 = right start
     this.controller = controller;
     // STYLE is the single source of character variation. The roster's legacy
@@ -99,9 +101,12 @@ export class Fighter {
   pressed(k) { return this.pad[k] && !this.prevPad[k]; }
 
   hurtbox() {
-    // crouching ducks you under high attacks — the reward for the stance
-    const h = this.airborne ? 120 : (this.crouching ? PHYS.BODY_H * 0.68 : PHYS.BODY_H);
-    const w = PHYS.BODY_W;
+    // crouching ducks you under high attacks — the reward for the stance.
+    // A bigger body is a bigger target, which is what pays for its damage.
+    const b = this.body;
+    const full = PHYS.BODY_H * b.height;
+    const h = this.airborne ? 120 * b.height : (this.crouching ? full * 0.68 : full);
+    const w = PHYS.BODY_W * b.build;
     return { x: this.x - w / 2, y: this.y - h, w, h };
   }
 

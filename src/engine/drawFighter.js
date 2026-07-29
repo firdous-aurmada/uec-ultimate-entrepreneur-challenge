@@ -4,6 +4,7 @@
 
 import { shade } from '../data/fighters.js';
 import { STYLES } from '../config.js';
+import { clampBody, applyProportions, bufferMetrics } from './proportions.js';
 
 const OUTLINE = '#0a0c16';
 const FILTER_OK = typeof CanvasRenderingContext2D !== 'undefined' && 'filter' in CanvasRenderingContext2D.prototype;
@@ -715,13 +716,25 @@ function drawBriefcase(ctx, x, y, accent) {
 // and future animation frame gets the same lit-from-above, warm-key/cool-fill
 // look for free. Toggle with STYLE.shaded so we can A/B the old flat look.
 export const STYLE = { shaded: true };
-const SS = 2, BUF_OX = 130, BUF_OY = 250, BUF_W = 280, BUF_H = 300;
+const SS = 2;
+// Live metrics for the buffer currently allocated. Neutral bodies keep the
+// historical 280×300 at (130, 250), so their render is byte-identical.
+let BUF_OX = 130, BUF_OY = 250, BUF_W = 280, BUF_H = 300;
 let _buf = null, _tmp = null;
-function fighterBuffer() {
-  if (!_buf && typeof document !== 'undefined') {
+function fighterBuffer(m) {
+  if (typeof document === 'undefined') return null;
+  if (!_buf) {
     _buf = document.createElement('canvas');
-    _buf.width = BUF_W * SS; _buf.height = BUF_H * SS;
     _tmp = document.createElement('canvas');
+    _buf.width = BUF_W * SS; _buf.height = BUF_H * SS;
+    _tmp.width = BUF_W * SS; _tmp.height = BUF_H * SS;
+  }
+  // Grow only. Bodies are fixed for a match, so this stabilises on frame 1
+  // and never thrashes.
+  if (m && (m.w > BUF_W || m.h > BUF_H)) {
+    BUF_W = Math.max(BUF_W, m.w); BUF_H = Math.max(BUF_H, m.h);
+    BUF_OX = Math.max(BUF_OX, m.ox); BUF_OY = Math.max(BUF_OY, m.oy);
+    _buf.width = BUF_W * SS; _buf.height = BUF_H * SS;
     _tmp.width = BUF_W * SS; _tmp.height = BUF_H * SS;
   }
   return _buf;
@@ -768,7 +781,8 @@ function shadeBuffer(b) {
 // Main world-space fighter draw. f: Fighter instance.
 export function drawFighter(ctx, f, t) {
   const def = f.def;
-  const P = computePose(f, t);
+  const body = f.body || clampBody(def.body);
+  const P = applyProportions(computePose(f, t), body);
   const c = def.c;
   ctx.save();
   ctx.translate(f.x, f.y);
@@ -786,7 +800,7 @@ export function drawFighter(ctx, f, t) {
   ctx.scale(f.facing, 1);
   if (P.rot) ctx.rotate(P.rot);
 
-  const buf = STYLE.shaded ? fighterBuffer() : null;
+  const buf = STYLE.shaded ? fighterBuffer(bufferMetrics(body)) : null;
   // Render the body either into the shading buffer (local, upright, facing +x)
   // or straight to the world ctx when shading is off.
   let g = ctx;
@@ -808,9 +822,9 @@ export function drawFighter(ctx, f, t) {
   if (P.sx !== 1 || P.sy !== 1) g.scale(P.sx, P.sy);
 
   // back arm, back leg
-  capsule(g, -10, P.shoulderY + 8, P.armB.x, P.armB.y, 13, c.suit2);
+  capsule(g, -10, P.shoulderY + 8, P.armB.x, P.armB.y, P.armW ?? 13, c.suit2);
   blob(g, () => { g.arc(P.armB.x, P.armB.y, 8.5, 0, 7); }, c.skin);
-  capsule(g, -8, P.hipY, P.legB.x, P.legB.y - 6, 15, c.pants);
+  capsule(g, -8, P.hipY, P.legB.x, P.legB.y - 6, P.legW ?? 15, c.pants);
   blob(g, () => { g.roundRect(P.legB.x - 9, P.legB.y - 9, 26, 10, 5); }, c.shoe);
 
   // torso (with lean)
@@ -821,7 +835,7 @@ export function drawFighter(ctx, f, t) {
     g.translate(0, -P.hipY);
   }
   drawTorso(g, def, P);
-  drawHead(g, def, P.headX + (P.bodyLean * 26), P.headY, 22, P.face, t, f.unicornT > 0);
+  drawHead(g, def, P.headX + (P.bodyLean * 26), P.headY, P.headR ?? 22, P.face, t, f.unicornT > 0);
   g.restore();
 
   // motion smear behind the striking limb (sells the speed)
@@ -848,9 +862,9 @@ export function drawFighter(ctx, f, t) {
   }
 
   // front leg, front arm
-  capsule(g, 8, P.hipY, P.legF.x, P.legF.y - 6, 15, c.pants);
+  capsule(g, 8, P.hipY, P.legF.x, P.legF.y - 6, P.legW ?? 15, c.pants);
   blob(g, () => { g.roundRect(P.legF.x - 7, P.legF.y - 9, 26, 10, 5); }, c.shoe);
-  capsule(g, 10, P.shoulderY + 8, P.armF.x, P.armF.y, 13, c.suit);
+  capsule(g, 10, P.shoulderY + 8, P.armF.x, P.armF.y, P.armW ?? 13, c.suit);
   blob(g, () => { g.arc(P.armF.x, P.armF.y, 9, 0, 7); }, c.skin);
 
   if (P.briefcase) drawBriefcase(g, 34, -92, c.accent);
