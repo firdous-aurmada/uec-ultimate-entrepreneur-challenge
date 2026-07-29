@@ -73,8 +73,14 @@ Expected: FAIL — `npm error Missing script: "test"`
 In `package.json`, add to `"scripts"`:
 
 ```json
-    "test": "node --test test/"
+    "test": "node --test \"test/**/*.test.js\""
 ```
+
+The quoting is load-bearing. `node --test test/` treats **every** `.js` under a `test/`
+directory as a test file, so it would try to execute `test/golden/hash.js` (Task 6) and
+fail. And an *unquoted* glob is expanded by `sh` when npm runs it, where `**` does not
+recurse — nested test files would then be silently skipped, which is worse than failing.
+Quoting hands the glob to Node, which expands it correctly regardless of shell.
 
 - [ ] **Step 4: Run the test to verify it passes**
 
