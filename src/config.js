@@ -1,7 +1,7 @@
 // Central tuning for the whole game. All gameplay numbers live here.
 
 // Bump this on every release — it's rendered on the title screen.
-export const VERSION = 'v2.2';
+export const VERSION = 'v2.3';
 
 // Every player fights on identical footing. Your base character is pure
 // cosmetics: it decides how you LOOK, never how hard you hit. Ranked points
@@ -111,6 +111,45 @@ export const ATTACKS = {
   slap:  { startup: 0.04, active: 0.06, recovery: 0.12, dmg: 4,  reach: 78,  hitY: -112, kb: 70,  kbUp: 0,    stun: 0.20, shake: 4,  words: ['SLAP!', 'SMACK!', 'DISRESPECT!'] },
   punch: { startup: 0.05, active: 0.06, recovery: 0.11, dmg: 7,  reach: 84,  hitY: -104, kb: 110, kbUp: 0,    stun: 0.24, shake: 6,  words: ['POW!', 'JAB!', 'BAM!'] },
   kick:  { startup: 0.10, active: 0.08, recovery: 0.17, dmg: 12, reach: 106, hitY: -78,  kb: 320, kbUp: -120, stun: 0.32, shake: 9,  words: ['WHAM!', 'SMACK!', 'BOOM!'] },
+};
+
+// ---------------------------------------------------------------------------
+// FIGHTING STYLES
+//
+// Every character plays differently, not just looks different. A style scales
+// the shared move set — speed, damage and reach — so the same three buttons
+// feel like a different fighter in each pair of hands. Multipliers are kept
+// mild and compensating (faster ⇒ weaker, stronger ⇒ slower) so distinctiveness
+// never becomes a straight power advantage.
+//
+// `stance` drives the idle + crouch poses in drawFighter, so a character reads
+// as themselves even while standing still.
+// ---------------------------------------------------------------------------
+export const STYLES = {
+  balanced: {
+    name: 'BALANCED', blurb: 'No holes, no gimmicks. Textbook.',
+    startup: 1.00, dmg: 1.00, reach: 1.00, recovery: 1.00, stance: 'ready',
+  },
+  rushdown: {
+    name: 'RUSHDOWN', blurb: 'Fast, relentless, in your face. Chip them apart.',
+    startup: 0.82, dmg: 0.88, reach: 0.94, recovery: 0.90, stance: 'coiled',
+  },
+  brawler: {
+    name: 'BRAWLER', blurb: 'Slow wind-up, devastating payoff. One read wins.',
+    startup: 1.22, dmg: 1.26, reach: 1.04, recovery: 1.12, stance: 'heavy',
+  },
+  zoner: {
+    name: 'ZONER', blurb: 'Long limbs, longer patience. Keeps you out.',
+    startup: 1.08, dmg: 0.96, reach: 1.20, recovery: 1.05, stance: 'poised',
+  },
+  trickster: {
+    name: 'TRICKSTER', blurb: 'Slippery and evasive. Never where you swung.',
+    startup: 0.90, dmg: 0.92, reach: 1.02, recovery: 0.86, stance: 'loose',
+  },
+  showman: {
+    name: 'SHOWMAN', blurb: 'Flashy, theatrical, disrespectful. Style is damage.',
+    startup: 0.94, dmg: 1.04, reach: 0.98, recovery: 1.00, stance: 'flair',
+  },
 };
 
 // 💸 Acqui-Hire: close-range talent raid that siphons the rival's energy.

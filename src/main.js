@@ -1054,6 +1054,14 @@ function boot() {
           syncProfileUp();
         }
       });
+      // Brand-new player: set the scene once. The story stays available any
+      // time from THE STORY on the menu, but never auto-plays again.
+      if (!Save.data.storySeen && !pendingChallenge && !pendingLive) {
+        Save.markStorySeen();
+        showScreen('scr-about');
+        $('btn-about-fight').textContent = "⚡ BUILD YOUR FOUNDER";
+        return;
+      }
       if (!Save.profile) {
         // First time in: the profile gate in showScreen() already routes them to
         // the builder — this just explains why they're staring at it.

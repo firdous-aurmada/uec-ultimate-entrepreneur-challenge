@@ -11,6 +11,61 @@ const { W, H, FLOOR } = STAGE;
 // the foreground; a scene light + vignette over the top unifies everything.
 // One system, applied to every arena — each arena keeps its own art underneath.
 
+// ---- pseudo-3D floor -------------------------------------------------------
+// A receding perspective grid + a reflective sheen under the fighters. This is
+// what sells "3D" more than anything done to the characters: the eye reads the
+// converging lines as depth and places the fight ON a stage rather than in
+// front of a picture. Pure canvas — no engine, no dependency.
+function drawPerspectiveFloor(ctx, t) {
+  const horizon = FLOOR - 96;         // vanishing height above the floor line
+  const vpx = W / 2;
+  ctx.save();
+  ctx.beginPath(); ctx.rect(0, FLOOR - 6, W, H - FLOOR + 6); ctx.clip();
+
+  // floor plane
+  const g = ctx.createLinearGradient(0, FLOOR - 10, 0, H);
+  g.addColorStop(0, 'rgba(24,30,62,0.55)');
+  g.addColorStop(1, 'rgba(6,8,20,0.92)');
+  ctx.fillStyle = g;
+  ctx.fillRect(0, FLOOR - 10, W, H - FLOOR + 10);
+
+  // lines converging on the vanishing point → depth
+  ctx.strokeStyle = 'rgba(120,150,255,0.16)';
+  ctx.lineWidth = 1.5;
+  for (let i = -14; i <= 14; i++) {
+    ctx.beginPath();
+    ctx.moveTo(vpx + i * 26, horizon);
+    ctx.lineTo(vpx + i * 190, H + 40);
+    ctx.stroke();
+  }
+  // horizontal rungs, spaced non-linearly so they compress toward the horizon
+  for (let r = 1; r <= 9; r++) {
+    const k = r / 9;
+    const y = FLOOR + Math.pow(k, 2.1) * (H - FLOOR + 60);
+    ctx.globalAlpha = 0.22 * (1 - k * 0.65);
+    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
+  ctx.restore();
+}
+
+// Mirror-ish sheen beneath a fighter — cheap, and it plants them on the plane.
+function drawFloorSheen(ctx, f) {
+  const airK = Math.max(0, Math.min(1, (FLOOR - f.y) / 260));
+  if (airK > 0.75) return;
+  ctx.save();
+  ctx.globalAlpha = 0.16 * (1 - airK);
+  ctx.globalCompositeOperation = 'lighter';
+  const g = ctx.createLinearGradient(f.x, FLOOR, f.x, FLOOR + 62);
+  g.addColorStop(0, 'rgba(150,180,255,0.5)');
+  g.addColorStop(1, 'rgba(150,180,255,0)');
+  ctx.fillStyle = g;
+  ctx.beginPath();
+  ctx.ellipse(f.x, FLOOR + 26, 40, 30, 0, 0, 7);
+  ctx.fill();
+  ctx.restore();
+}
+
 function drawStageGrade(ctx, t) {
   // atmospheric haze rising off the floor + a top spotlight cone
   ctx.save();
@@ -226,9 +281,10 @@ export function renderGame(ctx, game) {
 
   game.arena.draw(ctx, t);
   drawStageGrade(ctx, t);           // push the backdrop back + haze
+  drawPerspectiveFloor(ctx, t);     // receding grid — the main depth cue
 
   for (const d of game.drops) drawDrop(ctx, d, t);
-  for (const f of game.fighters) drawShadow(ctx, f);
+  for (const f of game.fighters) { drawShadow(ctx, f); drawFloorSheen(ctx, f); }
   for (const g of game.afterimages) drawAfterimage(ctx, g);
 
   // draw the fighter in hitstun/ko behind the attacker for cleaner overlaps

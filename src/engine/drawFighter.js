@@ -3,6 +3,7 @@
 // Also renders the portrait busts used across the UI.
 
 import { shade } from '../data/fighters.js';
+import { STYLES } from '../config.js';
 
 const OUTLINE = '#0a0c16';
 const FILTER_OK = typeof CanvasRenderingContext2D !== 'undefined' && 'filter' in CanvasRenderingContext2D.prototype;
@@ -88,8 +89,37 @@ function computePose(f, t) {
   const bob = Math.sin(t * 4 + (f.side === 0 ? 0 : 1.7)) * 2.2;
   const st = f.state;
 
+  // Each fighting style has its own silhouette at rest and in a crouch — you
+  // can tell who someone is picking before they throw a single button.
+  const stance = (STYLES[f.def?.style] || STYLES.balanced).stance;
+
   if (st === 'idle') {
     P.hipY += bob * 0.5; P.headY += bob; P.armF.y += bob; P.armB.y += bob;
+    if (stance === 'coiled') {                 // rushdown: low, hands up, leaning in
+      P.hipY += 8; P.shoulderY += 5; P.headY += 6; P.bodyLean = 0.14;
+      P.armF = { x: 26, y: -112 + bob }; P.armB = { x: 12, y: -104 + bob };
+      P.legF = { x: 19, y: 0 }; P.legB = { x: -17, y: 0 };
+    } else if (stance === 'heavy') {           // brawler: wide, arms hanging, chin down
+      P.hipY += 4; P.bodyLean = 0.05;
+      P.armF = { x: 34, y: -84 + bob }; P.armB = { x: 24, y: -78 + bob };
+      P.legF = { x: 24, y: 0 }; P.legB = { x: -24, y: 0 };
+      P.sx = 1.05; P.sy = 0.98;
+    } else if (stance === 'poised') {          // zoner: tall, upright, arm extended out
+      P.hipY -= 3; P.headY -= 3; P.bodyLean = -0.05;
+      P.armF = { x: 40, y: -104 + bob }; P.armB = { x: 8, y: -92 + bob };
+      P.legF = { x: 12, y: 0 }; P.legB = { x: -11, y: 0 };
+      P.sy = 1.03;
+    } else if (stance === 'loose') {           // trickster: off-balance, hands low, swaying
+      const sway = Math.sin(t * 2.6) * 4;
+      P.bodyLean = 0.10 + Math.sin(t * 2.2) * 0.05;
+      P.headX = sway * 0.5;
+      P.armF = { x: 30 + sway, y: -80 + bob }; P.armB = { x: -22 - sway, y: -86 + bob };
+      P.legF = { x: 17, y: 0 }; P.legB = { x: -13, y: 0 };
+    } else if (stance === 'flair') {           // showman: one arm out presenting, chest up
+      P.bodyLean = -0.08;
+      P.armF = { x: 38, y: -128 + bob * 1.4 }; P.armB = { x: -16, y: -88 + bob };
+      P.headY -= 2; P.legF = { x: 16, y: 0 }; P.legB = { x: -15, y: 0 };
+    }
   } else if (st === 'walk') {
     const ph = f.walkPhase;
     P.legF = { x: 15 + Math.sin(ph) * 17, y: -Math.max(0, Math.sin(ph + 1.5)) * 9 };
@@ -194,6 +224,33 @@ function computePose(f, t) {
     P.legF = { x: 24, y: 0 }; P.legB = { x: -20, y: 0 };
     P.sx = 1.10; P.sy = 0.90;
     P.bodyLean = 0.12;
+    // …and each style crouches in character, too
+    if (stance === 'coiled') {                 // sprinter's crouch, ready to burst
+      P.hipY += 4; P.bodyLean = 0.26; P.headX = 6;
+      P.armF = { x: 30, y: -84 }; P.armB = { x: -14, y: -60 };
+      P.legF = { x: 28, y: 0 }; P.legB = { x: -14, y: 0 };
+      P.sx = 1.06; P.sy = 0.92;
+    } else if (stance === 'heavy') {           // sumo-wide, arms braced on knees
+      P.hipY += 6; P.bodyLean = 0.06;
+      P.armF = { x: 30, y: -58 }; P.armB = { x: -24, y: -56 };
+      P.legF = { x: 32, y: 0 }; P.legB = { x: -30, y: 0 };
+      P.sx = 1.20; P.sy = 0.86;
+    } else if (stance === 'poised') {          // low but tall-backed, one arm still out
+      P.hipY -= 2; P.bodyLean = -0.06;
+      P.armF = { x: 38, y: -80 }; P.armB = { x: 4, y: -62 };
+      P.legF = { x: 20, y: 0 }; P.legB = { x: -22, y: 0 };
+      P.sx = 1.06; P.sy = 0.94;
+    } else if (stance === 'loose') {           // slouched, weight on the back foot
+      P.bodyLean = -0.14; P.headX = -4;
+      P.armF = { x: 18, y: -70 }; P.armB = { x: -26, y: -58 };
+      P.legF = { x: 26, y: 0 }; P.legB = { x: -18, y: 0 };
+      P.sx = 1.12; P.sy = 0.89;
+    } else if (stance === 'flair') {           // theatrical kneel, arm flourished out
+      P.bodyLean = 0.04;
+      P.armF = { x: 36, y: -96 }; P.armB = { x: -20, y: -58 };
+      P.legF = { x: 22, y: 0 }; P.legB = { x: -24, y: 0 };
+      P.sx = 1.08; P.sy = 0.91;
+    }
   } else if (st === 'block') {
     P.crouch = 8; P.hipY += 8; P.headY += 10; P.shoulderY += 8;
     P.armF = { x: 26, y: -96 }; P.armB = { x: 24, y: -84 };

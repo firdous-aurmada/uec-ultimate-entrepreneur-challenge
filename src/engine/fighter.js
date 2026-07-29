@@ -1,7 +1,7 @@
 // Fighter entity: physics, state machine, attacks and specials.
 // Hit *detection/resolution* lives in game.js; fighters own their own state.
 
-import { STAGE, PHYS, ATTACKS, METER, UNICORN, BOMB, DASH, DROPS, COMBO, STEAL } from '../config.js';
+import { STAGE, PHYS, ATTACKS, METER, UNICORN, BOMB, DASH, DROPS, COMBO, STEAL, STYLES } from '../config.js';
 import { SPECIALS } from '../data/fighters.js';
 
 function blankPad() {
@@ -305,9 +305,21 @@ export class Fighter {
     this.stateT = 0;
   }
 
+  // The character's fighting style scales the shared move set, so the same
+  // three buttons feel different in each pair of hands. Multipliers compensate
+  // (faster ⇒ weaker) so a style is a flavour, not a power tier.
+  get style() { return STYLES[this.def.style] || STYLES.balanced; }
+
   startAttack(kind, game) {
     const base = ATTACKS[kind];
-    this.attack = { ...base, kind, hasHit: false };
+    const s = this.style;
+    this.attack = {
+      ...base, kind, hasHit: false,
+      startup: base.startup * s.startup,
+      recovery: base.recovery * s.recovery,
+      dmg: base.dmg * s.dmg,
+      reach: (base.reach || 84) * s.reach,
+    };
     this.setState('attack');
     game.audio.sfx(kind === 'kick' ? 'kickWhiff' : 'whiff');
     if (this.airborne) this.airAttackUsed = true;

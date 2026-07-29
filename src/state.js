@@ -11,7 +11,9 @@ const DEFAULTS = () => ({
   stats: { wins: 0, losses: 0, kos: 0, streak: 0, bestStreak: 0, points: 0, matches: 0 },
   settings: { volume: 80, music: true, sfx: true },
   tutorialSeen: false,
-  lastRival: 'random',     // you always fight as yourself; this is who you faced
+  storySeen: false,        // the intro plays once, then lives under THE STORY
+  lastSelf: 'custom',      // who you play AS (your founder, or a roster character)
+  lastRival: 'random',     // who you faced
   lastDifficulty: 'founder',
 });
 
@@ -60,7 +62,13 @@ export const Save = {
     this.persist();
   },
 
-  rememberSelection(rivalId, difficulty) {
+  markStorySeen() {
+    this.data.storySeen = true;
+    this.persist();
+  },
+
+  rememberSelection(rivalId, difficulty, selfId) {
+    if (selfId) this.data.lastSelf = selfId;
     if (rivalId) this.data.lastRival = rivalId;
     if (difficulty) this.data.lastDifficulty = difficulty;
     this.persist();

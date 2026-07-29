@@ -121,21 +121,32 @@
         </div>
       </div>
       <div class="select-right">
-        <div class="preview-card" id="preview-card">
-          <canvas id="preview-portrait" width="420" height="420"></canvas>
-          <div class="pv-name" id="pv-name"></div>
-          <div class="pv-title" id="pv-title"></div>
-          <div class="pv-co" id="pv-co"></div>
-          <div class="pv-stats">
-            <div class="stat"><span>SPD</span><div class="stat-track"><div id="stat-spd"></div></div></div>
-            <div class="stat"><span>PWR</span><div class="stat-track"><div id="stat-pwr"></div></div></div>
-            <div class="stat"><span>HP</span><div class="stat-track"><div id="stat-hp"></div></div></div>
-          </div>
-          <div class="pv-special">
-            <div class="pv-sp-name" id="pv-sp-name"></div>
-            <div class="pv-sp-desc" id="pv-sp-desc"></div>
-          </div>
+        <!-- VS banner: you on the left, rival on the right. Tap a side to aim
+             the grid at it — the same way an arcade cabinet does it. -->
+        <div class="vs-picker">
+          <button class="vs-side active" id="side-you">
+            <div class="vs-slot">YOU</div>
+            <canvas id="you-portrait" width="360" height="360"></canvas>
+            <div class="pv-name" id="you-name"></div>
+            <div class="pv-title" id="you-title"></div>
+            <div class="pv-co" id="you-co"></div>
+            <div class="pv-style" id="you-style"></div>
+            <div class="pv-rap" id="you-rap"></div>
+            <div class="pv-sp-name" id="you-sp"></div>
+          </button>
+          <div class="vs-mid">VS</div>
+          <button class="vs-side" id="side-rival">
+            <div class="vs-slot">RIVAL</div>
+            <canvas id="rival-portrait" width="360" height="360"></canvas>
+            <div class="pv-name" id="rival-name"></div>
+            <div class="pv-title" id="rival-title"></div>
+            <div class="pv-co" id="rival-co"></div>
+            <div class="pv-style" id="rival-style"></div>
+            <div class="pv-rap" id="rival-rap"></div>
+            <div class="pv-sp-name" id="rival-sp"></div>
+          </button>
         </div>
+        <div class="hint center" id="style-blurb"></div>
         <button id="btn-fight" class="btn btn-primary btn-big">FIGHT ➤</button>
       </div>
     </div>

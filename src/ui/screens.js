@@ -4,7 +4,7 @@
 import { FIGHTERS, BASE_CHARACTERS, DEFAULT_BASE_ID, SPECIALS, UNICORN_META, LOOKS, LOOK_FIELDS, pickLook, getFighter, buildCustomFighter } from '../data/fighters.js';
 import { ARENAS, getArena, randomArena } from '../data/arenas.js';
 import { Save, buildChallengeLink } from '../state.js';
-import { rankFor, AI_LEVELS } from '../config.js';
+import { STYLES, rankFor, AI_LEVELS } from '../config.js';
 import { drawPortrait, setPhotoReadyCallback, ensurePhoto } from '../engine/drawFighter.js';
 import { audio } from '../engine/audio.js';
 import { KEY_LABELS } from '../engine/input.js';
@@ -27,20 +27,29 @@ export const sel = {
   ghost: null,          // { def, difficulty } for accepted challenges / rival fights
 };
 
-// You always fight as yourself, so the grid picks your RIVAL, never you.
+// One shared roster: your own founder first, then the disgraced-founder cast.
+// Both sides of the select screen pick from it — you choose who you fight AS
+// and who you fight AGAINST.
 function tileDefs() {
-  const list = FIGHTERS.map(f => ({ id: f.id, def: f, badge: f.cameo ? 'CAMEO' : null }));
+  const list = [];
+  if (Save.profile) list.push({ id: 'custom', def: buildCustomFighter(Save.profile), badge: 'YOU' });
+  for (const f of FIGHTERS) list.push({ id: f.id, def: f, badge: f.cameo ? 'CAMEO' : null });
   list.push({ id: 'random', def: null, badge: null });
   return list;
 }
 
-// The local player's fighter — always their own founder profile.
+// The local player's chosen fighter (defaults to their own founder).
 export function playerDef() {
+  return resolveDef(sel.p1 || 'custom');
+}
+
+// Your own founder, regardless of who you've picked to play as.
+export function myFounderDef() {
   return Save.profile ? buildCustomFighter(Save.profile) : getFighter(DEFAULT_BASE_ID);
 }
 
 function resolveDef(id) {
-  if (id === 'custom') return playerDef();
+  if (id === 'custom') return Save.profile ? buildCustomFighter(Save.profile) : getFighter(DEFAULT_BASE_ID);
   if (id === 'random') {
     const pool = FIGHTERS.map(f => f.id);
     return getFighter(pool[Math.floor(Math.random() * pool.length)]);
@@ -61,20 +70,23 @@ function drawRandomTile(canvas) {
   ctx.fillText('?', S / 2, S * 0.56);
 }
 
+// Which side of the select screen the next tile click fills.
+let pickSide = 'p1';
+
 export function openSelect(mode) {
   sel.mode = mode;
-  sel.p1 = 'custom';
+  sel.p1 = Save.data.lastSelf || 'custom';
   sel.p2 = mode === 'solo' ? (Save.data.lastRival || 'random') : null;
+  pickSide = 'p1';
   if (!sel.ghost) sel.difficulty = Save.data.lastDifficulty || 'founder';
   renderSelect();
   A.showScreen('scr-select');
 }
 
 function selectTitle() {
-  if (sel.mode === 'online') return '🔴 LIVE — PICK YOUR ARENA';
-  if (sel.mode === 'versus') return 'CHOOSE THE CHALLENGER (P2)';
+  if (sel.mode === 'online') return '🔴 LIVE — PICK YOUR FIGHTER';
   if (sel.ghost) return `FACE ${sel.ghost.def.name}!`;
-  return 'CHOOSE YOUR RIVAL';
+  return 'CHARACTER SELECT';
 }
 
 function renderSelect() {
@@ -85,18 +97,28 @@ function renderSelect() {
   document.querySelector('#arena-strip').parentElement.style.display =
     (sel.mode === 'online' && net?.role === 'guest') ? 'none' : '';
 
-  // The rival grid is meaningless when the opponent is already decided — a live
-  // peer or the founder who challenged you.
+  // The rival side is fixed when the opponent is already decided — a live peer
+  // or the founder who challenged you. You still choose who YOU play as.
   const rivalFixed = sel.mode === 'online' || !!sel.ghost;
-  const gridWrap = $('rival-row');
-  if (gridWrap) gridWrap.style.display = rivalFixed ? 'none' : '';
+  if (rivalFixed && pickSide === 'p2') pickSide = 'p1';
+
+  // side toggle: which slot the next tile click fills
+  const setSide = (s) => { pickSide = s; renderSelect(); };
+  $('side-you').classList.toggle('active', pickSide === 'p1');
+  $('side-rival').classList.toggle('active', pickSide === 'p2');
+  $('side-rival').style.display = rivalFixed ? 'none' : '';
+  $('side-you').onclick = () => { audio.sfx('click'); setSide('p1'); };
+  $('side-rival').onclick = () => { audio.sfx('click'); setSide('p2'); };
 
   const grid = $('fighter-grid');
   grid.innerHTML = '';
-  for (const t of rivalFixed ? [] : tileDefs()) {
+  for (const t of tileDefs()) {
+    // 'random' only makes sense for the rival, never for who you play as
+    if (t.id === 'random' && pickSide === 'p1') continue;
     const tile = document.createElement('div');
     tile.className = 'f-tile';
-    if (t.id === sel.p2) tile.classList.add('sel');
+    if (t.id === sel.p1) tile.classList.add('sel');
+    if (t.id === sel.p2 && !rivalFixed) tile.classList.add('sel2');
     const c = document.createElement('canvas');
     c.width = c.height = 280;
     if (t.def) drawPortrait(c, t.def); else drawRandomTile(c);
@@ -113,7 +135,9 @@ function renderSelect() {
     }
     tile.onclick = () => {
       audio.sfx('select');
-      sel.p2 = t.id;
+      sel[pickSide] = t.id;
+      // picking your own fighter naturally hands over to picking the rival
+      if (pickSide === 'p1' && !rivalFixed) pickSide = 'p2';
       renderSelect();
     };
     grid.appendChild(tile);
@@ -154,25 +178,33 @@ export function refreshSelect() {
   if (document.getElementById('scr-select').classList.contains('active')) renderSelect();
 }
 
-function renderPreview() {
-  // Preview shows whoever you're choosing: your rival normally, the challenger
-  // when one is fixed, and yourself in live mode (where you only pick an arena).
-  let def;
-  if (sel.ghost) def = sel.ghost.def;
-  else if (sel.mode === 'online') def = playerDef();
-  else def = sel.p2 === 'random' || !sel.p2 ? null : resolveDef(sel.p2);
-  const pv = $('preview-portrait');
+// Fills one side of the VS banner (the big portrait + name + dossier).
+function renderSide(prefix, def, fallbackLabel) {
+  const pv = $(`${prefix}-portrait`);
   if (def) drawPortrait(pv, def); else drawRandomTile(pv);
-  $('pv-name').textContent = def ? def.name : 'RANDOM';
-  $('pv-title').textContent = def ? def.title : 'ROLL THE DICE';
-  $('pv-co').textContent = def ? def.company : 'Could be anyone…';
-  const stats = def ? def.stats : { speed: 1, power: 1, hp: 100 };
-  $('stat-spd').style.width = `${Math.round(((stats.speed - 0.8) / 0.45) * 100)}%`;
-  $('stat-pwr').style.width = `${Math.round(((stats.power - 0.8) / 0.5) * 100)}%`;
-  $('stat-hp').style.width = `${Math.round(((stats.hp - 88) / 26) * 100)}%`;
+  $(`${prefix}-name`).textContent = def ? def.name : fallbackLabel;
+  $(`${prefix}-title`).textContent = def ? (def.title || '') : 'ROLL THE DICE';
+  $(`${prefix}-co`).textContent = def ? def.company : 'Could be anyone…';
+  const st = def ? (STYLES[def.style] || STYLES.balanced) : null;
+  $(`${prefix}-style`).textContent = st ? st.name : '—';
+  $(`${prefix}-rap`).textContent = def?.rap || (def?.id === 'custom' ? 'Unindicted · so far' : '');
   const sp = def ? SPECIALS[def.special] : null;
-  $('pv-sp-name').textContent = sp ? `${sp.icon} ${sp.name}` : '🎲 MYSTERY SPECIAL';
-  $('pv-sp-desc').textContent = sp ? sp.desc : 'Fighter and special revealed at the bell.';
+  $(`${prefix}-sp`).textContent = sp ? `${sp.icon} ${sp.name}` : '🎲 MYSTERY';
+}
+
+function renderPreview() {
+  const youDef = resolveDef(sel.p1 || 'custom');
+  let rivalDef;
+  if (sel.ghost) rivalDef = sel.ghost.def;
+  else if (sel.mode === 'online') rivalDef = null;
+  else rivalDef = (!sel.p2 || sel.p2 === 'random') ? null : resolveDef(sel.p2);
+
+  renderSide('you', youDef, 'PICK YOU');
+  renderSide('rival', rivalDef, sel.mode === 'online' ? 'YOUR RIVAL' : 'RANDOM');
+
+  // style blurb explains what picking this character actually changes
+  const st = STYLES[youDef?.style] || STYLES.balanced;
+  $('style-blurb').textContent = `${st.name} — ${st.blurb}`;
 }
 
 function onFight() {
@@ -195,7 +227,7 @@ function onFight() {
   }
 
   const arena = sel.arena === 'random' ? randomArena() : getArena(sel.arena);
-  Save.rememberSelection(sel.p2, sel.mode === 'solo' ? difficulty : null);
+  Save.rememberSelection(sel.p2, sel.mode === 'solo' ? difficulty : null, sel.p1);
   A.startMatch({ mode: sel.mode, p1Def, p2Def, arena, difficulty, isChallenge });
 }
 
@@ -936,7 +968,12 @@ export function initScreens(actions) {
   $('btn-profile').onclick = () => { audio.sfx('select'); renderProfile(); A.showScreen('scr-profile'); };
   $('btn-help').onclick = () => { audio.sfx('select'); renderHelp(); A.showScreen('scr-help'); };
   $('btn-about').onclick = () => { audio.sfx('select'); A.showScreen('scr-about'); };
-  $('btn-about-fight').onclick = () => { audio.sfx('fight'); A.quickFight(); };
+  $('btn-about-fight').onclick = () => {
+    audio.sfx('fight');
+    // Straight from the story into building your founder if you haven't yet.
+    if (!Save.profile) { renderProfile(); A.showScreen('scr-profile'); return; }
+    A.quickFight();
+  };
   $('title-profile-chip').onclick = () => { audio.sfx('select'); renderProfile(); A.showScreen('scr-profile'); };
 
   // back buttons
