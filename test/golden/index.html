@@ -1,0 +1,84 @@
+<meta charset="utf-8">
+<title>UEC golden images</title>
+<style>
+  body { background: #0b0e1a; color: #eef1ff; font: 14px ui-monospace, monospace; padding: 16px; }
+  #out { white-space: pre; line-height: 1.5; }
+  .ok { color: #57ff8a; } .bad { color: #ff3d6e; }
+  button { font: inherit; padding: 6px 14px; margin-right: 8px; }
+</style>
+<button id="check">CHECK against baseline</button>
+<button id="write">WRITE new baseline</button>
+<div id="out">ready</div>
+<canvas id="c" width="360" height="380" style="display:none"></canvas>
+<script type="module">
+import { FIGHTERS } from '../../src/data/fighters.js';
+import { drawFighter } from '../../src/engine/drawFighter.js';
+import { ATTACKS } from '../../src/config.js';
+import { hashPixels, CASES } from './hash.js';
+
+const out = document.getElementById('out');
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d', { willReadFrequently: true });
+
+// Three Math.random() calls sit in the render/update path — hit jitter in
+// drawFighter, the unicorn sparkle and the rush spark in fighter.js. Without
+// pinning, baselines never reproduce.
+const realRandom = Math.random;
+
+// computePose only reads plain fields, so a stub object is enough — no Game
+// instance, no controller, no audio.
+function stubFighter(def, c) {
+  return {
+    def, side: 0, x: 180, y: 330, facing: 1,
+    state: c.state, stateT: c.stateT ?? 0, walkPhase: c.walkPhase ?? 0,
+    airborne: !!c.airborne, crouching: !!c.crouching, movingBack: false,
+    unicornT: 0, flashT: 0,
+    attack: c.kind ? { ...ATTACKS[c.kind], kind: c.kind, hasHit: false } : null,
+  };
+}
+
+function keyFor(def, c) {
+  return `${def.id}/${c.state}${c.kind ? ':' + c.kind : ''}@${c.t}`;
+}
+
+function capture() {
+  const result = {};
+  Math.random = () => 0.5;
+  try {
+    for (const def of FIGHTERS) {
+      for (const c of CASES) {
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        drawFighter(ctx, stubFighter(def, c), c.t);
+        const px = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+        result[keyFor(def, c)] = hashPixels(px);
+      }
+    }
+  } finally {
+    Math.random = realRandom;
+  }
+  return result;
+}
+
+// Exposed so the controller can drive this headlessly instead of clicking.
+window.captureGolden = capture;
+window.checkGolden = async () => {
+  const current = capture();
+  const baseline = await fetch('./baseline.json?' + Date.now()).then(r => r.json());
+  const keys = [...new Set([...Object.keys(baseline), ...Object.keys(current)])].sort();
+  const bad = keys.filter(k => baseline[k] !== current[k]);
+  return { total: keys.length, bad, detail: bad.map(k => `${k}: ${baseline[k] ?? '(new)'} → ${current[k] ?? '(gone)'}`) };
+};
+
+document.getElementById('check').onclick = async () => {
+  const r = await window.checkGolden();
+  out.innerHTML = `<span class="${r.bad.length ? 'bad' : 'ok'}">${r.bad.length ? r.bad.length + ' MISMATCH of ' + r.total : 'ALL ' + r.total + ' MATCH'}</span>\n\n`
+    + r.detail.join('\n');
+};
+
+document.getElementById('write').onclick = async () => {
+  const body = JSON.stringify(capture(), null, 2);
+  const res = await fetch('./baseline.json', { method: 'PUT', body });
+  out.textContent = res.ok ? 'baseline written — commit it' : 'PUT failed: run under dev-server.py';
+};
+</script>
