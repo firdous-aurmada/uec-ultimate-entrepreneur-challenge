@@ -14,7 +14,7 @@ import { hud } from './ui/hud.js';
 import {
   initScreens, openSelect, sel, toast, updateTitleChip, showIncomingChallenge,
   showShareCard, openInvite, openModal, closeModals, renderProfile, renderLeaderboard,
-  showIncomingLive, setLiveStatus, refreshSelect, confirmDialog, playerDef,
+  showIncomingLive, setLiveStatus, refreshSelect, confirmDialog, playerDef, showAbout,
 } from './ui/screens.js';
 import { shouldShowTutorial, showTutorial } from './ui/tutorial.js';
 import { AUTH, initAuth, onAuthChange, signInGoogle, signInMicrosoft, signInEmail, signOut, currentUser, userHandle, __debugSignIn } from './auth.js';
@@ -1058,8 +1058,7 @@ function boot() {
       // time from THE STORY on the menu, but never auto-plays again.
       if (!Save.data.storySeen && !pendingChallenge && !pendingLive) {
         Save.markStorySeen();
-        showScreen('scr-about');
-        $('btn-about-fight').textContent = "⚡ BUILD YOUR FOUNDER";
+        showAbout();
         return;
       }
       if (!Save.profile) {

@@ -835,9 +835,19 @@ export function openInvite() {
   audio.sfx('select');
 }
 
+// Opens the story. The CTA is derived from state every time — it used to be
+// set once on first launch, so returning players saw a stale "BUILD YOUR
+// FOUNDER" button long after they'd built one.
+export function showAbout() {
+  $('btn-about-fight').textContent = Save.profile ? '⚡ ENTER THE ARENA' : '⚡ BUILD YOUR FOUNDER';
+  A.showScreen('scr-about');
+}
+
 // The recipient's own fighter for the right side of a challenge card.
+// This must be YOUR founder, not whoever you last picked to play as —
+// a challenge card is an identity card, so it always shows your face.
 function myFighterDef() {
-  return playerDef();
+  return myFounderDef();
 }
 function myFighterName() {
   return Save.profile ? (Save.profile.name || 'YOU').toUpperCase() : 'YOU';
@@ -967,7 +977,7 @@ export function initScreens(actions) {
   $('btn-leaderboard').onclick = () => { audio.sfx('select'); renderLeaderboard(); A.showScreen('scr-leaderboard'); };
   $('btn-profile').onclick = () => { audio.sfx('select'); renderProfile(); A.showScreen('scr-profile'); };
   $('btn-help').onclick = () => { audio.sfx('select'); renderHelp(); A.showScreen('scr-help'); };
-  $('btn-about').onclick = () => { audio.sfx('select'); A.showScreen('scr-about'); };
+  $('btn-about').onclick = () => { audio.sfx('select'); showAbout(); };
   $('btn-about-fight').onclick = () => {
     audio.sfx('fight');
     // Straight from the story into building your founder if you haven't yet.

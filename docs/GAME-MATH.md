@@ -18,43 +18,45 @@ the frame column is `seconds × 60`.
 | **POWER** | Multiplies every point of damage you deal — basics, specials, projectiles and chip alike. |
 | **HP** | Your health pool. Rounds are won by emptying the other bar or leading when the 60 s clock expires. |
 
-### Are they the same for everyone? — **Yes, for players. Always.**
+### Are they the same for everyone? — **Not any more (v2.3).**
+
+Since v2.3 you choose **who you play as** — your own founder or any roster
+character — and each character has a **fighting style** that is the *single*
+source of variation:
 
 ```js
-// src/config.js
-export const PLAYER_STATS = { speed: 1.0, power: 1.0, hp: 100 };
+// src/engine/fighter.js — every fighter, no exceptions
+const st = STYLES[def.style] || STYLES.balanced;
+this.stats = {
+  speed: PLAYER_STATS.speed * st.speed,
+  power: PLAYER_STATS.power,        // damage variation lives in style.dmg
+  hp:    Math.round(PLAYER_STATS.hp * st.hp),
+};
 ```
 
-Every human fights on exactly this line: **1.00 speed, 1.00 power, 100 HP**.
-Your base character, hair, headwear, eyewear, facial hair, outfit, colours and
-photo are **pure cosmetics** — they decide how you look, never how hard you
-hit. There is no stat attached to any look option, and no "meta" build to
-discover. That is enforced in one place:
+The roster's old per-character `stats` block is **no longer read**. It used to
+stack on top of the style, which made Carl hit 58 % harder *and* carry 10 % more
+HP than a player's own founder — a straight power tier rather than a playstyle.
 
-```js
-// src/data/fighters.js — buildCustomFighter() and buildGhostFighter()
-stats: { ...PLAYER_STATS },
-```
+**Your own founder is `BALANCED`** and sits mid-table: 5th of 10 on damage,
+median HP, median speed. Playing as yourself is never a handicap.
 
-Before this, a player inherited the stats of whichever silhouette they clicked,
-which spread across `0.90–1.18` speed, `0.90–1.20` power and `94–110` HP. That
-meant a cosmetic choice was worth up to **a 33 % power gap** — and ranked points
-were measuring the wardrobe, not the player.
+| Character | Style | Punch | HP | Speed | Reach | Pays for it with |
+|---|---|---|---|---|---|---|
+| Elo Ma | GLASS CANNON | 9.10 | 86 | 1.02 | 84 | lowest HP, slowest recovery |
+| Carl Icahnt | GRAPPLER | 8.54 | 108 | 0.92 | 72 | shortest reach |
+| Adam Weumann | BRAWLER | 8.26 | 110 | 0.88 | 87 | slowest startup + movement |
+| Steve Nojobs | SHOWMAN | 7.42 | 99 | 1.00 | 82 | near-baseline all round |
+| **Your founder** | **BALANCED** | **7.00** | **100** | **1.00** | **84** | — |
+| Cathie Woodz | ZONER | 6.72 | 102 | 0.94 | 102 | low damage, slow startup |
+| Jeff Bozo | TECHNICAL | 6.58 | 100 | 0.98 | 89 | lowest damage of the tanks |
+| Scam Alt | TRICKSTER | 6.44 | 96 | 1.06 | 86 | low damage |
+| Kim Koindashian | RUSHDOWN | 6.16 | 93 | 1.12 | 79 | weakest hits, short reach |
+| Lizbeth Holmez | PHANTOM | 6.02 | 92 | 1.10 | 91 | lowest damage in the game |
 
-**The varied stats still exist, but only ever on AI opponents**, so the roster
-still feels distinct to fight:
-
-| Rival | SPD | PWR | HP | Signature special |
-|---|---|---|---|---|
-| Lizbeth Holmez | 1.00 | 1.00 | 100 | 🔄 Pivot Punch |
-| Adam Weumann | 0.95 | 1.20 | 95 | 🔥 Burn Rate Blast |
-| Steve Nojobs | 1.15 | 0.90 | 95 | 📊 Pitch Deck Strike |
-| Kim Koindashian | 1.10 | 0.95 | 95 | 📈 Growth Hack |
-| Cathie Woodz | 0.90 | 1.05 | 105 | 💰 Funding Round |
-| Carl Icahnt | 0.85 | 1.25 | 110 | 🦈 Hostile Takeover |
-| Elo Ma *(cameo)* | 1.05 | 1.15 | 100 | 🔄 Pivot Punch |
-| Jeff Bozo *(cameo)* | 0.90 | 1.20 | 108 | 🦈 Hostile Takeover |
-| Scam Alt *(cameo)* | 1.10 | 0.90 | 96 | 📊 Pitch Deck Strike |
+No two characters share a style, so no two play the same. Exact balance still
+wants real playtesting — the numbers are compensating by construction, not by
+measured win rates.
 
 ### Do stats grow as you rank up? — **No. Deliberately.**
 
@@ -73,13 +75,14 @@ AI difficulty you chose. All temporary, all symmetrical.
 The single formula every hit goes through:
 
 ```
-dealt = max(1, round( base × POWER × unicorn × crateBuff × comboScaling ))
+dealt = max(1, round( base × STYLE.dmg × POWER × unicorn × crateBuff × comboScaling ))
 ```
 
 | Term | Value |
 |---|---|
 | `base` | the move's damage from the table below |
-| `POWER` | your power stat — **always 1.00 for a player** |
+| `STYLE.dmg` | your character's style multiplier — `0.86` (Phantom) … `1.30` (Glass Cannon) |
+| `POWER` | **always 1.00** — all character variation now lives in `STYLE` |
 | `unicorn` | `1.35` while Unicorn Mode is active, else `1.00` |
 | `crateBuff` | `1.40` while a 💪 damage crate is running, else `1.00` |
 | `comboScaling` | see §3 — depends on how deep the *victim* already is in the chain |
@@ -127,22 +130,24 @@ The trade is deliberate: slap is **2.5× faster to start** than kick but does
 
 ## 3. Combos — the magic series
 
-One rule: **when an attack lands, you may cancel it into the same move (up to
-its cap) or any stronger move. Never a weaker one.**
+One rule: **when an attack lands, press any other attack and it chains.** There
+is no order to memorise and no wrong answer — the rank ladder (slap < punch <
+kick with per-move caps) was removed in v2.1 because a wrong guess silently did
+nothing.
 
-```
-RANK:  🖐 slap (0)  <  👊 punch (1)  <  👟 kick (2)
-CAP:   slap ×2        punch ×3         kick ×2
-```
-
-So the longest pure-basics route is **7 hits**, then a finisher:
-
-```
-🖐🖐 → 👊👊👊 → 👟👟 → ⚡ special / ⚖️ C&D / 🦄 Unicorn
+```js
+BASICS:    ['slap', 'punch', 'kick', 'launch']   // any → any
+MAX_CHAIN: 5                                     // basics per string, then finish
 ```
 
-Kick cannot drop back to punch. Whiffs cancel nothing — miss and you eat the
-full recovery, which is what keeps mashing punishable.
+So all of these are legal, among many others:
+
+```
+👊👊👟 → ⚡        🖐👟👊 → ⚖️        👟🚀👊🖐👊 → 🦄
+```
+
+Whiffs cancel nothing — miss and you eat the full recovery, which is what keeps
+mashing punishable.
 
 ### Damage scaling
 
@@ -152,7 +157,7 @@ Each hit the victim takes in one chain makes the *next* one weaker:
 SCALING = [1, 0.85, 0.7, 0.6, 0.5, 0.45, 0.4]   // indexed by victim's chain depth, capped at 6
 ```
 
-**Worked example — the full 8-hit route:**
+**Worked example — a 5-basic string into a finisher:**
 
 | # | Move | Base | × scaling | Dealt |
 |---|---|---|---|---|

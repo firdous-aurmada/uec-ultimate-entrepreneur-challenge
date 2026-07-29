@@ -1,7 +1,7 @@
 // Central tuning for the whole game. All gameplay numbers live here.
 
 // Bump this on every release — it's rendered on the title screen.
-export const VERSION = 'v2.3';
+export const VERSION = 'v2.3.1';
 
 // Every player fights on identical footing. Your base character is pure
 // cosmetics: it decides how you LOOK, never how hard you hit. Ranked points
@@ -128,27 +128,43 @@ export const ATTACKS = {
 export const STYLES = {
   balanced: {
     name: 'BALANCED', blurb: 'No holes, no gimmicks. Textbook.',
-    startup: 1.00, dmg: 1.00, reach: 1.00, recovery: 1.00, stance: 'ready',
+    startup: 1.00, dmg: 1.00, reach: 1.00, recovery: 1.00, speed: 1.00, hp: 1.00, stance: 'ready',
   },
   rushdown: {
-    name: 'RUSHDOWN', blurb: 'Fast, relentless, in your face. Chip them apart.',
-    startup: 0.82, dmg: 0.88, reach: 0.94, recovery: 0.90, stance: 'coiled',
+    name: 'RUSHDOWN', blurb: 'Fastest hands and feet — but the thinnest skin.',
+    startup: 0.82, dmg: 0.88, reach: 0.94, recovery: 0.90, speed: 1.12, hp: 0.93, stance: 'coiled',
   },
   brawler: {
-    name: 'BRAWLER', blurb: 'Slow wind-up, devastating payoff. One read wins.',
-    startup: 1.22, dmg: 1.26, reach: 1.04, recovery: 1.12, stance: 'heavy',
+    name: 'BRAWLER', blurb: 'Hits hardest and takes the most. Slow to start.',
+    startup: 1.22, dmg: 1.18, reach: 1.04, recovery: 1.12, speed: 0.88, hp: 1.10, stance: 'heavy',
   },
   zoner: {
-    name: 'ZONER', blurb: 'Long limbs, longer patience. Keeps you out.',
-    startup: 1.08, dmg: 0.96, reach: 1.20, recovery: 1.05, stance: 'poised',
+    name: 'ZONER', blurb: 'Longest reach. Keeps you at arm\'s length all day.',
+    startup: 1.08, dmg: 0.96, reach: 1.22, recovery: 1.05, speed: 0.94, hp: 1.02, stance: 'poised',
   },
   trickster: {
-    name: 'TRICKSTER', blurb: 'Slippery and evasive. Never where you swung.',
-    startup: 0.90, dmg: 0.92, reach: 1.02, recovery: 0.86, stance: 'loose',
+    name: 'TRICKSTER', blurb: 'Slippery and quick to recover. Never where you swung.',
+    startup: 0.90, dmg: 0.92, reach: 1.02, recovery: 0.84, speed: 1.06, hp: 0.96, stance: 'loose',
   },
   showman: {
-    name: 'SHOWMAN', blurb: 'Flashy, theatrical, disrespectful. Style is damage.',
-    startup: 0.94, dmg: 1.04, reach: 0.98, recovery: 1.00, stance: 'flair',
+    name: 'SHOWMAN', blurb: 'Flashy and well-rounded. Style is the damage.',
+    startup: 0.94, dmg: 1.06, reach: 0.98, recovery: 0.98, speed: 1.00, hp: 0.99, stance: 'flair',
+  },
+  grappler: {
+    name: 'GRAPPLER', blurb: 'Short reach, brutal up close. Get in or get nothing.',
+    startup: 1.10, dmg: 1.22, reach: 0.86, recovery: 1.08, speed: 0.92, hp: 1.08, stance: 'heavy',
+  },
+  glass: {
+    name: 'GLASS CANNON', blurb: 'Hits like a lawsuit. Folds like a startup.',
+    startup: 0.96, dmg: 1.30, reach: 1.00, recovery: 1.14, speed: 1.02, hp: 0.86, stance: 'loose',
+  },
+  technical: {
+    name: 'TECHNICAL', blurb: 'Fastest recovery. Chains longer than anyone.',
+    startup: 1.00, dmg: 0.94, reach: 1.06, recovery: 0.78, speed: 0.98, hp: 1.00, stance: 'poised',
+  },
+  phantom: {
+    name: 'PHANTOM', blurb: 'Barely there. Low damage, impossible to pin down.',
+    startup: 0.86, dmg: 0.86, reach: 1.08, recovery: 0.82, speed: 1.10, hp: 0.92, stance: 'loose',
   },
 };
 

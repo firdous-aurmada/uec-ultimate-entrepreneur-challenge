@@ -1,7 +1,7 @@
 // Fighter entity: physics, state machine, attacks and specials.
 // Hit *detection/resolution* lives in game.js; fighters own their own state.
 
-import { STAGE, PHYS, ATTACKS, METER, UNICORN, BOMB, DASH, DROPS, COMBO, STEAL, STYLES } from '../config.js';
+import { STAGE, PHYS, ATTACKS, METER, UNICORN, BOMB, DASH, DROPS, COMBO, STEAL, STYLES, PLAYER_STATS } from '../config.js';
 import { SPECIALS } from '../data/fighters.js';
 
 function blankPad() {
@@ -13,7 +13,18 @@ export class Fighter {
     this.def = def;
     this.side = side;                       // 0 = left start, 1 = right start
     this.controller = controller;
-    this.maxHp = def.stats.hp;
+    // STYLE is the single source of character variation. The roster's legacy
+    // per-fighter `stats` used to stack on top of it, which made Carl hit 58%
+    // harder AND carry 10% more HP than a player's own founder — a straight
+    // power tier, not a playstyle. Everyone now starts from PLAYER_STATS and
+    // is differentiated only by their style's compensating multipliers.
+    const st = STYLES[def.style] || STYLES.balanced;
+    this.stats = {
+      speed: PLAYER_STATS.speed * (st.speed ?? 1),
+      power: PLAYER_STATS.power,            // damage variation lives in style.dmg
+      hp: Math.round(PLAYER_STATS.hp * (st.hp ?? 1)),
+    };
+    this.maxHp = this.stats.hp;
     this.hp = this.maxHp;
     this.energy = 0;
     this.x = side === 0 ? 300 : 660;
@@ -71,12 +82,12 @@ export class Fighter {
   get grounded() { return !this.airborne; }
   get alive() { return this.hp > 0; }
   get speedMult() {
-    return this.def.stats.speed
+    return this.stats.speed
       * (this.unicornT > 0 ? UNICORN.SPEED_MULT : 1)
       * (this.speedBuffT > 0 ? DROPS.BUFF_SPEED : 1);
   }
   get dmgMult() {
-    return this.def.stats.power
+    return this.stats.power
       * (this.unicornT > 0 ? UNICORN.DMG_MULT : 1)
       * (this.dmgBuffT > 0 ? DROPS.BUFF_DMG : 1);
   }
