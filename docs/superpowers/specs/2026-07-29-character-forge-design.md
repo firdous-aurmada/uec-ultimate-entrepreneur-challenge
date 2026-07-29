@@ -171,7 +171,8 @@ construction.
 
 | Archetype | Covers today | Parameters |
 |---|---|---|
-| `strike` | slap/punch/kick/launch, `aoe` (Burn Rate) | startup, active, recovery, dmg, reach, hitY, kb, kbUp, stun |
+| `strike` | slap/punch/kick/launch | startup, active, recovery, dmg, reach, hitY, kb, kbUp, stun |
+| `aoe` | Burn Rate Blast | startup, active, recovery, dmg, reach, kb, kbUp |
 | `projectile` | Pitch Deck Strike | count, speed, interval, arc, dmg, startup, recovery, lifetime |
 | `rush` | Growth Hack | hits, hitInterval, speed, duration, startup, recovery, kb |
 | `grab` | Hostile Takeover | reach, dmg, startup, recovery, kb, kbUp — unblockable, jump-escapable |
@@ -180,9 +181,11 @@ construction.
 | **`counter`** | *new* | window, dmg, startup, recovery, retaliation kb |
 | **`trap`** | *new* | lifetime, radius, dmg, armTime, maxActive |
 
-The first six generalise everything the game already does. `counter` and `trap` are
-new fight patterns — they exist so the roster can hold characters that play
-differently in kind, not just in degree.
+The first seven generalise everything the game already does — `aoe` is kept separate
+from `strike` rather than merged, because P1 must preserve shipped behaviour exactly;
+consolidating them is a P3 decision. `counter` and `trap` are new fight patterns,
+added at the start of P2 alongside the UI that can author them. They exist so the
+roster can hold characters that play differently in kind, not just in degree.
 
 ## 5. Authoring loop
 
@@ -215,8 +218,7 @@ git, needs no extra fetch at boot, and adds no new runtime failure mode.
 | `src/engine/fighter.js` | Hurtbox derives from `body` (height/build) instead of global `PHYS.BODY_W/H`. Move lookup goes through the character's move table rather than the module-level `ATTACKS`. |
 | `src/engine/drawFighter.js` | A proportion object threaded through the hand-tuned offsets. **The delicate change** — see §7. |
 | `src/engine/drawFighter.js` (buffer) | `BUF_OX`/`BUF_OY` scale with `height` and `reach` so tall or long-armed characters do not clip the cel-shade buffer. |
-| `src/engine/moves.js` *(new)* | The 8 archetype implementations, extracted from what is currently special-cased inside `game.js`. |
-| `src/engine/game.js` | Special dispatch delegates to `moves.js` instead of branching on `sp.type` inline. |
+| `src/engine/moves.js` *(new)* | The archetype implementations, extracted from the `sp.type` chains at `fighter.js:383-388` and `:407-434`. |
 | `src/config.js` | Adds `BODY` bound constants and the power-budget weights. `PHYS.BODY_W/H` remain as the 1.0 baseline. |
 | `src/data/schema.js` *(new)* | Schema definition + validator, shared by the Incubator and the game's load path. |
 
@@ -243,8 +245,11 @@ Live matches run deterministic lockstep, so both peers need byte-identical chara
 data. Therefore:
 
 - The roster compiles into the bundle rather than being fetched at runtime.
-- The character definition contributes to the state hash, so a mismatch is detected
-  as a desync rather than silently diverging.
+- **No change to the state hash is needed.** `hashGameState` (`src/net/online.js:55`)
+  fingerprints *derived* state — positions, HP, energy, timer — so peers holding
+  different character data diverge on the first hit and the existing detector catches
+  it downstream. An earlier draft of this spec claimed the definition had to feed the
+  hash; reading the function shows that is unnecessary.
 - **Custom characters cannot enter ranked or live play until there is a distribution
   mechanism.** That is a separate problem, deliberately out of scope here, and named
   now so it does not surprise anyone later.
@@ -267,10 +272,10 @@ data. Therefore:
 moves from data, all 9 characters migrated. *Acceptance: the game plays and looks
 identical — golden images match, determinism test passes.* Nothing visible changes.
 
-**P2 — The Incubator.** Authoring UI: identity, look, body sliders, move archetype
-editor, live budget meter, live preview, spar, export. *Acceptance: a new character
-can be authored, sparred against, exported, and loaded by the game without editing
-code by hand.*
+**P2 — The Incubator.** Opens with the two new archetypes (`counter`, `trap`), then
+the authoring UI: identity, look, body sliders, move archetype editor, live budget
+meter, live preview, spar, export. *Acceptance: a new character can be authored,
+sparred against, exported, and loaded by the game without editing code by hand.*
 
 **P3 — Repopulate.** Use the tool to make the roster genuinely distinct; retune the
 PHANTOM and GLASS CANNON findings from §3. *Acceptance: no two characters share a
