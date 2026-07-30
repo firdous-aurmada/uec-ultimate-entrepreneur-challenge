@@ -1,0 +1,64 @@
+<meta charset="utf-8">
+<title>Face placement</title>
+<style>
+  body { background:#0b0e1a; color:#eef1ff; font:13px ui-monospace,monospace; padding:16px; margin:0; }
+  h1 { font:700 17px system-ui; margin:0 0 4px; }
+  p.sub { color:#8b93ad; font:12px/1.6 system-ui; margin:0 0 12px; max-width:880px; }
+  .row { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:10px; }
+  canvas { background:linear-gradient(#1e2438,#11141f); border-radius:4px; }
+  h2 { font:700 12px system-ui; letter-spacing:.08em; text-transform:uppercase; color:#ffd23f; margin:14px 0 4px; }
+  #log { color:#8b93ad; white-space:pre; font-size:12px; margin-top:10px; }
+</style>
+<h1>Face placement — head-bone anchored</h1>
+<p class="sub">Features are positioned in the head bone's own frame (derived from the Head, headfront and
+head_end bones) and then projected with the body's camera, so they track the head as it turns and
+tilts. Zoomed on the head so placement can be judged.</p>
+<div id="out"></div>
+<div id="log"></div>
+
+<script type="module">
+import { loadModel, skinAt, renderPose, motionTimes, clipGroundOffset, headFrame } from './glb.js';
+import { drawFace } from './face.js';
+
+const log = (s) => { document.getElementById('log').textContent += s + '\n'; };
+const out = document.getElementById('out');
+const model = loadModel(await (await fetch('./assets/base-boxing.glb')).arrayBuffer());
+
+const YAW = 30;
+const CLIPS = [
+  ['idle (block tail)', 'block', [0.80, 1.0], true],
+  ['punch', 'punch', null, false],
+  ['kick', 'kick', null, false],
+  ['ko', 'ko', null, false],
+];
+
+for (const [label, file, range, loop] of CLIPS) {
+  const anim = file ? loadModel(await (await fetch(`./assets/${file}.glb`)).arrayBuffer()) : null;
+  const times = motionTimes(model, { anim, frames: 6, loop, range });
+  const base = { lockYaw: true, stripRoot: true, anim };
+  const groundOffset = clipGroundOffset(model, times, base);
+
+  const h = document.createElement('h2'); h.textContent = label; out.appendChild(h);
+  const row = document.createElement('div'); row.className = 'row'; out.appendChild(row);
+
+  // zoom hard on the head so placement is judgeable
+  const W = 210, H = 240, scale = 300;
+  times.forEach((t, i) => {
+    const cv = document.createElement('canvas');
+    cv.width = W; cv.height = H;
+    const cx = cv.getContext('2d');
+    const { P, N } = skinAt(model, t, { ...base, groundOffset });
+    // centre the view on the head for this frame
+    const hf = headFrame(model, t, { ...base, groundOffset });
+    // centre the view on the head centre for this frame
+    const proj = { yaw: YAW, scale, originX: W / 2, baselineY: H * 0.55 + hf.origin[1] * scale };
+    const r = renderPose(W, H, model, P, N, {
+      yaw: YAW, scale, originX: proj.originX, baselineY: proj.baselineY, ink: true,
+    });
+    cx.putImageData(r.img, 0, 0);
+    const drew = drawFace(cx, model, t, { proj, skinOpts: { ...base, groundOffset } });
+    if (i === 0) log(`${label}: face drawn = ${drew}`);
+    row.appendChild(cv);
+  });
+}
+</script>

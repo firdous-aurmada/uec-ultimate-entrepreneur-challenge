@@ -283,6 +283,130 @@ export function skinAt(m, time, opts = {}) {
   return { P, N };
 }
 
+// Joint world matrices at a time — used to anchor 2D detail (a face) to a bone
+// so it tracks the bone's rotation instead of sliding around on the silhouette.
+export function jointWorld(m, time, opts = {}) {
+  return skinMatrices(m, time, opts, true);
+}
+
+// An orthonormal frame for the head, in world space, at a given time.
+//
+// The rig carries three head bones — Head, headfront and head_end — so the
+// facing direction is given rather than guessed: headfront-Head points out of
+// the face, head_end-Head points out of the crown. Features placed in this
+// frame track the head as it turns and tilts, which a flat 2D overlay cannot.
+// Bone basis vectors are unusable directly here: the skeleton is authored in
+// centimetres and carries a ~0.01 scale, so we derive the axes from bone
+// POSITIONS instead, which are scale-independent.
+// Where the visual head sits relative to the Head BONE, measured from the mesh
+// once and cached. The bone is at the base of the skull, not its centre —
+// measured 15cm below and 16cm behind the head mass on this rig — so anchoring
+// features to the bone draws them on the neck. Calibrating against the actual
+// vertices makes the placement rig-independent instead of hand-tuned.
+function headCalibration(m) {
+  if (m._headCal) return m._headCal;
+  const iH = m.jointNames.indexOf('Head');
+  const iF = m.jointNames.indexOf('headfront');
+  const iT = m.jointNames.indexOf('head_end');
+  if (iH < 0 || iF < 0 || iT < 0) return (m._headCal = null);
+
+  // bind-pose frame, straight from the node hierarchy
+  const W = skinMatrices(m, 0, { lockYaw: false, stripRoot: false, anim: null }, true);
+  const pos = (i) => [W[i][12], W[i][13], W[i][14]];
+  const o = pos(iH);
+  const sub = (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
+  const norm = (v) => { const l = Math.hypot(...v) || 1; return [v[0] / l, v[1] / l, v[2] / l]; };
+  const dot = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+  const cross = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
+  const fwd = norm(sub(pos(iF), o));
+  const upR = sub(pos(iT), o);
+  const d = dot(upR, fwd);
+  const up = norm([upR[0] - fwd[0] * d, upR[1] - fwd[1] * d, upR[2] - fwd[2] * d]);
+  const right = norm(cross(up, fwd));
+
+  // centroid + radius of the vertices actually skinned to the head bones
+  const heads = new Set([iH, iF, iT].map(i => m.jointNodes[i]));
+  const headJointIdx = new Set([iH, iF, iT]);
+  let cx = 0, cy = 0, cz = 0, n = 0;
+  const picked = [];
+  for (let v = 0; v < m.POS.length / 3; v++) {
+    let bj = 0, bw = -1;
+    for (let k = 0; k < 4; k++) {
+      const w = m.WEIGHTS[v * 4 + k];
+      if (w > bw) { bw = w; bj = m.JOINTS[v * 4 + k]; }
+    }
+    if (!headJointIdx.has(bj)) continue;
+    cx += m.POS[v * 3]; cy += m.POS[v * 3 + 1]; cz += m.POS[v * 3 + 2];
+    picked.push(v); n++;
+  }
+  if (!n) return (m._headCal = null);
+  const c = [cx / n, cy / n, cz / n];
+  let rad = 0;
+  for (const v of picked) {
+    rad += Math.hypot(m.POS[v * 3] - c[0], m.POS[v * 3 + 1] - c[1], m.POS[v * 3 + 2] - c[2]);
+  }
+  rad /= n;
+
+  // express bone -> head-centre in the head's own axes, so it survives rotation
+  const rel = sub(c, o);
+  return (m._headCal = {
+    local: [dot(rel, right), dot(rel, up), dot(rel, fwd)],
+    radius: rad,
+  });
+}
+
+export function headFrame(m, time, opts = {}) {
+  const cal = headCalibration(m);
+  const W = skinMatrices(m, time, opts, true);
+  const idx = (n) => m.jointNames.indexOf(n);
+  const iH = idx('Head'), iF = idx('headfront'), iT = idx('head_end');
+  if (iH < 0 || iF < 0 || iT < 0) return null;
+  const pos = (i) => [W[i][12], W[i][13], W[i][14]];
+  const o = pos(iH), f0 = pos(iF), t0 = pos(iT);
+
+  const sub = (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
+  const norm = (v) => { const l = Math.hypot(...v) || 1; return [v[0] / l, v[1] / l, v[2] / l]; };
+  const dot = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+  const cross = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
+
+  const fwdRaw = sub(f0, o);
+  const upRaw = sub(t0, o);
+  const forward = norm(fwdRaw);
+  // Gram-Schmidt: make up perpendicular to forward so the frame is orthonormal
+  const d = dot(upRaw, forward);
+  const up = norm([upRaw[0] - forward[0] * d, upRaw[1] - forward[1] * d, upRaw[2] - forward[2] * d]);
+  const right = norm(cross(up, forward));
+  // head radius, from the crown distance — scales features with the character
+  // skinMatrices runs before skinAt's ground offset, so apply it here too or
+  // the face floats away from the body.
+  const off = opts.groundOffset || 0;
+  // shift from the bone to the head's visual centre, using the calibrated
+  // offset expressed in this frame's axes
+  const L = cal ? cal.local : [0, 0, 0];
+  const origin = [
+    o[0] + right[0] * L[0] + up[0] * L[1] + forward[0] * L[2],
+    o[1] + right[1] * L[0] + up[1] * L[1] + forward[1] * L[2] - off,
+    o[2] + right[2] * L[0] + up[2] * L[1] + forward[2] * L[2],
+  ];
+  return {
+    origin, forward, up, right,
+    size: cal ? cal.radius : (Math.hypot(...upRaw) || 0.12),
+    faceDist: Math.hypot(...fwdRaw),
+  };
+}
+
+// The exact projection renderPose uses, so overlays land on the body.
+export function projectPoint(p, opts = {}) {
+  const { yaw = 30, scale = 190, originX = 0, baselineY = 0, flip = false } = opts;
+  const a = yaw * Math.PI / 180, cy = Math.cos(a), sy = Math.sin(a);
+  const fx = flip ? -1 : 1;
+  return {
+    x: originX + fx * (p[0] * cy + p[2] * sy) * scale,
+    y: baselineY - p[1] * scale,
+    depth: -p[0] * sy + p[2] * cy,
+  };
+}
+
 // Lowest vertex across a whole clip — the constant that plants it on the floor.
 export function clipGroundOffset(m, times, opts = {}) {
   let lo = Infinity;
