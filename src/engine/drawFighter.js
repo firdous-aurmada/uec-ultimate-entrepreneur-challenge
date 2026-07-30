@@ -717,30 +717,33 @@ function drawBriefcase(ctx, x, y, accent) {
 // look for free. Toggle with STYLE.shaded so we can A/B the old flat look.
 export const STYLE = { shaded: true };
 const SS = 2;
-// Live metrics for the buffer currently allocated. Neutral bodies keep the
-// historical 280×300 at (130, 250), so their render is byte-identical.
-let BUF_OX = 130, BUF_OY = 250, BUF_W = 280, BUF_H = 300;
-let _buf = null, _tmp = null;
+// One buffer per distinct body size, cached by size.
+//
+// A single grow-only buffer was wrong. shadeBuffer fills its gradients over
+// the whole buffer rect, so enlarging the buffer for one big character shifts
+// every OTHER character's shading very slightly (~0.01% — invisible to the
+// eye, but real). That made a fighter's appearance depend on who else happened
+// to be on screen, and made no render reproducible. Keying by size keeps each
+// body deterministic, and a neutral body always lands on the historical
+// 280×300 at (130, 250). At most two are live in a match.
+const _buffers = new Map();
 function fighterBuffer(m) {
   if (typeof document === 'undefined') return null;
-  if (!_buf) {
-    _buf = document.createElement('canvas');
-    _tmp = document.createElement('canvas');
-    _buf.width = BUF_W * SS; _buf.height = BUF_H * SS;
-    _tmp.width = BUF_W * SS; _tmp.height = BUF_H * SS;
+  const key = `${m.w}x${m.h}@${m.ox},${m.oy}`;
+  let rec = _buffers.get(key);
+  if (!rec) {
+    const buf = document.createElement('canvas');
+    const tmp = document.createElement('canvas');
+    buf.width = tmp.width = m.w * SS;
+    buf.height = tmp.height = m.h * SS;
+    rec = { buf, tmp, ox: m.ox, oy: m.oy, w: m.w, h: m.h };
+    _buffers.set(key, rec);
   }
-  // Grow only. Bodies are fixed for a match, so this stabilises on frame 1
-  // and never thrashes.
-  if (m && (m.w > BUF_W || m.h > BUF_H)) {
-    BUF_W = Math.max(BUF_W, m.w); BUF_H = Math.max(BUF_H, m.h);
-    BUF_OX = Math.max(BUF_OX, m.ox); BUF_OY = Math.max(BUF_OY, m.oy);
-    _buf.width = BUF_W * SS; _buf.height = BUF_H * SS;
-    _tmp.width = BUF_W * SS; _tmp.height = BUF_H * SS;
-  }
-  return _buf;
+  return rec;
 }
-function shadeBuffer(b) {
-  const W = _buf.width, H = _buf.height, oy = BUF_OY * SS, ox = BUF_OX * SS;
+function shadeBuffer(b, B) {
+  const _buf = B.buf, _tmp = B.tmp;
+  const W = _buf.width, H = _buf.height, oy = B.oy * SS, ox = B.ox * SS;
 
   // ---- rim light: a warm crescent on the upper-key edge of the silhouette ----
   // built as (white silhouette) minus (white silhouette shifted toward shadow),
@@ -800,17 +803,17 @@ export function drawFighter(ctx, f, t) {
   ctx.scale(f.facing, 1);
   if (P.rot) ctx.rotate(P.rot);
 
-  const buf = STYLE.shaded ? fighterBuffer(bufferMetrics(body)) : null;
+  const B = STYLE.shaded ? fighterBuffer(bufferMetrics(body)) : null;
   // Render the body either into the shading buffer (local, upright, facing +x)
   // or straight to the world ctx when shading is off.
   let g = ctx;
-  if (buf) {
-    g = buf.getContext('2d');
+  if (B) {
+    g = B.buf.getContext('2d');
     g.setTransform(1, 0, 0, 1, 0, 0);
-    g.clearRect(0, 0, buf.width, buf.height);
+    g.clearRect(0, 0, B.buf.width, B.buf.height);
     g.save();
     g.scale(SS, SS);
-    g.translate(BUF_OX, BUF_OY);
+    g.translate(B.ox, B.oy);
     INK = 1.32;                 // bolder ink for the buffer render only
   } else if (f.flashT > 0 && FILTER_OK) {
     ctx.filter = 'brightness(2.2) saturate(0.4)';
@@ -869,13 +872,13 @@ export function drawFighter(ctx, f, t) {
 
   if (P.briefcase) drawBriefcase(g, 34, -92, c.accent);
 
-  if (buf) {
+  if (B) {
     INK = 1;                   // reset before shading/blit
     g.restore();               // undo scale/translate
-    shadeBuffer(g);            // cel-shade the whole silhouette at once
+    shadeBuffer(g, B);         // cel-shade the whole silhouette at once
     ctx.save();
     if (f.flashT > 0 && FILTER_OK) ctx.filter = 'brightness(2.2) saturate(0.4)';
-    ctx.drawImage(buf, 0, 0, buf.width, buf.height, -BUF_OX, -BUF_OY, BUF_W, BUF_H);
+    ctx.drawImage(B.buf, 0, 0, B.buf.width, B.buf.height, -B.ox, -B.oy, B.w, B.h);
     ctx.restore();
   }
 

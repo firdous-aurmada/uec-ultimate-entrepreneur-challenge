@@ -7,6 +7,7 @@
   button { font: inherit; padding: 6px 14px; margin-right: 8px; }
 </style>
 <button id="check">CHECK against baseline</button>
+<button id="isolate">CHECK isolation (big bodies first)</button>
 <button id="write">WRITE new baseline</button>
 <div id="out">ready</div>
 <canvas id="c" width="360" height="380" style="display:none"></canvas>
@@ -14,6 +15,7 @@
 import { FIGHTERS } from '../../src/data/fighters.js';
 import { drawFighter } from '../../src/engine/drawFighter.js';
 import { ATTACKS } from '../../src/config.js';
+import { clampBody } from '../../src/engine/proportions.js';
 import { hashPixels, CASES } from './hash.js';
 
 const out = document.getElementById('out');
@@ -73,6 +75,36 @@ window.checkGolden = async () => {
 document.getElementById('check').onclick = async () => {
   const r = await window.checkGolden();
   out.innerHTML = `<span class="${r.bad.length ? 'bad' : 'ok'}">${r.bad.length ? r.bad.length + ' MISMATCH of ' + r.total : 'ALL ' + r.total + ' MATCH'}</span>\n\n`
+    + r.detail.join('\n');
+};
+
+// Renders extreme bodies first, then re-checks the neutral roster.
+//
+// This exists because of a real bug: the shading buffer used to be shared and
+// grow-only, so once a big-bodied character rendered, every OTHER character's
+// shading shifted very slightly — a fighter's look depended on who else was on
+// screen. Plain CHECK could never catch it, because no shipped character has a
+// non-neutral body yet. This makes the isolation a standing guarantee.
+window.checkIsolation = async () => {
+  const cv = document.createElement('canvas');
+  cv.width = 600; cv.height = 600;
+  const cx = cv.getContext('2d');
+  const bodies = [
+    { height: 1.22, build: 1.25, reach: 1.20, stride: 1.18, shoulders: 1.25, head: 1.12 },
+    { height: 0.82, build: 0.85, reach: 0.88, stride: 0.88, shoulders: 0.85, head: 0.90 },
+    { height: 1.10, build: 1.00, reach: 1.15, stride: 1.05, shoulders: 1.00, head: 1.00 },
+  ];
+  for (const body of bodies) {
+    drawFighter(cx, { ...stubFighter(FIGHTERS[0], { state: 'idle' }), body: clampBody(body), x: 300, y: 500 }, 0.5);
+  }
+  return window.checkGolden();
+};
+
+document.getElementById('isolate').onclick = async () => {
+  const r = await window.checkIsolation();
+  out.innerHTML = `<span class="${r.bad.length ? 'bad' : 'ok'}">${r.bad.length
+    ? r.bad.length + ' MISMATCH of ' + r.total + ' after big bodies rendered — buffers are leaking between characters'
+    : 'ISOLATED — all ' + r.total + ' still match after extreme bodies rendered'}</span>\n\n`
     + r.detail.join('\n');
 };
 
