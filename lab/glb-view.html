@@ -463,6 +463,215 @@ function renderRigged(canvas, yawDeg, label) {
   log(`rig-rendered ${label}`);
 }
 
+// ---- skinning -------------------------------------------------------------
+// Evaluate the animation at a timestamp and deform the mesh, so we render real
+// animation frames instead of the bind pose. glTF matrices are column-major.
+function fromTRS(t, q, s) {
+  const x = q[0], y = q[1], z = q[2], w = q[3];
+  const x2 = x + x, y2 = y + y, z2 = z + z;
+  const xx = x * x2, xy = x * y2, xz = x * z2;
+  const yy = y * y2, yz = y * z2, zz = z * z2;
+  const wx = w * x2, wy = w * y2, wz = w * z2;
+  const m = new Float32Array(16);
+  m[0] = (1 - (yy + zz)) * s[0]; m[1] = (xy + wz) * s[0]; m[2] = (xz - wy) * s[0]; m[3] = 0;
+  m[4] = (xy - wz) * s[1]; m[5] = (1 - (xx + zz)) * s[1]; m[6] = (yz + wx) * s[1]; m[7] = 0;
+  m[8] = (xz + wy) * s[2]; m[9] = (yz - wx) * s[2]; m[10] = (1 - (xx + yy)) * s[2]; m[11] = 0;
+  m[12] = t[0]; m[13] = t[1]; m[14] = t[2]; m[15] = 1;
+  return m;
+}
+function mul(a, b) {
+  const o = new Float32Array(16);
+  for (let c = 0; c < 4; c++) for (let r = 0; r < 4; r++) {
+    o[c * 4 + r] = a[r] * b[c * 4] + a[4 + r] * b[c * 4 + 1] + a[8 + r] * b[c * 4 + 2] + a[12 + r] * b[c * 4 + 3];
+  }
+  return o;
+}
+
+const anim = json.animations[0];
+const animCache = new Map();
+function chanData(sampler) {
+  if (!animCache.has(sampler)) {
+    animCache.set(sampler, {
+      t: readAccessor(json, bin, anim.samplers[sampler].input),
+      v: readAccessor(json, bin, anim.samplers[sampler].output),
+    });
+  }
+  return animCache.get(sampler);
+}
+// node index -> { translation?, rotation?, scale? } sampler ids
+const nodeChannels = new Map();
+for (const ch of anim.channels) {
+  const n = ch.target.node;
+  if (!nodeChannels.has(n)) nodeChannels.set(n, {});
+  nodeChannels.get(n)[ch.target.path] = ch.sampler;
+}
+const ANIM_DUR = chanData(anim.channels[0].sampler).t[chanData(anim.channels[0].sampler).t.length - 1];
+
+function sampleChannel(sampler, time, n) {
+  const { t, v } = chanData(sampler);
+  let i = 0;
+  while (i < t.length - 1 && t[i + 1] < time) i++;
+  const j = Math.min(i + 1, t.length - 1);
+  const span = t[j] - t[i];
+  const f = span > 1e-8 ? (time - t[i]) / span : 0;
+  const out = new Array(n);
+  if (n === 4) {                                   // quaternion — nlerp
+    let d = 0;
+    for (let k = 0; k < 4; k++) d += v[i * 4 + k] * v[j * 4 + k];
+    const sgn = d < 0 ? -1 : 1;
+    let len = 0;
+    for (let k = 0; k < 4; k++) {
+      out[k] = v[i * 4 + k] + (v[j * 4 + k] * sgn - v[i * 4 + k]) * f;
+      len += out[k] * out[k];
+    }
+    len = Math.sqrt(len) || 1;
+    for (let k = 0; k < 4; k++) out[k] /= len;
+  } else {
+    for (let k = 0; k < n; k++) out[k] = v[i * n + k] + (v[j * n + k] - v[i * n + k]) * f;
+  }
+  return out;
+}
+
+const IBM = readAccessor(json, bin, json.skins[0].inverseBindMatrices);
+const jointIdx = json.skins[0].joints;
+const parentOf = new Map();
+json.nodes.forEach((nd, i) => (nd.children || []).forEach(c => parentOf.set(c, i)));
+
+function localMatrix(ni, time) {
+  const nd = json.nodes[ni];
+  const ch = nodeChannels.get(ni);
+  const t = ch?.translation ? sampleChannel(ch.translation, time, 3) : (nd.translation || [0, 0, 0]);
+  const r = ch?.rotation ? sampleChannel(ch.rotation, time, 4) : (nd.rotation || [0, 0, 0, 1]);
+  const s = ch?.scale ? sampleChannel(ch.scale, time, 3) : (nd.scale || [1, 1, 1]);
+  return fromTRS(t, r, s);
+}
+
+function worldMatrices(time) {
+  const cache = new Map();
+  const get = (ni) => {
+    if (cache.has(ni)) return cache.get(ni);
+    const local = localMatrix(ni, time);
+    const p = parentOf.get(ni);
+    const w = p === undefined ? local : mul(get(p), local);
+    cache.set(ni, w);
+    return w;
+  };
+  return jointIdx.map((ni, j) => {
+    const w = get(ni);
+    const ibm = new Float32Array(IBM.buffer, IBM.byteOffset + j * 64, 16);
+    return mul(w, ibm);
+  });
+}
+
+// Skinned copies of POSITION / NORMAL at a given time.
+function skinAt(time) {
+  const S = worldMatrices(time);
+  const n = POS.length / 3;
+  const P2 = new Float32Array(POS.length), N2 = new Float32Array(NRM.length);
+  for (let v = 0; v < n; v++) {
+    const px = POS[v * 3], py = POS[v * 3 + 1], pz = POS[v * 3 + 2];
+    const nx = NRM[v * 3], ny = NRM[v * 3 + 1], nz = NRM[v * 3 + 2];
+    let ox = 0, oy = 0, oz = 0, mx = 0, my = 0, mz = 0;
+    for (let k = 0; k < 4; k++) {
+      const w = WEIGHTS[v * 4 + k];
+      if (w === 0) continue;
+      const m = S[JOINTS[v * 4 + k]];
+      if (!m) continue;
+      ox += w * (m[0] * px + m[4] * py + m[8] * pz + m[12]);
+      oy += w * (m[1] * px + m[5] * py + m[9] * pz + m[13]);
+      oz += w * (m[2] * px + m[6] * py + m[10] * pz + m[14]);
+      mx += w * (m[0] * nx + m[4] * ny + m[8] * nz);
+      my += w * (m[1] * nx + m[5] * ny + m[9] * nz);
+      mz += w * (m[2] * nx + m[6] * ny + m[10] * nz);
+    }
+    P2[v * 3] = ox; P2[v * 3 + 1] = oy; P2[v * 3 + 2] = oz;
+    const l = Math.hypot(mx, my, mz) || 1;
+    N2[v * 3] = mx / l; N2[v * 3 + 1] = my / l; N2[v * 3 + 2] = mz / l;
+  }
+  return { P2, N2 };
+}
+
+// Rig-classified render of an arbitrary skinned pose, with an ink outline.
+function renderPose(canvas, yawDeg, P2, N2, opts = {}) {
+  const cx = canvas.getContext('2d');
+  const W = canvas.width, HH = canvas.height;
+  const img = cx.createImageData(W, HH);
+  const px = img.data;
+  const zbuf = new Float32Array(W * HH).fill(-Infinity);
+  const cov = new Uint8Array(W * HH);
+  const yaw = yawDeg * Math.PI / 180, cy = Math.cos(yaw), sy = Math.sin(yaw);
+
+  let lo = 1e9, hi = -1e9;
+  for (let i = 1; i < P2.length; i += 3) { lo = Math.min(lo, P2[i]); hi = Math.max(hi, P2[i]); }
+  const scale = (opts.scale ?? HH * 0.84) / (opts.fixedH ?? (hi - lo));
+  const ox = W / 2, oy = HH * 0.96 + lo * scale;
+
+  const L = [0.55, 0.62, 0.56];
+  const Lm = Math.hypot(...L); L[0] /= Lm; L[1] /= Lm; L[2] /= Lm;
+  const n = P2.length / 3;
+  const sx_ = new Float32Array(n), sy_ = new Float32Array(n), sz_ = new Float32Array(n);
+  for (let v = 0; v < n; v++) {
+    const x = P2[v * 3], y = P2[v * 3 + 1], z = P2[v * 3 + 2];
+    sx_[v] = ox + (x * cy + z * sy) * scale;
+    sy_[v] = oy - y * scale;
+    sz_[v] = -x * sy + z * cy;
+  }
+  for (let t = 0; t < IDX.length / 3; t++) {
+    const a = IDX[t * 3], b = IDX[t * 3 + 1], c = IDX[t * 3 + 2];
+    const ax = sx_[a], ay = sy_[a], bx = sx_[b], by = sy_[b], cxx = sx_[c], cyy = sy_[c];
+    const area = (bx - ax) * (cyy - ay) - (cxx - ax) * (by - ay);
+    if (area === 0) continue;
+    const inv = 1 / area;
+    const nx = (N2[a * 3] + N2[b * 3] + N2[c * 3]) / 3;
+    const ny = (N2[a * 3 + 1] + N2[b * 3 + 1] + N2[c * 3 + 1]) / 3;
+    const nz = (N2[a * 3 + 2] + N2[b * 3 + 2] + N2[c * 3 + 2]) / 3;
+    const rnx = nx * cy + nz * sy, rnz = -nx * sy + nz * cy;
+    const lam = Math.max(0, rnx * L[0] + ny * L[1] + rnz * L[2]);
+    const shade = lam > 0.74 ? 1.18 : lam > 0.40 ? 0.96 : 0.66;
+    const m = VMAT[a].mat === VMAT[b].mat ? VMAT[a].mat
+            : VMAT[a].mat === VMAT[c].mat ? VMAT[a].mat
+            : VMAT[b].mat === VMAT[c].mat ? VMAT[b].mat : VMAT[a].mat;
+    const base = MAT_RGB[m];
+    const cr = base[0] * shade, cg = base[1] * shade, cb = base[2] * shade;
+    const x0 = Math.max(0, Math.floor(Math.min(ax, bx, cxx)));
+    const x1 = Math.min(W - 1, Math.ceil(Math.max(ax, bx, cxx)));
+    const y0 = Math.max(0, Math.floor(Math.min(ay, by, cyy)));
+    const y1 = Math.min(HH - 1, Math.ceil(Math.max(ay, by, cyy)));
+    for (let y = y0; y <= y1; y++) {
+      for (let x = x0; x <= x1; x++) {
+        const w0 = ((bx - x) * (cyy - y) - (cxx - x) * (by - y)) * inv;
+        const w1 = ((cxx - x) * (ay - y) - (ax - x) * (cyy - y)) * inv;
+        const w2 = 1 - w0 - w1;
+        if (w0 < -0.0001 || w1 < -0.0001 || w2 < -0.0001) continue;
+        const z = w0 * sz_[a] + w1 * sz_[b] + w2 * sz_[c];
+        const pi = y * W + x;
+        if (z <= zbuf[pi]) continue;
+        zbuf[pi] = z;
+        cov[pi] = 1;
+        const o = pi * 4;
+        px[o] = cr > 255 ? 255 : cr;
+        px[o + 1] = cg > 255 ? 255 : cg;
+        px[o + 2] = cb > 255 ? 255 : cb;
+        px[o + 3] = 255;
+      }
+    }
+  }
+  // ink outline: any covered pixel adjacent to empty space
+  if (opts.ink !== false) {
+    const edge = [];
+    for (let y = 1; y < HH - 1; y++) for (let x = 1; x < W - 1; x++) {
+      const pi = y * W + x;
+      if (!cov[pi]) continue;
+      if (!cov[pi - 1] || !cov[pi + 1] || !cov[pi - W] || !cov[pi + W]) edge.push(pi);
+    }
+    for (const pi of edge) {
+      const o = pi * 4;
+      px[o] = 10; px[o + 1] = 12; px[o + 2] = 22; px[o + 3] = 255;
+    }
+  }
+  cx.putImageData(img, 0, 0);
+}
+
 // ---- the question that actually matters -----------------------------------
 // In game a fighter is about 180 px tall on a 960x540 stage. Speckle from my
 // per-triangle sampler may simply not survive that downscale. Render at true
@@ -510,15 +719,42 @@ for (const yaw of [0, 20, 35, 90]) {
   row2.appendChild(d);
   renderRigged(cv, yaw, `rigged ${yaw}`);
 }
-for (const yaw of [0, 20, 35, 90]) {
-  const d = document.createElement('div');
-  d.className = 'shot';
-  d.innerHTML = `<h2>RIG game size · ${yaw}°</h2>`;
-  const cv = document.createElement('canvas');
-  cv.width = 130; cv.height = 180;
-  cv.style.cssText = 'width:130px;background:linear-gradient(#1a1f30,#11141f)';
-  d.appendChild(cv);
-  row2.appendChild(d);
-  renderRigged(cv, yaw, `rigged small ${yaw}`);
+// ---- ANIMATION FRAMES: the decisive test ----------------------------------
+const h3 = document.createElement('h1');
+h3.textContent = 'Animation frames (Boxing_Practice, skinned)';
+h3.style.cssText = 'font:700 16px system-ui;margin:22px 0 4px';
+document.body.insertBefore(h3, document.getElementById('log'));
+const sub3 = document.createElement('p');
+sub3.className = 'sub';
+sub3.textContent = `Real skinned poses sampled across the ${ANIM_DUR.toFixed(1)}s clip, side-on at fighting-game camera, with an ink outline. Top row large; bottom row at true in-game size.`;
+document.body.insertBefore(sub3, document.getElementById('log'));
+const row3 = document.createElement('div');
+row3.style.cssText = 'display:flex;gap:8px;flex-wrap:wrap';
+document.body.insertBefore(row3, document.getElementById('log'));
+
+// Fixed scale across all frames so the character doesn't jitter in size.
+const bindH = H;
+const FRAMES = 8;
+const poses = [];
+for (let i = 0; i < FRAMES; i++) {
+  poses.push(skinAt((i / FRAMES) * ANIM_DUR));
+}
+log(`skinned ${FRAMES} frames across ${ANIM_DUR.toFixed(2)}s`);
+
+for (const [px, tag] of [[300, 'large'], [180, 'game']]) {
+  const strip = document.createElement('div');
+  strip.style.cssText = 'display:flex;gap:6px;flex-wrap:wrap;width:100%;margin-bottom:8px';
+  row3.appendChild(strip);
+  poses.forEach((p, i) => {
+    const d = document.createElement('div');
+    d.className = 'shot';
+    d.style.padding = '4px';
+    const cv = document.createElement('canvas');
+    cv.width = Math.round(px * 0.78); cv.height = px;
+    cv.style.cssText = `width:${Math.round(px * 0.78)}px;background:linear-gradient(#1a1f30,#11141f)`;
+    d.appendChild(cv);
+    strip.appendChild(d);
+    renderPose(cv, 78, p.P2, p.N2, { scale: px * 0.84, fixedH: bindH });
+  });
 }
 </script>
