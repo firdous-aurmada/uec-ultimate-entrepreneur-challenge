@@ -1,0 +1,524 @@
+<meta charset="utf-8">
+<title>GLB inspect — software rasteriser</title>
+<style>
+  body { background:#0b0e1a; color:#eef1ff; font:13px ui-monospace,monospace; padding:16px; margin:0; }
+  h1 { font:700 16px system-ui; margin:0 0 4px; }
+  p.sub { color:#8b93ad; font:12px/1.6 system-ui; margin:0 0 12px; max-width:820px; }
+  #row { display:flex; gap:12px; flex-wrap:wrap; }
+  .shot { background:#141824; border:1px solid #232a3d; border-radius:8px; padding:8px; }
+  .shot h2 { font:700 11px system-ui; letter-spacing:.08em; text-transform:uppercase; color:#ffd23f; margin:0 0 6px; }
+  canvas { display:block; background:#1a1f30; border-radius:4px; }
+  #log { color:#8b93ad; margin-top:12px; white-space:pre; font-size:12px; }
+</style>
+<h1>GLB inspection — zero-dependency rasteriser</h1>
+<p class="sub">Parses the GLB directly and rasterises the bind pose with per-triangle texture sampling and
+Lambert shading, sorted back-to-front. No three.js, no WebGL — this exists only to judge whether the
+generated mesh is good enough to build a sprite pipeline on.</p>
+<div id="row"></div>
+<div id="log">loading…</div>
+
+<script type="module">
+const log = (s) => { document.getElementById('log').textContent += s + '\n'; };
+document.getElementById('log').textContent = '';
+
+const COMP = { 5120: Int8Array, 5121: Uint8Array, 5122: Int16Array, 5123: Uint16Array, 5125: Uint32Array, 5126: Float32Array };
+const NUM = { SCALAR: 1, VEC2: 2, VEC3: 3, VEC4: 4, MAT4: 16 };
+
+function parseGLB(buf) {
+  const dv = new DataView(buf);
+  if (dv.getUint32(0, true) !== 0x46546C67) throw new Error('not a GLB');
+  let off = 12, json = null, bin = null;
+  while (off < buf.byteLength) {
+    const len = dv.getUint32(off, true), type = dv.getUint32(off + 4, true);
+    const slice = buf.slice(off + 8, off + 8 + len);
+    if (type === 0x4E4F534A) json = JSON.parse(new TextDecoder().decode(slice));
+    if (type === 0x004E4942) bin = slice;
+    off += 8 + len;
+  }
+  return { json, bin };
+}
+
+function readAccessor(json, bin, idx) {
+  const acc = json.accessors[idx];
+  const bv = json.bufferViews[acc.bufferView];
+  const TA = COMP[acc.componentType];
+  const n = NUM[acc.type];
+  const base = (bv.byteOffset || 0) + (acc.byteOffset || 0);
+  // Tight-packed is the common case; handle byteStride for safety.
+  const stride = bv.byteStride;
+  if (!stride || stride === n * TA.BYTES_PER_ELEMENT) {
+    return new TA(bin, base, acc.count * n);
+  }
+  const out = new TA(acc.count * n);
+  const dv = new DataView(bin);
+  const get = { 5126: 'getFloat32', 5123: 'getUint16', 5125: 'getUint32', 5121: 'getUint8' }[acc.componentType];
+  for (let i = 0; i < acc.count; i++) {
+    for (let c = 0; c < n; c++) {
+      out[i * n + c] = dv[get](base + i * stride + c * TA.BYTES_PER_ELEMENT, true);
+    }
+  }
+  return out;
+}
+
+const res = await fetch('./assets/base-boxing.glb');
+const { json, bin } = parseGLB(await res.arrayBuffer());
+log(`meshes ${json.meshes.length} · nodes ${json.nodes.length} · textures ${json.textures?.length} · images ${json.images.length}`);
+
+const prim = json.meshes[0].primitives[0];
+const POS = readAccessor(json, bin, prim.attributes.POSITION);
+const NRM = readAccessor(json, bin, prim.attributes.NORMAL);
+const UV = readAccessor(json, bin, prim.attributes.TEXCOORD_0);
+const IDX = readAccessor(json, bin, prim.indices);
+log(`vertices ${POS.length / 3} · triangles ${IDX.length / 3}`);
+
+// baseColorTexture → its source image
+const mat = json.materials[prim.material];
+const texIdx = mat.pbrMetallicRoughness?.baseColorTexture?.index ?? 0;
+const imgIdx = json.textures[texIdx].source;
+const imgBV = json.bufferViews[json.images[imgIdx].bufferView];
+const imgBlob = new Blob([bin.slice(imgBV.byteOffset || 0, (imgBV.byteOffset || 0) + imgBV.byteLength)], { type: 'image/png' });
+const bmp = await createImageBitmap(imgBlob);
+log(`texture ${bmp.width}x${bmp.height} (image ${imgIdx} via texture ${texIdx})`);
+
+const tc = new OffscreenCanvas(bmp.width, bmp.height).getContext('2d', { willReadFrequently: true });
+tc.drawImage(bmp, 0, 0);
+const TEX = tc.getImageData(0, 0, bmp.width, bmp.height).data;
+const TW = bmp.width, TH = bmp.height;
+
+function sampleTex(u, v) {
+  let x = Math.min(TW - 1, Math.max(0, (u - Math.floor(u)) * TW | 0));
+  let y = Math.min(TH - 1, Math.max(0, (1 - (v - Math.floor(v))) * TH | 0));
+  const i = (y * TW + x) * 4;
+  return [TEX[i], TEX[i + 1], TEX[i + 2]];
+}
+
+// bounds
+let minY = 1e9, maxY = -1e9, cx0 = 0, cz0 = 0;
+for (let i = 0; i < POS.length; i += 3) { minY = Math.min(minY, POS[i + 1]); maxY = Math.max(maxY, POS[i + 1]); }
+const H = maxY - minY;
+
+function render(canvas, yawDeg, label) {
+  const cx = canvas.getContext('2d');
+  const W = canvas.width, HH = canvas.height;
+  cx.clearRect(0, 0, W, HH);
+  const yaw = yawDeg * Math.PI / 180, cy = Math.cos(yaw), sy = Math.sin(yaw);
+  const scale = HH * 0.86 / H;
+  const ox = W / 2, oy = HH * 0.95 + minY * scale;
+
+  // light from upper-right-front, matching the game's warm key
+  const L = [0.55, 0.62, 0.56];
+  const Lm = Math.hypot(...L); L[0] /= Lm; L[1] /= Lm; L[2] /= Lm;
+
+  const nTri = IDX.length / 3;
+  const order = new Array(nTri);
+  const proj = new Float32Array(POS.length);
+  for (let i = 0; i < POS.length; i += 3) {
+    const x = POS[i], y = POS[i + 1], z = POS[i + 2];
+    proj[i] = ox + (x * cy + z * sy) * scale;
+    proj[i + 1] = oy - y * scale;
+    proj[i + 2] = -x * sy + z * cy;              // view depth
+  }
+  for (let t = 0; t < nTri; t++) {
+    const a = IDX[t * 3], b = IDX[t * 3 + 1], c = IDX[t * 3 + 2];
+    order[t] = [t, (proj[a * 3 + 2] + proj[b * 3 + 2] + proj[c * 3 + 2]) / 3];
+  }
+  order.sort((p, q) => p[1] - q[1]);             // far (−z) first
+
+  for (const [t] of order) {
+    const a = IDX[t * 3], b = IDX[t * 3 + 1], c = IDX[t * 3 + 2];
+    const nx = (NRM[a * 3] + NRM[b * 3] + NRM[c * 3]) / 3;
+    const ny = (NRM[a * 3 + 1] + NRM[b * 3 + 1] + NRM[c * 3 + 1]) / 3;
+    const nz = (NRM[a * 3 + 2] + NRM[b * 3 + 2] + NRM[c * 3 + 2]) / 3;
+    const rnx = nx * cy + nz * sy, rnz = -nx * sy + nz * cy;
+    const lam = Math.max(0, rnx * L[0] + ny * L[1] + rnz * L[2]);
+    const shade = 0.34 + 0.66 * lam;
+    const u = (UV[a * 2] + UV[b * 2] + UV[c * 2]) / 3;
+    const v = (UV[a * 2 + 1] + UV[b * 2 + 1] + UV[c * 2 + 1]) / 3;
+    const [r, g, bl] = sampleTex(u, v);
+    cx.fillStyle = `rgb(${r * shade | 0},${g * shade | 0},${bl * shade | 0})`;
+    cx.beginPath();
+    cx.moveTo(proj[a * 3], proj[a * 3 + 1]);
+    cx.lineTo(proj[b * 3], proj[b * 3 + 1]);
+    cx.lineTo(proj[c * 3], proj[c * 3 + 1]);
+    cx.closePath();
+    cx.fill();
+  }
+  log(`rendered ${label}`);
+}
+
+for (const [yaw, label] of [[0, 'front'], [35, '3/4'], [90, 'side'], [180, 'back']]) {
+  const d = document.createElement('div');
+  d.className = 'shot';
+  d.innerHTML = `<h2>${label} (${yaw}°)</h2>`;
+  const cv = document.createElement('canvas');
+  cv.width = 300; cv.height = 460;
+  d.appendChild(cv);
+  document.getElementById('row').appendChild(d);
+  render(cv, yaw, label);
+}
+
+// ---- proper per-pixel rasteriser -----------------------------------------
+// The per-triangle sampler above grabs ONE texel per triangle, which on a
+// fragmented UV atlas bleeds across chart boundaries and speckles. This does
+// real barycentric interpolation with a z-buffer, so it settles whether the
+// speckle is my sampler or the asset.
+function renderPerPixel(canvas, yawDeg, label) {
+  const cx = canvas.getContext('2d');
+  const W = canvas.width, HH = canvas.height;
+  const img = cx.createImageData(W, HH);
+  const px = img.data;
+  const zbuf = new Float32Array(W * HH).fill(-Infinity);
+
+  const yaw = yawDeg * Math.PI / 180, cy = Math.cos(yaw), sy = Math.sin(yaw);
+  const scale = HH * 0.86 / H;
+  const ox = W / 2, oy = HH * 0.95 + minY * scale;
+  const L = [0.55, 0.62, 0.56];
+  const Lm = Math.hypot(...L); L[0] /= Lm; L[1] /= Lm; L[2] /= Lm;
+
+  const sx_ = new Float32Array(POS.length / 3), sy_ = new Float32Array(POS.length / 3), sz_ = new Float32Array(POS.length / 3);
+  for (let v = 0; v < POS.length / 3; v++) {
+    const x = POS[v * 3], y = POS[v * 3 + 1], z = POS[v * 3 + 2];
+    sx_[v] = ox + (x * cy + z * sy) * scale;
+    sy_[v] = oy - y * scale;
+    sz_[v] = -x * sy + z * cy;
+  }
+
+  for (let t = 0; t < IDX.length / 3; t++) {
+    const a = IDX[t * 3], b = IDX[t * 3 + 1], c = IDX[t * 3 + 2];
+    const ax = sx_[a], ay = sy_[a], bx = sx_[b], by = sy_[b], cxx = sx_[c], cyy = sy_[c];
+    const area = (bx - ax) * (cyy - ay) - (cxx - ax) * (by - ay);
+    if (area === 0) continue;
+    const inv = 1 / area;
+
+    const nx = (NRM[a * 3] + NRM[b * 3] + NRM[c * 3]) / 3;
+    const ny = (NRM[a * 3 + 1] + NRM[b * 3 + 1] + NRM[c * 3 + 1]) / 3;
+    const nz = (NRM[a * 3 + 2] + NRM[b * 3 + 2] + NRM[c * 3 + 2]) / 3;
+    const rnx = nx * cy + nz * sy, rnz = -nx * sy + nz * cy;
+    const shade = 0.34 + 0.66 * Math.max(0, rnx * L[0] + ny * L[1] + rnz * L[2]);
+
+    const x0 = Math.max(0, Math.floor(Math.min(ax, bx, cxx)));
+    const x1 = Math.min(W - 1, Math.ceil(Math.max(ax, bx, cxx)));
+    const y0 = Math.max(0, Math.floor(Math.min(ay, by, cyy)));
+    const y1 = Math.min(HH - 1, Math.ceil(Math.max(ay, by, cyy)));
+
+    for (let y = y0; y <= y1; y++) {
+      for (let x = x0; x <= x1; x++) {
+        const w0 = ((bx - x) * (cyy - y) - (cxx - x) * (by - y)) * inv;
+        const w1 = ((cxx - x) * (ay - y) - (ax - x) * (cyy - y)) * inv;
+        const w2 = 1 - w0 - w1;
+        if (w0 < -0.0001 || w1 < -0.0001 || w2 < -0.0001) continue;
+        const z = w0 * sz_[a] + w1 * sz_[b] + w2 * sz_[c];
+        const pi = y * W + x;
+        if (z <= zbuf[pi]) continue;
+        zbuf[pi] = z;
+        const u = w0 * UV[a * 2] + w1 * UV[b * 2] + w2 * UV[c * 2];
+        const v = w0 * UV[a * 2 + 1] + w1 * UV[b * 2 + 1] + w2 * UV[c * 2 + 1];
+        const tx = Math.min(TW - 1, Math.max(0, (u - Math.floor(u)) * TW | 0));
+        const ty = Math.min(TH - 1, Math.max(0, (1 - (v - Math.floor(v))) * TH | 0));
+        const ti = (ty * TW + tx) * 4;
+        const o = pi * 4;
+        px[o] = TEX[ti] * shade;
+        px[o + 1] = TEX[ti + 1] * shade;
+        px[o + 2] = TEX[ti + 2] * shade;
+        px[o + 3] = 255;
+      }
+    }
+  }
+  cx.putImageData(img, 0, 0);
+  log(`per-pixel rendered ${label}`);
+}
+
+// ---- palette-quantised render --------------------------------------------
+// The generated texture is camouflage: the auto UV atlas maps unrelated patches
+// to adjacent surface, so pinstripes fight each other and skin bleeds onto the
+// suit. But the MESH is good. So classify each triangle to the nearest entry in
+// a small character palette and fill it flat with banded cel shading.
+//
+// Two wins: the noise disappears, and per-character recolouring becomes a
+// palette swap rather than a new texture — which is what makes one base mesh
+// serve the whole roster cheaply.
+const PALETTE = [
+  { name: 'suit',   rgb: [0x2c, 0x2f, 0x3a] },
+  { name: 'suit2',  rgb: [0x19, 0x1b, 0x23] },
+  { name: 'shirt',  rgb: [0xf4, 0xf6, 0xff] },
+  { name: 'skin',   rgb: [0xd9, 0xa0, 0x6b] },
+  { name: 'hair',   rgb: [0xef, 0xe6, 0xd8] },
+  { name: 'shoe',   rgb: [0x10, 0x11, 0x16] },
+  { name: 'accent', rgb: [0xff, 0x3d, 0x6e] },
+];
+
+function nearestPalette(r, g, b) {
+  let best = 0, bd = Infinity;
+  for (let i = 0; i < PALETTE.length; i++) {
+    const p = PALETTE[i].rgb;
+    const d = (r - p[0]) ** 2 * 0.30 + (g - p[1]) ** 2 * 0.59 + (b - p[2]) ** 2 * 0.11;
+    if (d < bd) { bd = d; best = i; }
+  }
+  return PALETTE[best].rgb;
+}
+
+// Precompute one palette index per triangle by averaging several texture taps.
+const TRI_COL = new Uint8Array((IDX.length / 3) * 3);
+for (let t = 0; t < IDX.length / 3; t++) {
+  const a = IDX[t * 3], b = IDX[t * 3 + 1], c = IDX[t * 3 + 2];
+  let r = 0, g = 0, bl = 0;
+  for (const [uu, vv] of [
+    [UV[a * 2], UV[a * 2 + 1]], [UV[b * 2], UV[b * 2 + 1]], [UV[c * 2], UV[c * 2 + 1]],
+    [(UV[a * 2] + UV[b * 2] + UV[c * 2]) / 3, (UV[a * 2 + 1] + UV[b * 2 + 1] + UV[c * 2 + 1]) / 3],
+  ]) {
+    const s = sampleTex(uu, vv); r += s[0]; g += s[1]; bl += s[2];
+  }
+  const q = nearestPalette(r / 4, g / 4, bl / 4);
+  TRI_COL[t * 3] = q[0]; TRI_COL[t * 3 + 1] = q[1]; TRI_COL[t * 3 + 2] = q[2];
+}
+
+function renderQuantised(canvas, yawDeg, label) {
+  const cx = canvas.getContext('2d');
+  const W = canvas.width, HH = canvas.height;
+  const img = cx.createImageData(W, HH);
+  const px = img.data;
+  const zbuf = new Float32Array(W * HH).fill(-Infinity);
+  const yaw = yawDeg * Math.PI / 180, cy = Math.cos(yaw), sy = Math.sin(yaw);
+  const scale = HH * 0.86 / H;
+  const ox = W / 2, oy = HH * 0.95 + minY * scale;
+  const L = [0.55, 0.62, 0.56];
+  const Lm = Math.hypot(...L); L[0] /= Lm; L[1] /= Lm; L[2] /= Lm;
+
+  const n = POS.length / 3;
+  const sx_ = new Float32Array(n), sy_ = new Float32Array(n), sz_ = new Float32Array(n);
+  for (let v = 0; v < n; v++) {
+    const x = POS[v * 3], y = POS[v * 3 + 1], z = POS[v * 3 + 2];
+    sx_[v] = ox + (x * cy + z * sy) * scale;
+    sy_[v] = oy - y * scale;
+    sz_[v] = -x * sy + z * cy;
+  }
+
+  for (let t = 0; t < IDX.length / 3; t++) {
+    const a = IDX[t * 3], b = IDX[t * 3 + 1], c = IDX[t * 3 + 2];
+    const ax = sx_[a], ay = sy_[a], bx = sx_[b], by = sy_[b], cxx = sx_[c], cyy = sy_[c];
+    const area = (bx - ax) * (cyy - ay) - (cxx - ax) * (by - ay);
+    if (area === 0) continue;
+    const inv = 1 / area;
+    const nx = (NRM[a * 3] + NRM[b * 3] + NRM[c * 3]) / 3;
+    const ny = (NRM[a * 3 + 1] + NRM[b * 3 + 1] + NRM[c * 3 + 1]) / 3;
+    const nz = (NRM[a * 3 + 2] + NRM[b * 3 + 2] + NRM[c * 3 + 2]) / 3;
+    const rnx = nx * cy + nz * sy, rnz = -nx * sy + nz * cy;
+    const lam = Math.max(0, rnx * L[0] + ny * L[1] + rnz * L[2]);
+    // banded cel shading — three tones, like the hand-drawn reference
+    const shade = lam > 0.72 ? 1.12 : lam > 0.34 ? 0.92 : 0.62;
+    const cr = TRI_COL[t * 3] * shade, cg = TRI_COL[t * 3 + 1] * shade, cb = TRI_COL[t * 3 + 2] * shade;
+
+    const x0 = Math.max(0, Math.floor(Math.min(ax, bx, cxx)));
+    const x1 = Math.min(W - 1, Math.ceil(Math.max(ax, bx, cxx)));
+    const y0 = Math.max(0, Math.floor(Math.min(ay, by, cyy)));
+    const y1 = Math.min(HH - 1, Math.ceil(Math.max(ay, by, cyy)));
+    for (let y = y0; y <= y1; y++) {
+      for (let x = x0; x <= x1; x++) {
+        const w0 = ((bx - x) * (cyy - y) - (cxx - x) * (by - y)) * inv;
+        const w1 = ((cxx - x) * (ay - y) - (ax - x) * (cyy - y)) * inv;
+        const w2 = 1 - w0 - w1;
+        if (w0 < -0.0001 || w1 < -0.0001 || w2 < -0.0001) continue;
+        const z = w0 * sz_[a] + w1 * sz_[b] + w2 * sz_[c];
+        const pi = y * W + x;
+        if (z <= zbuf[pi]) continue;
+        zbuf[pi] = z;
+        const o = pi * 4;
+        px[o] = cr > 255 ? 255 : cr;
+        px[o + 1] = cg > 255 ? 255 : cg;
+        px[o + 2] = cb > 255 ? 255 : cb;
+        px[o + 3] = 255;
+      }
+    }
+  }
+  cx.putImageData(img, 0, 0);
+  log(`quantised ${label}`);
+}
+
+// ---- rig-classified render -----------------------------------------------
+// The texture is unusable, but the RIG is semantic: every vertex is skinned to
+// named bones (Hips, Spine, LeftForeArm, RightHand, Head, LeftToeBase...). So
+// colour by which bone owns each vertex and ignore the texture entirely.
+// Reliable, free, and per-character recolouring is just swapping the map.
+const JOINTS = readAccessor(json, bin, prim.attributes.JOINTS_0);
+const WEIGHTS = readAccessor(json, bin, prim.attributes.WEIGHTS_0);
+const jointNames = json.skins[0].joints.map(n => json.nodes[n].name);
+
+const BONE_MAT = {
+  Hips: 'suit', Spine: 'suit', Spine01: 'suit', Spine02: 'suit',
+  LeftShoulder: 'suit', RightShoulder: 'suit',
+  LeftArm: 'suit', RightArm: 'suit', LeftForeArm: 'suit', RightForeArm: 'suit',
+  LeftHand: 'skin', RightHand: 'skin',
+  neck: 'skin', Head: 'skin', head_end: 'skin', headfront: 'skin',
+  LeftUpLeg: 'pants', RightUpLeg: 'pants', LeftLeg: 'pants', RightLeg: 'pants',
+  LeftFoot: 'shoe', RightFoot: 'shoe', LeftToeBase: 'shoe', RightToeBase: 'shoe',
+};
+const MAT_RGB = {
+  suit:  [0x3a, 0x3e, 0x4c],
+  pants: [0x2c, 0x2f, 0x3a],
+  shirt: [0xf4, 0xf6, 0xff],
+  tie:   [0xc4, 0x2b, 0x50],
+  skin:  [0xd9, 0xa0, 0x6b],
+  hair:  [0xe8, 0xe2, 0xd6],
+  shoe:  [0x14, 0x15, 0x1c],
+};
+
+// Dominant bone per vertex → material. Head splits into hair/skin by height.
+let headTop = -1e9, headBottom = 1e9;
+const VMAT = new Array(POS.length / 3);
+{
+  const headJoints = new Set(['Head', 'head_end', 'headfront']);
+  for (let v = 0; v < POS.length / 3; v++) {
+    let bj = 0, bw = -1;
+    for (let k = 0; k < 4; k++) {
+      const w = WEIGHTS[v * 4 + k];
+      if (w > bw) { bw = w; bj = JOINTS[v * 4 + k]; }
+    }
+    const name = jointNames[bj] || 'Spine';
+    VMAT[v] = { mat: BONE_MAT[name] || 'suit', head: headJoints.has(name) };
+    if (headJoints.has(name)) {
+      headTop = Math.max(headTop, POS[v * 3 + 1]);
+      headBottom = Math.min(headBottom, POS[v * 3 + 1]);
+    }
+  }
+  const hairLine = headBottom + (headTop - headBottom) * 0.62;
+  for (let v = 0; v < POS.length / 3; v++) {
+    if (VMAT[v].head && POS[v * 3 + 1] > hairLine) VMAT[v].mat = 'hair';
+  }
+  log(`rig-classified: head ${headBottom.toFixed(2)}..${headTop.toFixed(2)}, hairline ${hairLine.toFixed(2)}`);
+}
+
+// Shirt + tie: front-centre band on the torso, so the suit reads as open.
+const zMax = (() => { let m = -1e9; for (let i = 2; i < POS.length; i += 3) m = Math.max(m, POS[i]); return m; })();
+for (let v = 0; v < POS.length / 3; v++) {
+  if (VMAT[v].mat !== 'suit') continue;
+  const x = POS[v * 3], y = POS[v * 3 + 1], z = POS[v * 3 + 2];
+  if (Math.abs(x) < 0.075 && z > zMax * 0.55 && y > 1.05 && y < 1.45) {
+    VMAT[v].mat = Math.abs(x) < 0.032 ? 'tie' : 'shirt';
+  }
+}
+
+function renderRigged(canvas, yawDeg, label) {
+  const cx = canvas.getContext('2d');
+  const W = canvas.width, HH = canvas.height;
+  const img = cx.createImageData(W, HH);
+  const px = img.data;
+  const zbuf = new Float32Array(W * HH).fill(-Infinity);
+  const yaw = yawDeg * Math.PI / 180, cy = Math.cos(yaw), sy = Math.sin(yaw);
+  const scale = HH * 0.86 / H;
+  const ox = W / 2, oy = HH * 0.95 + minY * scale;
+  const L = [0.55, 0.62, 0.56];
+  const Lm = Math.hypot(...L); L[0] /= Lm; L[1] /= Lm; L[2] /= Lm;
+
+  const n = POS.length / 3;
+  const sx_ = new Float32Array(n), sy_ = new Float32Array(n), sz_ = new Float32Array(n);
+  for (let v = 0; v < n; v++) {
+    const x = POS[v * 3], y = POS[v * 3 + 1], z = POS[v * 3 + 2];
+    sx_[v] = ox + (x * cy + z * sy) * scale;
+    sy_[v] = oy - y * scale;
+    sz_[v] = -x * sy + z * cy;
+  }
+
+  for (let t = 0; t < IDX.length / 3; t++) {
+    const a = IDX[t * 3], b = IDX[t * 3 + 1], c = IDX[t * 3 + 2];
+    const ax = sx_[a], ay = sy_[a], bx = sx_[b], by = sy_[b], cxx = sx_[c], cyy = sy_[c];
+    const area = (bx - ax) * (cyy - ay) - (cxx - ax) * (by - ay);
+    if (area === 0) continue;
+    const inv = 1 / area;
+    const nx = (NRM[a * 3] + NRM[b * 3] + NRM[c * 3]) / 3;
+    const ny = (NRM[a * 3 + 1] + NRM[b * 3 + 1] + NRM[c * 3 + 1]) / 3;
+    const nz = (NRM[a * 3 + 2] + NRM[b * 3 + 2] + NRM[c * 3 + 2]) / 3;
+    const rnx = nx * cy + nz * sy, rnz = -nx * sy + nz * cy;
+    const lam = Math.max(0, rnx * L[0] + ny * L[1] + rnz * L[2]);
+    const shade = lam > 0.74 ? 1.18 : lam > 0.40 ? 0.96 : 0.66;
+    // majority material of the triangle's three vertices
+    const m = VMAT[a].mat === VMAT[b].mat ? VMAT[a].mat
+            : VMAT[a].mat === VMAT[c].mat ? VMAT[a].mat
+            : VMAT[b].mat === VMAT[c].mat ? VMAT[b].mat : VMAT[a].mat;
+    const base = MAT_RGB[m];
+    const cr = base[0] * shade, cg = base[1] * shade, cb = base[2] * shade;
+
+    const x0 = Math.max(0, Math.floor(Math.min(ax, bx, cxx)));
+    const x1 = Math.min(W - 1, Math.ceil(Math.max(ax, bx, cxx)));
+    const y0 = Math.max(0, Math.floor(Math.min(ay, by, cyy)));
+    const y1 = Math.min(HH - 1, Math.ceil(Math.max(ay, by, cyy)));
+    for (let y = y0; y <= y1; y++) {
+      for (let x = x0; x <= x1; x++) {
+        const w0 = ((bx - x) * (cyy - y) - (cxx - x) * (by - y)) * inv;
+        const w1 = ((cxx - x) * (ay - y) - (ax - x) * (cyy - y)) * inv;
+        const w2 = 1 - w0 - w1;
+        if (w0 < -0.0001 || w1 < -0.0001 || w2 < -0.0001) continue;
+        const z = w0 * sz_[a] + w1 * sz_[b] + w2 * sz_[c];
+        const pi = y * W + x;
+        if (z <= zbuf[pi]) continue;
+        zbuf[pi] = z;
+        const o = pi * 4;
+        px[o] = cr > 255 ? 255 : cr;
+        px[o + 1] = cg > 255 ? 255 : cg;
+        px[o + 2] = cb > 255 ? 255 : cb;
+        px[o + 3] = 255;
+      }
+    }
+  }
+  cx.putImageData(img, 0, 0);
+  log(`rig-rendered ${label}`);
+}
+
+// ---- the question that actually matters -----------------------------------
+// In game a fighter is about 180 px tall on a 960x540 stage. Speckle from my
+// per-triangle sampler may simply not survive that downscale. Render at true
+// game scale, and also at 2x for the retina case.
+const row2 = document.createElement('div');
+row2.id = 'row2';
+row2.style.cssText = 'display:flex;gap:12px;flex-wrap:wrap;margin-top:14px;align-items:flex-end';
+document.body.insertBefore(row2, document.getElementById('log'));
+const h = document.createElement('h1');
+h.textContent = 'At real in-game size';
+h.style.cssText = 'font:700 16px system-ui;margin:18px 0 4px';
+document.body.insertBefore(h, row2);
+const sub = document.createElement('p');
+sub.className = 'sub';
+sub.textContent = 'A fighter occupies roughly 180 px of a 960x540 stage. Shown against the game background, next to a 2x retina render.';
+document.body.insertBefore(sub, row2);
+
+for (const yaw of [0, 35, 90]) {
+  const d = document.createElement('div');
+  d.className = 'shot';
+  d.innerHTML = `<h2>PER-PIXEL 460px · ${yaw}°</h2>`;
+  const cv = document.createElement('canvas');
+  cv.width = 300; cv.height = 460;
+  d.appendChild(cv);
+  row2.appendChild(d);
+  renderPerPixel(cv, yaw, `perpixel ${yaw}`);
+}
+for (const yaw of [0, 35, 90]) {
+  const d = document.createElement('div');
+  d.className = 'shot';
+  d.innerHTML = `<h2>QUANTISED 460px · ${yaw}°</h2>`;
+  const cv = document.createElement('canvas');
+  cv.width = 300; cv.height = 460;
+  d.appendChild(cv);
+  row2.appendChild(d);
+  renderQuantised(cv, yaw, `quantised ${yaw}`);
+}
+for (const yaw of [0, 20, 35, 90]) {
+  const d = document.createElement('div');
+  d.className = 'shot';
+  d.innerHTML = `<h2>RIG-CLASSIFIED · ${yaw}°</h2>`;
+  const cv = document.createElement('canvas');
+  cv.width = 300; cv.height = 460;
+  d.appendChild(cv);
+  row2.appendChild(d);
+  renderRigged(cv, yaw, `rigged ${yaw}`);
+}
+for (const yaw of [0, 20, 35, 90]) {
+  const d = document.createElement('div');
+  d.className = 'shot';
+  d.innerHTML = `<h2>RIG game size · ${yaw}°</h2>`;
+  const cv = document.createElement('canvas');
+  cv.width = 130; cv.height = 180;
+  cv.style.cssText = 'width:130px;background:linear-gradient(#1a1f30,#11141f)';
+  d.appendChild(cv);
+  row2.appendChild(d);
+  renderRigged(cv, yaw, `rigged small ${yaw}`);
+}
+</script>
