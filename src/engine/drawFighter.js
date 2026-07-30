@@ -5,6 +5,7 @@
 import { shade } from '../data/fighters.js';
 import { STYLES } from '../config.js';
 import { clampBody, applyProportions, bufferMetrics } from './proportions.js';
+import { loadSpriteSet, drawSprite } from './sprites.js';
 
 const OUTLINE = '#0a0c16';
 const FILTER_OK = typeof CanvasRenderingContext2D !== 'undefined' && 'filter' in CanvasRenderingContext2D.prototype;
@@ -715,7 +716,21 @@ function drawBriefcase(ctx, x, y, accent) {
 // it as a post-pass (not per-shape) means it's pose-independent: every current
 // and future animation frame gets the same lit-from-above, warm-key/cool-fill
 // look for free. Toggle with STYLE.shaded so we can A/B the old flat look.
-export const STYLE = { shaded: true };
+export const STYLE = { shaded: true, sprites: false };
+
+// Baked sprite atlases. Opt-in: the procedural renderer stays the default and
+// the fallback, because a player's own founder is drawn from their photo and
+// look choices, which no pre-baked sheet can represent.
+// Frame height in px. Tuned so an idle sprite measures the same 160px tall as
+// the procedural fighter it replaces, keeping stage scale and reach readable.
+export const SPRITE_HEIGHT = 202;
+let _spriteSet = null;
+export function enableSprites(on = true, base = 'assets/sprites/founder') {
+  STYLE.sprites = !!on;
+  if (on && !_spriteSet) _spriteSet = loadSpriteSet('founder', base);
+  return _spriteSet;
+}
+export function spritesReady() { return !!(_spriteSet && _spriteSet.ready); }
 const SS = 2;
 // One buffer per distinct body size, cached by size.
 //
@@ -802,6 +817,29 @@ export function drawFighter(ctx, f, t) {
 
   ctx.scale(f.facing, 1);
   if (P.rot) ctx.rotate(P.rot);
+
+  // Baked sprite path. Body proportions scale the sheet rather than re-posing
+  // a rig, so the P1 knobs still give a lanky zoner and a squat grappler.
+  if (STYLE.sprites && _spriteSet) {
+    const drew = drawSprite(ctx, _spriteSet, f, t, {
+      height: SPRITE_HEIGHT * body.height,
+      scaleX: body.build,
+      scaleY: 1,
+    });
+    if (drew) {
+      if (f.flashT > 0 && FILTER_OK) {
+        ctx.save();
+        ctx.globalCompositeOperation = 'source-atop';
+        ctx.fillStyle = 'rgba(255,255,255,0.55)';
+        ctx.fillRect(-200, -260, 400, 300);
+        ctx.restore();
+      }
+      ctx.filter = 'none';
+      ctx.restore();
+      return;
+    }
+    // not loaded yet (or no frame for this state) — fall through to procedural
+  }
 
   const B = STYLE.shaded ? fighterBuffer(bufferMetrics(body)) : null;
   // Render the body either into the shading buffer (local, upright, facing +x)

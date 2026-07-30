@@ -9,7 +9,7 @@ import { input, HumanController, isTouchDevice } from './engine/input.js';
 import { AIController } from './engine/ai.js';
 import { Game } from './engine/game.js';
 import { renderGame } from './engine/render.js';
-import { drawPortrait } from './engine/drawFighter.js';
+import { drawPortrait, enableSprites, spritesReady } from './engine/drawFighter.js';
 import { hud } from './ui/hud.js';
 import {
   initScreens, openSelect, sel, toast, updateTitleChip, showIncomingChallenge,
@@ -1109,9 +1109,16 @@ function boot() {
     }
   });
 
+  // Baked sprite fighters, opt-in via ?sprites while the art pass is in
+  // progress. Off by default: the procedural renderer is still what draws a
+  // player's own founder from their photo and look choices.
+  if (new URLSearchParams(location.search).has('sprites')) enableSprites(true);
+
   if (DEBUG) {
     window.UEC = {
       get game() { return currentGame; },
+      enableSprites,
+      spritesReady,
       Save,
       input,
       startMatch,

@@ -238,6 +238,13 @@ function dominant(m, v) {
 // few percent, and rotations are proportion-independent while translations
 // are not. Non-Hips joints keep their own bind translation; the Hips takes
 // the source's animated delta from its own bind pose.
+// opts.groundLock — shift the frame vertically so its lowest vertex sits at
+// y=0. The source clips are authored for a 3D game with a ground-contact
+// system: measured on the idle clip alone, the lowest vertex wanders between
+// 0.04 and 0.28 world units, and walk dips to -0.12 (through the floor). That
+// is what made baked sprites hover above the stage. Stripping root translation
+// does NOT fix it — verified identical output with it on and off — because the
+// height lives in the pose, not the root channel.
 export function skinAt(m, time, opts = {}) {
   const S = skinMatrices(m, time, opts);
   const n = m.POS.length / 3;
@@ -261,6 +268,14 @@ export function skinAt(m, time, opts = {}) {
     P[v * 3] = ox; P[v * 3 + 1] = oy; P[v * 3 + 2] = oz;
     const l = Math.hypot(mx, my, mz) || 1;
     N[v * 3] = mx / l; N[v * 3 + 1] = my / l; N[v * 3 + 2] = mz / l;
+  }
+
+  if (opts.groundLock !== false) {
+    let lo = Infinity;
+    for (let i = 1; i < P.length; i += 3) if (P[i] < lo) lo = P[i];
+    if (lo !== 0 && Number.isFinite(lo)) {
+      for (let i = 1; i < P.length; i += 3) P[i] -= lo;
+    }
   }
   return { P, N };
 }
@@ -354,7 +369,12 @@ function skinMatrices(m, time, opts = {}, wantWorld = false) {
       s = ch?.scale ? sampleChannel(m, ch.scale, time, 3) : (nd.scale || [1, 1, 1]);
     }
     if (ni === hipsNode) {
-      if (stripRoot) t = [bind[0], t[1], bind[2]];
+      // Strip ALL root translation, including Y. Keeping the vertical bob
+      // lifted the fighter off the floor — measured 17px of float on an idle
+      // frame. The game owns position on every axis: it moves the fighter for
+      // jumps and pins them to STAGE.FLOOR otherwise, so any root motion baked
+      // into the sprite is double-counted.
+      if (stripRoot) t = bind;
       if (lockYaw) r = stripYaw(r);
     }
     return fromTRS(t, r, s);

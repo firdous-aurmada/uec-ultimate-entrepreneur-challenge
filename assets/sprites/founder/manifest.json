@@ -1,0 +1,88 @@
+{
+  "frameWidth": 342,
+  "frameHeight": 318,
+  "anchor": {
+    "x": 156,
+    "y": 316
+  },
+  "states": {
+    "idle": {
+      "frames": 8,
+      "loop": true,
+      "clip": "Armature|Boxing_Practice|baselayer",
+      "file": "idle.png"
+    },
+    "walk": {
+      "frames": 8,
+      "loop": true,
+      "clip": "Armature|Casual_Walk_inplace|baselayer",
+      "file": "walk.png"
+    },
+    "crouch": {
+      "frames": 4,
+      "loop": true,
+      "clip": "Armature|Cautious_Crouch_Walk_Forward_inplace|baselayer",
+      "file": "crouch.png"
+    },
+    "block": {
+      "frames": 3,
+      "loop": false,
+      "clip": "Armature|Block1|baselayer",
+      "file": "block.png"
+    },
+    "slap": {
+      "frames": 6,
+      "loop": false,
+      "clip": "Armature|Left_Jab_from_Guard|baselayer",
+      "file": "slap.png"
+    },
+    "punch": {
+      "frames": 6,
+      "loop": false,
+      "clip": "Armature|Right_Jab_from_Guard|baselayer",
+      "file": "punch.png"
+    },
+    "kick": {
+      "frames": 7,
+      "loop": false,
+      "clip": "Armature|Boxing_Guard_Right_Straight_Kick|baselayer",
+      "file": "kick.png"
+    },
+    "launch": {
+      "frames": 7,
+      "loop": false,
+      "clip": "Armature|Right_Uppercut_from_Guard|baselayer",
+      "file": "launch.png"
+    },
+    "jump": {
+      "frames": 6,
+      "loop": false,
+      "clip": "Armature|Regular_Jump|baselayer",
+      "file": "jump.png"
+    },
+    "hitlight": {
+      "frames": 3,
+      "loop": false,
+      "clip": "Armature|Slap_Reaction|baselayer",
+      "file": "hitlight.png"
+    },
+    "hitstun": {
+      "frames": 4,
+      "loop": false,
+      "clip": "Armature|Face_Punch_Reaction|baselayer",
+      "file": "hitstun.png"
+    },
+    "launched": {
+      "frames": 5,
+      "loop": false,
+      "clip": "Armature|BeHit_FlyUp|baselayer",
+      "file": "launched.png"
+    },
+    "ko": {
+      "frames": 8,
+      "loop": false,
+      "clip": "Armature|Knock_Down|baselayer",
+      "file": "ko.png"
+    }
+  }
+}
