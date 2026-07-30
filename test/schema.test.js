@@ -1,9 +1,12 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { BODY, BUDGET } from '../src/config.js';
-import { budgetCost, budgetBand } from '../src/data/schema.js';
+import { BODY, BUDGET, ATTACKS } from '../src/config.js';
+import { budgetCost, budgetBand, commandCost } from '../src/data/schema.js';
 import { STYLES } from '../src/config.js';
-import { validateCharacter, DEFAULT_BODY } from '../src/data/schema.js';
+import {
+  validateCharacter, DEFAULT_BODY, SCHEMA_VERSION,
+  ARCHETYPES, COMMAND_SLOTS, slotButton,
+} from '../src/data/schema.js';
 
 test('every body knob has a [min, max] range bracketing 1.0', () => {
   const knobs = ['height', 'build', 'reach', 'stride', 'shoulders', 'head'];
@@ -54,7 +57,7 @@ test('a bigger body refunds budget, because it is easier to hit', () => {
 
 function validChar(over = {}) {
   return {
-    schema: 1,
+    schema: SCHEMA_VERSION,
     id: 'test-fighter',
     identity: { name: 'TEST', title: 'THE TEST', company: 'TESTCO', tagline: 'x', rap: 'y' },
     body: { ...DEFAULT_BODY },
@@ -121,5 +124,146 @@ test('a warn-band character validates ok but carries a warning', () => {
 test('identity text over its length cap is rejected', () => {
   const c = validChar();
   c.identity.name = 'X'.repeat(30);
+  assert.equal(validateCharacter(c).ok, false);
+});
+
+// ---------------------------------------------------------------- v2: command normals
+
+test('schema v2 carries the full nine-archetype vocabulary', () => {
+  assert.equal(SCHEMA_VERSION, 2);
+  for (const a of ['strike', 'aoe', 'projectile', 'rush', 'grab', 'teleport', 'rain', 'counter', 'trap']) {
+    assert.ok(ARCHETYPES.includes(a), `${a} must be an archetype`);
+  }
+});
+
+test('every command slot names a real basic attack', () => {
+  assert.deepEqual([...COMMAND_SLOTS].sort(), ['fwd+kick', 'fwd+launch', 'fwd+punch', 'fwd+slap']);
+  for (const slot of COMMAND_SLOTS) {
+    assert.ok(ATTACKS[slotButton(slot)], `${slot} must map onto an ATTACKS entry`);
+  }
+});
+
+// A command normal is priced against the neutral basic it shares a button with,
+// so "costs nothing" means "is that basic, on a direction".
+const cmd = (over = {}) => ({
+  slot: 'fwd+punch', archetype: 'strike', displayName: 'TEST NORMAL',
+  frameData: { ...ATTACKS.punch },
+  ...over,
+});
+
+test('a command normal identical to its base costs nothing', () => {
+  assert.ok(Math.abs(commandCost(cmd())) < 0.001);
+});
+
+test('a richer archetype costs more than a plain strike', () => {
+  const plain = commandCost(cmd({ archetype: 'strike' }));
+  for (const a of ['counter', 'projectile', 'grab']) {
+    assert.ok(commandCost(cmd({ archetype: a })) > plain, `${a} should cost more than strike`);
+  }
+});
+
+test('adding launch to a basic that does not launch is charged for', () => {
+  const flat = commandCost(cmd());
+  const launcher = commandCost(cmd({ frameData: { ...ATTACKS.punch, kbUp: -380 } }));
+  assert.ok(launcher > flat + 2, `launcher ${launcher} should carry a real premium over ${flat}`);
+});
+
+test('a launching basic is not charged twice for launching', () => {
+  // ATTACKS.launch already launches, so keeping that property is free
+  const asIs = commandCost(cmd({ slot: 'fwd+launch', frameData: { ...ATTACKS.launch } }));
+  assert.ok(Math.abs(asIs) < 0.001);
+});
+
+// The two tuning targets named in the plan. These pin the constants: if the
+// weights drift, these fail before any character does.
+test('balanced style plus two modest command normals stays clean', () => {
+  const c = validChar();
+  c.commandNormals = [
+    // slower but stronger — a compensating trade, not an upgrade
+    cmd({ slot: 'fwd+punch', frameData: { ...ATTACKS.punch, dmg: ATTACKS.punch.dmg * 1.1, startup: ATTACKS.punch.startup * 1.15 } }),
+    cmd({ slot: 'fwd+kick', frameData: { ...ATTACKS.kick, reach: ATTACKS.kick.reach * 1.1, recovery: ATTACKS.kick.recovery * 1.15 } }),
+  ];
+  const r = validateCharacter(c);
+  assert.equal(r.ok, true, r.errors.join('; '));
+  assert.equal(r.band, 'clean', `expected clean, got ${r.band} at ${r.cost.toFixed(1)}`);
+});
+
+test('a launcher plus a projectile on fast frames pushes into warn', () => {
+  const c = validChar();
+  c.commandNormals = [
+    cmd({
+      slot: 'fwd+punch', archetype: 'strike',
+      frameData: { ...ATTACKS.punch, kbUp: -380, startup: ATTACKS.punch.startup * 0.85, dmg: ATTACKS.punch.dmg * 1.1 },
+    }),
+    cmd({
+      slot: 'fwd+kick', archetype: 'projectile',
+      frameData: { ...ATTACKS.kick, startup: ATTACKS.kick.startup * 0.9 },
+    }),
+  ];
+  const r = validateCharacter(c);
+  assert.equal(r.band, 'warn', `expected warn, got ${r.band} at ${r.cost.toFixed(1)}`);
+  assert.equal(r.ok, true);
+});
+
+test('command normals count toward the budget and can block export on their own', () => {
+  const c = validChar();
+  c.commandNormals = [
+    cmd({ slot: 'fwd+punch', archetype: 'grab', frameData: { ...ATTACKS.punch, dmg: ATTACKS.punch.dmg * 1.6, reach: ATTACKS.punch.reach * 1.4 } }),
+    cmd({ slot: 'fwd+kick', archetype: 'rain', frameData: { ...ATTACKS.kick, startup: ATTACKS.kick.startup * 0.6 } }),
+    cmd({ slot: 'fwd+launch', archetype: 'teleport', frameData: { ...ATTACKS.launch, dmg: ATTACKS.launch.dmg * 1.5 } }),
+  ];
+  const r = validateCharacter(c);
+  assert.equal(r.ok, false);
+  assert.equal(r.band, 'block');
+});
+
+test('a character with no command normals is still valid', () => {
+  const r = validateCharacter(validChar());
+  assert.equal(r.ok, true);
+  assert.deepEqual(r.errors, []);
+});
+
+test('command normals are capped at three slots', () => {
+  const c = validChar();
+  c.commandNormals = [
+    cmd({ slot: 'fwd+slap', frameData: { ...ATTACKS.slap } }),
+    cmd({ slot: 'fwd+punch' }),
+    cmd({ slot: 'fwd+kick', frameData: { ...ATTACKS.kick } }),
+    cmd({ slot: 'fwd+launch', frameData: { ...ATTACKS.launch } }),
+  ];
+  const r = validateCharacter(c);
+  assert.equal(r.ok, false);
+  assert.match(r.errors.join(' '), /at most 3/i);
+});
+
+test('a duplicate slot is rejected — one move per input', () => {
+  const c = validChar();
+  c.commandNormals = [cmd(), cmd({ displayName: 'OTHER' })];
+  const r = validateCharacter(c);
+  assert.equal(r.ok, false);
+  assert.match(r.errors.join(' '), /duplicate/i);
+});
+
+test('an unknown slot or archetype is rejected', () => {
+  for (const over of [{ slot: 'back+punch' }, { slot: 'down+kick' }, { archetype: 'nonsense' }]) {
+    const c = validChar();
+    c.commandNormals = [cmd(over)];
+    assert.equal(validateCharacter(c).ok, false, `${JSON.stringify(over)} should fail`);
+  }
+});
+
+// This is the anti-cheat line: frame data arrives over the wire in a challenge
+// link, so ratios are clamped against the base rather than merely priced.
+test('frame data far outside its clamp is rejected, not just charged for', () => {
+  const c = validChar();
+  c.commandNormals = [cmd({ frameData: { ...ATTACKS.punch, dmg: 400, startup: 0.001 } })];
+  const r = validateCharacter(c);
+  assert.equal(r.ok, false);
+  assert.match(r.errors.join(' '), /frameData/);
+});
+
+test('a command normal missing its display name is rejected', () => {
+  const c = validChar();
+  c.commandNormals = [cmd({ displayName: '' })];
   assert.equal(validateCharacter(c).ok, false);
 });

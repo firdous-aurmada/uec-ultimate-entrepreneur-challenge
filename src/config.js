@@ -253,4 +253,30 @@ export const BUDGET = {
   },
   WARN: 8,     // |cost| above this warns
   BLOCK: 15,   // |cost| above this blocks export
+
+  // ---- command normals ----
+  // A command normal is priced against the neutral basic on its own button, so
+  // "free" means "that basic, on a direction". Two things are charged: what the
+  // archetype can do at all, and how much better its frame data is.
+  CMD: {
+    MAX_SLOTS: 3,
+    // Situational: a command normal only comes out with a direction held, so an
+    // equal frame-data edge is worth far less here than on a global multiplier.
+    // Pricing it at full weight would make every command normal unaffordable.
+    SCALE: 0.25,
+    // Turning a grounded basic into a launcher opens combo routes the base move
+    // has no access to, which the frame-data deltas alone do not capture.
+    LAUNCHER: 3,
+    ARCHETYPE: {
+      strike: 0,
+      aoe: 2.5, counter: 3, trap: 3.5, rush: 3.5,
+      projectile: 4, teleport: 4, rain: 4.5, grab: 5,
+    },
+    // Ratio bounds against the base move. Frame data crosses the wire in a
+    // challenge link, so these are a hard reject, not merely an expensive price.
+    CLAMP: {
+      startup: [0.5, 2.0], active: [0.5, 2.5], recovery: [0.5, 2.0],
+      dmg: [0.4, 2.0], reach: [0.5, 1.8],
+    },
+  },
 };

@@ -383,6 +383,9 @@ export function toCharacter(def) {
         signature: null,
       },
     },
+    // A character's own vocabulary. Absent means "universal grammar only",
+    // which is a complete character — most of the base bodies are exactly that.
+    commandNormals: def.commandNormals || [],
     ai: {
       aggr: def.ai?.aggr ?? 0.6,
       jump: def.ai?.jump ?? 0.35,

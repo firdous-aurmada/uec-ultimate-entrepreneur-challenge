@@ -22,6 +22,24 @@ export const ARCHETYPE_SHAPES = {
   },
   rain: (a) => { a.words = ['FUNDED!']; },
   grab: (a) => { a.words = ['ACQUIRED!']; a.hitY = -95; },
+
+  // A counter swings nothing. It opens a window during which an incoming
+  // strike is turned back on its owner, which is why `active` IS the window:
+  // the move is over the moment the chance to be hit has passed.
+  counter: (a, sp) => {
+    a.words = ['DENIED!', 'OBJECTION!', 'COUNTERSUED!'];
+    a.counterWindow = sp.window ?? 0.2;
+    a.active = a.counterWindow;
+    a.noHitbox = true;
+    a.hitY = -95;
+  },
+  // A trap places a hazard and walks away — the placing animation is not the
+  // threat, so it has no hitbox either. The hazard arms on its own clock.
+  trap: (a) => {
+    a.words = ['PLANTED!', 'DUE DILIGENCE!'];
+    a.noHitbox = true;
+    a.hitY = -95;
+  },
 };
 
 // Applies archetype shaping to a freshly built attack object. Returns it.
@@ -76,4 +94,11 @@ export const ARCHETYPE_TICKS = {
     a.fxDone = true;
     game.onBurnBlast(f);
   },
+  trap: (f, a, sp, dt, game) => {
+    if (a.hasFired) return;
+    a.hasFired = true;
+    game.spawnTrap(f, sp);
+  },
+  // `counter` has no tick on purpose: nothing happens until someone swings at
+  // it, so the window is read by the hit resolver rather than polled here.
 };

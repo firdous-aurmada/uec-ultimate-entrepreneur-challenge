@@ -1,12 +1,12 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { FIGHTERS, BASE_CHARACTERS, toCharacter } from '../src/data/fighters.js';
-import { validateCharacter } from '../src/data/schema.js';
+import { validateCharacter, SCHEMA_VERSION } from '../src/data/schema.js';
 
-test('every shipped fighter converts to a schema v1 character', () => {
+test('every shipped fighter converts to a current-schema character', () => {
   for (const def of FIGHTERS) {
     const ch = toCharacter(def);
-    assert.equal(ch.schema, 1, `${def.id} wrong schema version`);
+    assert.equal(ch.schema, SCHEMA_VERSION, `${def.id} wrong schema version`);
     assert.equal(ch.id, def.id);
   }
 });

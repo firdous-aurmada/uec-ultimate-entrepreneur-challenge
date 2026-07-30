@@ -117,11 +117,23 @@ export class Fighter {
     if (!a) return null;
     if (this.stateT < a.startup || this.stateT > a.startup + a.active) return null;
     if (a.kind === 'projectile' || a.kind === 'rain' || a.kind === 'bomb') return null;   // damage via projectiles
+    if (a.noHitbox) return null;              // counters absorb, traps place — neither swings
     const reach = a.reach || 82;
     const x0 = this.x + (this.facing > 0 ? 14 : -14 - reach);
     const yC = this.y + (a.hitY || -95);
     const tall = a.kind === 'aoe' ? 150 : 74;
     return { x: x0, y: yC - tall / 2, w: reach, h: tall, a };
+  }
+
+  // The counter stance, if it is currently open. Read by game.strike when a hit
+  // arrives — nothing polls it, because nothing happens until someone swings.
+  counterActive() {
+    const a = this.attack;
+    if (!a || a.kind !== 'counter') return null;
+    const t = this.stateT - a.startup;
+    if (t < 0 || t > (a.counterWindow || 0)) return null;
+    const sp = a.special || {};
+    return { dmg: sp.dmg ?? 14, kb: sp.kb ?? 300 };
   }
 
   update(dt, game, locked = false) {
