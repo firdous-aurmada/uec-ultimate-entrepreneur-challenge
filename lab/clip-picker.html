@@ -1,0 +1,67 @@
+<meta charset="utf-8">
+<title>Animation clip shortlist — UEC states</title>
+<style>
+  body { background:#0b0e1a; color:#eef1ff; font:13px ui-monospace,monospace; padding:16px; margin:0; }
+  h1 { font:700 17px system-ui; margin:0 0 4px; }
+  p.sub { color:#8b93ad; font:12px/1.6 system-ui; margin:0 0 14px; max-width:900px; }
+  h2 { font:700 12px system-ui; letter-spacing:.09em; text-transform:uppercase; color:#ffd23f; margin:18px 0 8px; }
+  .grid { display:flex; gap:10px; flex-wrap:wrap; }
+  .c { background:#141824; border:1px solid #232a3d; border-radius:8px; padding:6px; width:150px; }
+  .c img { width:138px; height:138px; object-fit:contain; background:#0f1320; border-radius:4px; display:block; }
+  .c .n { font:11px system-ui; color:#eef1ff; margin-top:5px; line-height:1.3; }
+  .c .id { color:#8b93ad; font-size:10px; }
+  .state { color:#57ff8a; font-weight:700; font-size:10px; }
+</style>
+<h1>Animation clip shortlist — mapped to UEC fighter states</h1>
+<p class="sub">Free preview GIFs from the rig library, so clip suitability can be judged without spending
+credits. Checking two things: does the character stay side-on, and is a weapon involved (many
+"Fighting" clips assume a sword or gun, which would be wrong here).</p>
+<div id="out"></div>
+<script>
+const CDN = 'https://cdn.meshy.ai/webapp-assets/feature-demo/animation/preview/biped/';
+const SECTIONS = [
+  ['Idle / stance', [
+    [89, 'Combat_Stance', 'idle'], [609, 'Boxing_Practice', 'idle alt'],
+    [0, 'Idle', '—'], [88, 'Chest_Pound_Taunt', 'victory'],
+  ]],
+  ['Light + heavy attacks (all "from guard")', [
+    [191, 'Left_Jab_from_Guard', 'slap'], [192, 'Right_Jab_from_Guard', 'punch'],
+    [193, 'Left_Hook_from_Guard', 'alt'], [194, 'Right_Uppercut_from_Guard', 'LAUNCH'],
+    [197, 'Left_Short_Hook_from_Guard', 'alt'], [210, 'Boxing_Guard_Prep_Straight_Punch', 'alt punch'],
+  ]],
+  ['Kicks', [
+    [209, 'Boxing_Guard_Right_Straight_Kick', 'kick'], [207, 'Roundhouse_Kick', 'alt'],
+    [215, 'High_Kick', 'alt'], [213, 'Leg_Sweep', 'crouch kick'],
+    [212, 'Elbow_Strike', 'alt'], [206, 'Spartan_Kick', 'alt'],
+  ]],
+  ['Block', [
+    [138, 'Block1', 'block'], [139, 'Block2', 'alt'], [140, 'Block3', 'alt'],
+    [141, 'Block4', 'alt'], [142, 'Block5', 'alt'], [143, 'Block6', 'alt'],
+  ]],
+  ['Getting hit', [
+    [173, 'Slap_Reaction', 'hitstun light'], [174, 'Face_Punch_Reaction', 'hitstun'],
+    [178, 'Hit_Reaction', 'alt'], [179, 'Hit_Reaction_1', 'alt'],
+    [7, 'BeHit_FlyUp', 'launched'],
+  ]],
+  ['Knockdown / KO', [
+    [187, 'Knock_Down', 'KO'], [190, 'Knock_Down_1', 'KO alt'],
+    [8, 'Dead', 'alt'], [189, 'dying_backwards', 'alt'],
+  ]],
+  ['Movement (root motion stripped at bake time)', [
+    [613, 'Casual_Walk', 'walk'], [621, 'Confident_Strut', 'walk alt'],
+    [652, 'Proud_Strut', 'walk alt'], [616, 'Cautious_Crouch_Walk_Forward', 'crouch'],
+    [466, 'Regular_Jump', 'jump'], [468, 'Back_Jump', 'back-dash'],
+  ]],
+];
+const out = document.getElementById('out');
+for (const [title, items] of SECTIONS) {
+  const h = document.createElement('h2'); h.textContent = title; out.appendChild(h);
+  const g = document.createElement('div'); g.className = 'grid'; out.appendChild(g);
+  for (const [id, name, state] of items) {
+    const d = document.createElement('div'); d.className = 'c';
+    d.innerHTML = `<img loading="eager" src="${CDN}${name}.gif" alt="${name}">
+      <div class="n"><span class="state">${state}</span><br>${name}<br><span class="id">id ${id}</span></div>`;
+    g.appendChild(d);
+  }
+}
+</script>

@@ -1,0 +1,46 @@
+<meta charset="utf-8">
+<title>Clip contact sheet</title>
+<body style="background:#0b0e1a;margin:0">
+<div id="g" style="display:none"></div>
+<canvas id="out"></canvas>
+<script>
+const NAMES = [
+  ['Block1', 'block'], ['Block2', 'alt'], ['Block3', 'alt'],
+  ['Block4', 'alt'], ['Block5', 'alt'], ['Block6', 'alt'],
+  ['Slap_Reaction', 'hitstun light'], ['Face_Punch_Reaction', 'hitstun'],
+  ['Hit_Reaction', 'alt'], ['Hit_Reaction_1', 'alt'], ['BeHit_FlyUp', 'launched'],
+  ['Knock_Down', 'KO'], ['Knock_Down_1', 'KO alt'], ['Dead', 'alt'], ['dying_backwards', 'alt'],
+  ['Casual_Walk', 'walk'], ['Confident_Strut', 'walk alt'], ['Proud_Strut', 'walk alt'],
+  ['Cautious_Crouch_Walk_Forward', 'crouch'], ['Regular_Jump', 'jump'], ['Back_Jump', 'back-dash'],
+];
+const g = document.getElementById('g');
+const imgs = NAMES.map(([n]) => {
+  const i = new Image();
+  i.src = './previews/' + n + '.gif';
+  g.appendChild(i);
+  return i;
+});
+Promise.all(imgs.map(i => i.decode().catch(() => {}))).then(() => setTimeout(draw, 900));
+
+function draw() {
+  const CW = 168, CH = 196, COLS = 7;
+  const rows = Math.ceil(NAMES.length / COLS);
+  const out = document.getElementById('out');
+  out.width = COLS * CW + 20; out.height = rows * CH + 44;
+  const cx = out.getContext('2d');
+  cx.fillStyle = '#0b0e1a'; cx.fillRect(0, 0, out.width, out.height);
+  cx.fillStyle = '#ffd23f'; cx.font = '700 19px system-ui';
+  cx.fillText('Block · Getting hit · Knockdown · Movement — checking for weapons and usable pose', 10, 26);
+  NAMES.forEach(([n, state], i) => {
+    const x = 10 + (i % COLS) * CW, y = 40 + ((i / COLS) | 0) * CH;
+    cx.fillStyle = '#141824'; cx.fillRect(x, y, CW - 8, CH - 8);
+    try { cx.drawImage(imgs[i], x + 4, y + 4, CW - 16, CW - 16); } catch (e) {}
+    cx.fillStyle = '#57ff8a'; cx.font = '700 11px system-ui';
+    cx.fillText(state, x + 6, y + CW - 4);
+    cx.fillStyle = '#eef1ff'; cx.font = '11px system-ui';
+    cx.fillText(n.slice(0, 24), x + 6, y + CW + 10);
+  });
+  out.toBlob(b => fetch('/lab/clip-sheet.png', { method: 'PUT', body: b })
+    .then(r => { document.title = 'PUT ' + r.status; }));
+}
+</script>
