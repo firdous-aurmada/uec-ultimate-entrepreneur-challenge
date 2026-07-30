@@ -239,62 +239,7 @@ function dominant(m, v) {
 // are not. Non-Hips joints keep their own bind translation; the Hips takes
 // the source's animated delta from its own bind pose.
 export function skinAt(m, time, opts = {}) {
-  const { lockYaw = true, stripRoot = true, anim = null } = opts;
-  const cache = new Map();
-  const hipsNode = m.jointNodes[m.hipsJoint];
-
-  // name -> node index in the animation source
-  let srcByName = null, srcHipsBind = null;
-  if (anim) {
-    srcByName = new Map();
-    anim.jointNodes.forEach((ni, j) => srcByName.set(anim.jointNames[j], ni));
-    srcHipsBind = anim.json.nodes[anim.jointNodes[anim.hipsJoint]].translation || [0, 0, 0];
-  }
-
-  const local = (ni) => {
-    const nd = m.json.nodes[ni];
-    const bind = nd.translation || [0, 0, 0];
-    let t, r, s;
-
-    if (anim) {
-      const srcNi = srcByName.get(nd.name);
-      const sch = srcNi === undefined ? null : anim.channels.get(srcNi);
-      r = sch?.rotation ? sampleChannel(anim, sch.rotation, time, 4) : (nd.rotation || [0, 0, 0, 1]);
-      s = nd.scale || [1, 1, 1];
-      if (ni === hipsNode && sch?.translation) {
-        const st = sampleChannel(anim, sch.translation, time, 3);
-        t = [bind[0] + (st[0] - srcHipsBind[0]),
-             bind[1] + (st[1] - srcHipsBind[1]),
-             bind[2] + (st[2] - srcHipsBind[2])];
-      } else {
-        t = bind;
-      }
-    } else {
-      const ch = m.channels.get(ni);
-      t = ch?.translation ? sampleChannel(m, ch.translation, time, 3) : bind;
-      r = ch?.rotation ? sampleChannel(m, ch.rotation, time, 4) : (nd.rotation || [0, 0, 0, 1]);
-      s = ch?.scale ? sampleChannel(m, ch.scale, time, 3) : (nd.scale || [1, 1, 1]);
-    }
-
-    if (ni === hipsNode) {
-      if (stripRoot) t = [bind[0], t[1], bind[2]];
-      if (lockYaw) r = stripYaw(r);
-    }
-    return fromTRS(t, r, s);
-  };
-  const world = (ni) => {
-    if (cache.has(ni)) return cache.get(ni);
-    const p = m.parentOf.get(ni);
-    const w = p === undefined ? local(ni) : mul(world(p), local(ni));
-    cache.set(ni, w);
-    return w;
-  };
-
-  const S = m.jointNodes.map((ni, j) => {
-    const ibm = new Float32Array(m.IBM.buffer, m.IBM.byteOffset + j * 64, 16);
-    return mul(world(ni), ibm);
-  });
-
+  const S = skinMatrices(m, time, opts);
   const n = m.POS.length / 3;
   const P = new Float32Array(m.POS.length), N = new Float32Array(m.NRM.length);
   for (let v = 0; v < n; v++) {
@@ -318,6 +263,115 @@ export function skinAt(m, time, opts = {}) {
     N[v * 3] = mx / l; N[v * 3 + 1] = my / l; N[v * 3 + 2] = mz / l;
   }
   return { P, N };
+}
+
+// ---------------------------------------------------------------- timing
+// Joint world positions — cheap (24 joints) next to skinning 31k vertices, so
+// it is what the motion analysis runs on. Note these are WORLD matrices, not
+// skinning matrices: a skinning matrix is world × inverseBind, whose
+// translation is not the joint's position.
+function jointPositions(m, time, opts) {
+  return skinMatrices(m, time, opts, true).map(mm => [mm[12], mm[13], mm[14]]);
+}
+
+// Frame times spaced by equal MOTION rather than equal time.
+//
+// One-shot clips (a jab, a knockdown) spend most of their length near the rest
+// pose, so uniform time sampling wastes frames: the first punch bake had 7 of
+// 10 frames identical. Trimming to a "motion window" barely helped, because
+// the guard still drifts slightly and the window stayed at 90% of the clip.
+//
+// Instead, walk the cumulative motion curve and place frames at equal
+// increments of distance travelled. Frames automatically cluster through the
+// strike and thin out through the hold — which is also how an animator would
+// key it. Works for loops too: an even cycle yields near-even spacing.
+export function motionTimes(m, opts = {}) {
+  const { anim = null, frames = 10, probes = 96, loop = false } = opts;
+  const dur = (anim || m).duration;
+  if (!dur || frames < 2) return new Array(frames).fill(0);
+
+  const pos = [];
+  for (let i = 0; i < probes; i++) {
+    pos.push(jointPositions(m, (i / (probes - 1)) * dur, { lockYaw: true, stripRoot: true, anim }));
+  }
+  const cum = [0];
+  for (let i = 1; i < probes; i++) {
+    let e = 0;
+    for (let j = 0; j < pos[i].length; j++) {
+      const a = pos[i][j], b = pos[i - 1][j];
+      e += Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
+    }
+    cum.push(cum[i - 1] + e);
+  }
+  const total = cum[probes - 1];
+  if (total <= 1e-6) {
+    return Array.from({ length: frames }, (_, i) => (i / frames) * dur);
+  }
+
+  const out = [];
+  for (let f = 0; f < frames; f++) {
+    // loops stop short of the end so frame N does not duplicate frame 0
+    const target = total * (loop ? f / frames : f / (frames - 1));
+    let i = 1;
+    while (i < probes - 1 && cum[i] < target) i++;
+    const span = cum[i] - cum[i - 1];
+    const k = span > 1e-9 ? (target - cum[i - 1]) / span : 0;
+    out.push(((i - 1 + k) / (probes - 1)) * dur);
+  }
+  return out;
+}
+
+// The single hierarchy walk, shared by skinAt and the motion analysis.
+// wantWorld=true returns joint world matrices; otherwise skinning matrices
+// (world × inverseBind), which is what vertex deformation needs.
+function skinMatrices(m, time, opts = {}, wantWorld = false) {
+  const { lockYaw = true, stripRoot = true, anim = null } = opts;
+  const cache = new Map();
+  const hipsNode = m.jointNodes[m.hipsJoint];
+  let srcByName = null, srcHipsBind = null;
+  if (anim) {
+    srcByName = new Map();
+    anim.jointNodes.forEach((ni, j) => srcByName.set(anim.jointNames[j], ni));
+    srcHipsBind = anim.json.nodes[anim.jointNodes[anim.hipsJoint]].translation || [0, 0, 0];
+  }
+  const local = (ni) => {
+    const nd = m.json.nodes[ni];
+    const bind = nd.translation || [0, 0, 0];
+    let t, r, s;
+    if (anim) {
+      const srcNi = srcByName.get(nd.name);
+      const sch = srcNi === undefined ? null : anim.channels.get(srcNi);
+      r = sch?.rotation ? sampleChannel(anim, sch.rotation, time, 4) : (nd.rotation || [0, 0, 0, 1]);
+      s = nd.scale || [1, 1, 1];
+      if (ni === hipsNode && sch?.translation) {
+        const st = sampleChannel(anim, sch.translation, time, 3);
+        t = [bind[0] + (st[0] - srcHipsBind[0]), bind[1] + (st[1] - srcHipsBind[1]), bind[2] + (st[2] - srcHipsBind[2])];
+      } else t = bind;
+    } else {
+      const ch = m.channels.get(ni);
+      t = ch?.translation ? sampleChannel(m, ch.translation, time, 3) : bind;
+      r = ch?.rotation ? sampleChannel(m, ch.rotation, time, 4) : (nd.rotation || [0, 0, 0, 1]);
+      s = ch?.scale ? sampleChannel(m, ch.scale, time, 3) : (nd.scale || [1, 1, 1]);
+    }
+    if (ni === hipsNode) {
+      if (stripRoot) t = [bind[0], t[1], bind[2]];
+      if (lockYaw) r = stripYaw(r);
+    }
+    return fromTRS(t, r, s);
+  };
+  const world = (ni) => {
+    if (cache.has(ni)) return cache.get(ni);
+    const p = m.parentOf.get(ni);
+    const w = p === undefined ? local(ni) : mul(world(p), local(ni));
+    cache.set(ni, w);
+    return w;
+  };
+  return m.jointNodes.map((ni, j) => {
+    const w = world(ni);
+    if (wantWorld) return w;
+    const ibm = new Float32Array(m.IBM.buffer, m.IBM.byteOffset + j * 64, 16);
+    return mul(w, ibm);
+  });
 }
 
 // ---------------------------------------------------------------- render
