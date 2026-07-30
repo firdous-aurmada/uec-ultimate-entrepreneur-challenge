@@ -94,14 +94,18 @@ const BONE_MAT = {
 };
 const HEAD_BONES = new Set(['Head', 'head_end', 'headfront']);
 
+// Values are spread deliberately. The first pass had suit, trousers and shoes
+// all within a few points of each other, so the whole character read as one
+// navy mass with a bright head stuck on top — the hair at #e8e2d6 was the
+// lightest thing on screen and pulled the eye off the face.
 export const DEFAULT_PALETTE = {
-  suit:  [0x3a, 0x3e, 0x4c],
-  pants: [0x2c, 0x2f, 0x3a],
-  shirt: [0xf4, 0xf6, 0xff],
+  suit:  [0x56, 0x5e, 0x74],   // lifted well clear of the background
+  pants: [0x3b, 0x41, 0x52],   // clearly darker than the jacket
+  shirt: [0xf2, 0xf5, 0xff],
   tie:   [0xc4, 0x2b, 0x50],
-  skin:  [0xd9, 0xa0, 0x6b],
-  hair:  [0xe8, 0xe2, 0xd6],
-  shoe:  [0x14, 0x15, 0x1c],
+  skin:  [0xdc, 0xa5, 0x72],
+  hair:  [0x9d, 0xa2, 0xac],   // silver-grey, not near-white
+  shoe:  [0x1b, 0x1d, 0x26],   // near-black, anchors the figure to the floor
 };
 
 export function loadModel(buf) {
@@ -200,7 +204,10 @@ function classify(m) {
       m.VMAT[v] = 'skin';
     }
   }
-  const hairLine = headBottom + (headTop - headBottom) * 0.62;
+  // The head-bone range includes the neck, so 0.62 landed low on the skull and
+  // turned most of the head into hair — it read as a white helmet. 0.78 leaves
+  // hair on the crown and gives the face back its upper half.
+  const hairLine = headBottom + (headTop - headBottom) * 0.78;
   for (let v = 0; v < n; v++) {
     const name = m.jointNames[dominant(m, v)];
     if (HEAD_BONES.has(name) && m.POS[v * 3 + 1] > hairLine) m.VMAT[v] = 'hair';
@@ -214,6 +221,51 @@ function classify(m) {
     if (Math.abs(x) < 0.075 && z > zMax * 0.55 && y > 1.05 && y < 1.45) {
       m.VMAT[v] = Math.abs(x) < 0.032 ? 'tie' : 'shirt';
     }
+  }
+
+  smoothMaterials(m, 2);
+}
+
+// Majority-vote smoothing over the mesh's own connectivity.
+//
+// Materials come from each vertex's dominant bone, which is a hard threshold —
+// so along a seam like collar-to-neck, adjacent vertices flip back and forth
+// and the rendered boundary comes out as a sawtooth. Letting each vertex take
+// the modal material of its neighbourhood removes the speckle while leaving
+// genuine boundaries where they are, because a real region wins its own vote.
+function smoothMaterials(m, passes = 2) {
+  const n = m.POS.length / 3;
+  // adjacency from the index buffer, flattened into CSR-style arrays
+  const count = new Uint16Array(n);
+  const IDX = m.IDX;
+  for (let i = 0; i < IDX.length; i += 3) {
+    count[IDX[i]] += 2; count[IDX[i + 1]] += 2; count[IDX[i + 2]] += 2;
+  }
+  const start = new Uint32Array(n + 1);
+  for (let v = 0; v < n; v++) start[v + 1] = start[v] + count[v];
+  const fill = new Uint32Array(n);
+  const adj = new Uint32Array(start[n]);
+  const push = (a, b) => { adj[start[a] + fill[a]++] = b; };
+  for (let i = 0; i < IDX.length; i += 3) {
+    const a = IDX[i], b = IDX[i + 1], c = IDX[i + 2];
+    push(a, b); push(a, c); push(b, a); push(b, c); push(c, a); push(c, b);
+  }
+
+  for (let p = 0; p < passes; p++) {
+    const next = m.VMAT.slice();
+    const tally = new Map();
+    for (let v = 0; v < n; v++) {
+      tally.clear();
+      tally.set(m.VMAT[v], 1.5);          // bias toward keeping its own material
+      for (let k = start[v]; k < start[v + 1]; k++) {
+        const mat = m.VMAT[adj[k]];
+        tally.set(mat, (tally.get(mat) || 0) + 1);
+      }
+      let best = m.VMAT[v], bestN = -1;
+      for (const [mat, c] of tally) if (c > bestN) { bestN = c; best = mat; }
+      next[v] = best;
+    }
+    m.VMAT = next;
   }
 }
 function dominant(m, v) {

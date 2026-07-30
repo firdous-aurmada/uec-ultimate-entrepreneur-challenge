@@ -9,12 +9,13 @@
 import { headFrame, projectPoint } from './glb.js';
 
 export const DEFAULT_FACE = {
-  skin:   '#d9a06b',
-  shade:  'rgba(10,12,22,0.55)',
+  skin:   '#dca572',
+  shade:  'rgba(12,14,24,0.62)',
+  mouth:  'rgba(10,12,22,0.85)',
   ink:    '#0a0c16',
-  shades: '#14161f',      // wraparound sunglasses
-  glint:  'rgba(255,240,210,0.55)',
-  hair:   '#e8e2d6',
+  shades: '#12141c',      // wraparound sunglasses
+  glint:  'rgba(255,244,220,0.7)',
+  hair:   '#9da2ac',
   wearsShades: true,
 };
 
@@ -102,8 +103,21 @@ export function drawFace(cx, model, time, opts = {}) {
 
   // brow ridge — reads as a scowl and gives the skull some structure
   stroke(band(-0.60, 0.60, 0.34), style.shade, R * 0.07);
-  // hard flat mouth, set low
-  stroke(band(-0.28, 0.30, -0.44, 4), style.shade, R * 0.065);
+
+  // The lower face was empty, so the shades floated on a blank tan shape.
+  // A jaw edge, a cheek shadow and a set mouth give it something to sit on.
+  stroke(band(-0.30, 0.34, -0.40, 5), style.mouth || style.ink, R * 0.085);
+  // shadow under the lip, so the mouth reads as a mouth and not a scratch
+  cx.globalAlpha = fade * 0.55;
+  stroke(band(-0.24, 0.28, -0.52, 4), style.shade, R * 0.06);
+  cx.globalAlpha = fade;
+  // jaw line sweeping back from the chin
+  stroke([at(0.44, -0.22), at(0.30, -0.50), at(-0.02, -0.62), at(-0.34, -0.52)],
+         style.shade, R * 0.065);
+  // cheekbone, just under the lens
+  cx.globalAlpha = fade * 0.5;
+  stroke(band(0.10, 0.52, -0.14, 3), style.shade, R * 0.055);
+  cx.globalAlpha = fade;
 
   cx.restore();
   return true;
