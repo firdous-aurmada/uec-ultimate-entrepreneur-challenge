@@ -22,26 +22,28 @@ motion is stripped so the game owns position. Exports one PNG atlas per state pl
 <div id="log"></div>
 
 <script type="module">
-import { loadModel, skinAt, renderPose, motionTimes } from './glb.js';
+import { loadModel, skinAt, renderPose, motionTimes, clipGroundOffset } from './glb.js';
 
 const log = (s) => { document.getElementById('log').textContent += s + '\n'; };
 const out = document.getElementById('out');
 
 // frames tuned per state: more where the motion carries meaning
 const STATES = [
-  { id: 'idle',     clip: null,       frames: 8, loop: true  },
-  { id: 'walk',     clip: 'walk',     frames: 8, loop: true  },
-  { id: 'crouch',   clip: 'crouch',   frames: 4, loop: true  },
-  { id: 'block',    clip: 'block',    frames: 3 },
-  { id: 'slap',     clip: 'slap',     frames: 6 },
-  { id: 'punch',    clip: 'punch',    frames: 6 },
-  { id: 'kick',     clip: 'kick',     frames: 7 },
-  { id: 'launch',   clip: 'launch',   frames: 7 },
-  { id: 'jump',     clip: 'jump',     frames: 6 },
-  { id: 'hitlight', clip: 'hitlight', frames: 3 },
-  { id: 'hitstun',  clip: 'hitstun',  frames: 4 },
-  { id: 'launched', clip: 'launched', frames: 5 },
-  { id: 'ko',       clip: 'ko',       frames: 8 },
+  // Idle is the settled guard at the TAIL of Block1, not shadowboxing.
+  // Measured foot travel: this window 5.6px, Boxing_Practice 51px (hopping).
+  { id: 'idle',     clip: 'block',    frames: 10, loop: true, range: [0.80, 1.0] },
+  { id: 'walk',     clip: 'walk',     frames: 12, loop: true  },
+  { id: 'crouch',   clip: 'crouch',   frames: 6,  loop: true  },
+  { id: 'block',    clip: 'block',    frames: 4, range: [0.0, 0.30] },
+  { id: 'slap',     clip: 'slap',     frames: 10 },
+  { id: 'punch',    clip: 'punch',    frames: 10 },
+  { id: 'kick',     clip: 'kick',     frames: 12 },
+  { id: 'launch',   clip: 'launch',   frames: 12 },
+  { id: 'jump',     clip: 'jump',     frames: 9 },
+  { id: 'hitlight', clip: 'hitlight', frames: 5 },
+  { id: 'hitstun',  clip: 'hitstun',  frames: 6 },
+  { id: 'launched', clip: 'launched', frames: 8 },
+  { id: 'ko',       clip: 'ko',       frames: 12 },
 ];
 
 const YAW = 30, FH = 300;
@@ -63,9 +65,12 @@ async function bakeAll() {
 
   for (const st of STATES) {
     const anim = st.clip ? loadModel(await (await fetch(`./assets/${st.clip}.glb`)).arrayBuffer()) : null;
-    const times = motionTimes(model, { anim, frames: st.frames, loop: !!st.loop });
+    const times = motionTimes(model, { anim, frames: st.frames, loop: !!st.loop, range: st.range || null });
+    const base = { lockYaw: true, stripRoot: true, anim };
+    // one constant per clip, so the clip's own bob survives but it sits on the floor
+    const groundOffset = clipGroundOffset(model, times, base);
     const raw = times.map(t => {
-      const { P, N } = skinAt(model, t, { lockYaw: true, stripRoot: true, anim });
+      const { P, N } = skinAt(model, t, { ...base, groundOffset });
       return renderPose(W, H, model, P, N, { yaw: YAW, scale, originX: W / 2, baselineY });
     });
     for (const r of raw) {
@@ -95,6 +100,7 @@ async function bakeAll() {
       d.getContext('2d').drawImage(src, bx, by, bw, bh, 0, 0, bw, bh);
       return d;
     });
+    const dur = (times.length > 1 ? times[times.length - 1] : 0) || 0;
     baked.states.push({ id: st.id, loop: !!st.loop, frames: st.frames, clip: clipName, times, cvs });
 
     const row = document.createElement('div'); row.className = 'row';
@@ -123,7 +129,12 @@ document.getElementById('save').onclick = async () => {
     s.cvs.forEach((c, i) => cx.drawImage(c, i * baked.bw, 0));
     const blob = await new Promise(r => a.toBlob(r, 'image/png'));
     const res = await fetch(`/lab/atlas/${s.id}.png`, { method: 'PUT', body: blob });
-    manifest.states[s.id] = { frames: s.frames, loop: s.loop, clip: s.clip, file: `${s.id}.png` };
+    // Normalised display time of each frame. Frames were chosen by equal motion,
+    // so replaying them at a constant rate would flatten a punch into a shove.
+    // The game uses these to hold each frame for its real share of the clip.
+    const span = s.times[s.times.length - 1] - s.times[0] || 1;
+    const norm = s.times.map(t => +((t - s.times[0]) / span).toFixed(4));
+    manifest.states[s.id] = { frames: s.frames, loop: s.loop, clip: s.clip, file: `${s.id}.png`, times: norm };
     log(`  ${s.id}.png ${a.width}x${a.height} → ${res.status}`);
   }
   const r = await fetch('/lab/atlas/manifest.json', { method: 'PUT', body: JSON.stringify(manifest, null, 2) });

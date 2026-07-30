@@ -49,11 +49,23 @@ export function pickFrame(set, f, t) {
   if (!mf) return null;
   const has = (s) => !!mf.states[s];
   const clamp01 = (v) => v < 0 ? 0 : v > 1 ? 1 : v;
+  // Frames were chosen by equal motion, not equal time, so dividing progress
+  // into n equal slices would replay a punch at a constant speed and flatten
+  // its snap. `times` carries each frame's real normalised moment in the clip;
+  // hold a frame until the next one's time is reached.
   const pick = (state, prog, loop) => {
-    const n = mf.states[state].frames;
-    const i = loop
-      ? Math.floor(prog * n) % n
-      : Math.min(n - 1, Math.floor(clamp01(prog) * n));
+    const st = mf.states[state];
+    const n = st.frames;
+    const p = loop ? ((prog % 1) + 1) % 1 : clamp01(prog);
+    let i;
+    if (st.times && st.times.length === n) {
+      i = n - 1;
+      for (let k = 1; k < n; k++) {
+        if (p < st.times[k]) { i = k - 1; break; }
+      }
+    } else {
+      i = Math.min(n - 1, Math.floor(p * n));   // older atlases without timings
+    }
     return { state, frame: i < 0 ? 0 : i };
   };
 

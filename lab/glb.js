@@ -270,14 +270,27 @@ export function skinAt(m, time, opts = {}) {
     N[v * 3] = mx / l; N[v * 3 + 1] = my / l; N[v * 3 + 2] = mz / l;
   }
 
-  if (opts.groundLock !== false) {
-    let lo = Infinity;
-    for (let i = 1; i < P.length; i += 3) if (P[i] < lo) lo = P[i];
-    if (lo !== 0 && Number.isFinite(lo)) {
-      for (let i = 1; i < P.length; i += 3) P[i] -= lo;
-    }
-  }
+  // A CONSTANT vertical offset for the whole clip, never per-frame.
+  //
+  // Locking each frame to its own lowest vertex looked right in a still and
+  // was badly wrong in motion: whenever a different foot became the lowest
+  // point the entire body snapped vertically. Measured range was 40px on idle
+  // and 21px on kick, against a 160px-tall character — a bounce that exists
+  // nowhere in the source animation. Offsetting by one per-clip constant keeps
+  // the clip's own weight shift and bob, which is the part that looks human.
+  const off = opts.groundOffset || 0;
+  if (off) for (let i = 1; i < P.length; i += 3) P[i] -= off;
   return { P, N };
+}
+
+// Lowest vertex across a whole clip — the constant that plants it on the floor.
+export function clipGroundOffset(m, times, opts = {}) {
+  let lo = Infinity;
+  for (const t of times) {
+    const { P } = skinAt(m, t, { ...opts, groundOffset: 0 });
+    for (let i = 1; i < P.length; i += 3) if (P[i] < lo) lo = P[i];
+  }
+  return Number.isFinite(lo) ? lo : 0;
 }
 
 // ---------------------------------------------------------------- timing
@@ -300,14 +313,22 @@ function jointPositions(m, time, opts) {
 // increments of distance travelled. Frames automatically cluster through the
 // strike and thin out through the hold — which is also how an animator would
 // key it. Works for loops too: an even cycle yields near-even spacing.
+// opts.range — [from, to] as fractions of the clip, to bake from a segment.
+// Needed because whole clips are rarely the right length for a game state: the
+// only settled guard in the library is the tail of Block1, and shadowboxing
+// (the obvious idle by name) travels 51px vertically, which reads as hopping.
 export function motionTimes(m, opts = {}) {
-  const { anim = null, frames = 10, probes = 96, loop = false } = opts;
-  const dur = (anim || m).duration;
-  if (!dur || frames < 2) return new Array(frames).fill(0);
+  const { anim = null, frames = 10, probes = 96, loop = false, range = null } = opts;
+  const full = (anim || m).duration;
+  if (!full || frames < 2) return new Array(frames).fill(0);
+  const from = range ? Math.max(0, range[0]) * full : 0;
+  const to = range ? Math.min(1, range[1]) * full : full;
+  const dur = to - from;
+  if (dur <= 0) return new Array(frames).fill(from);
 
   const pos = [];
   for (let i = 0; i < probes; i++) {
-    pos.push(jointPositions(m, (i / (probes - 1)) * dur, { lockYaw: true, stripRoot: true, anim }));
+    pos.push(jointPositions(m, from + (i / (probes - 1)) * dur, { lockYaw: true, stripRoot: true, anim }));
   }
   const cum = [0];
   for (let i = 1; i < probes; i++) {
@@ -320,7 +341,7 @@ export function motionTimes(m, opts = {}) {
   }
   const total = cum[probes - 1];
   if (total <= 1e-6) {
-    return Array.from({ length: frames }, (_, i) => (i / frames) * dur);
+    return Array.from({ length: frames }, (_, i) => from + (i / frames) * dur);
   }
 
   const out = [];
@@ -331,7 +352,7 @@ export function motionTimes(m, opts = {}) {
     while (i < probes - 1 && cum[i] < target) i++;
     const span = cum[i] - cum[i - 1];
     const k = span > 1e-9 ? (target - cum[i - 1]) / span : 0;
-    out.push(((i - 1 + k) / (probes - 1)) * dur);
+    out.push(from + ((i - 1 + k) / (probes - 1)) * dur);
   }
   return out;
 }

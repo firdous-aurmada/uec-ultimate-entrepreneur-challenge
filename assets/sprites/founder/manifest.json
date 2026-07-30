@@ -1,88 +1,230 @@
 {
-  "frameWidth": 342,
-  "frameHeight": 318,
+  "frameWidth": 341,
+  "frameHeight": 332,
   "anchor": {
-    "x": 156,
-    "y": 316
+    "x": 151,
+    "y": 330
   },
   "states": {
     "idle": {
-      "frames": 8,
+      "frames": 10,
       "loop": true,
-      "clip": "Armature|Boxing_Practice|baselayer",
-      "file": "idle.png"
+      "clip": "Armature|Block1|baselayer",
+      "file": "idle.png",
+      "times": [
+        0,
+        0.092,
+        0.1784,
+        0.2756,
+        0.3991,
+        0.5219,
+        0.6469,
+        0.8043,
+        0.916,
+        1
+      ]
     },
     "walk": {
-      "frames": 8,
+      "frames": 12,
       "loop": true,
       "clip": "Armature|Casual_Walk_inplace|baselayer",
-      "file": "walk.png"
+      "file": "walk.png",
+      "times": [
+        0,
+        0.1254,
+        0.2028,
+        0.2928,
+        0.3683,
+        0.4775,
+        0.5505,
+        0.6454,
+        0.723,
+        0.8299,
+        0.9044,
+        1
+      ]
     },
     "crouch": {
-      "frames": 4,
+      "frames": 6,
       "loop": true,
       "clip": "Armature|Cautious_Crouch_Walk_Forward_inplace|baselayer",
-      "file": "crouch.png"
+      "file": "crouch.png",
+      "times": [
+        0,
+        0.1421,
+        0.3734,
+        0.5736,
+        0.7698,
+        1
+      ]
     },
     "block": {
-      "frames": 3,
-      "loop": false,
-      "clip": "Armature|Block1|baselayer",
-      "file": "block.png"
-    },
-    "slap": {
-      "frames": 6,
-      "loop": false,
-      "clip": "Armature|Left_Jab_from_Guard|baselayer",
-      "file": "slap.png"
-    },
-    "punch": {
-      "frames": 6,
-      "loop": false,
-      "clip": "Armature|Right_Jab_from_Guard|baselayer",
-      "file": "punch.png"
-    },
-    "kick": {
-      "frames": 7,
-      "loop": false,
-      "clip": "Armature|Boxing_Guard_Right_Straight_Kick|baselayer",
-      "file": "kick.png"
-    },
-    "launch": {
-      "frames": 7,
-      "loop": false,
-      "clip": "Armature|Right_Uppercut_from_Guard|baselayer",
-      "file": "launch.png"
-    },
-    "jump": {
-      "frames": 6,
-      "loop": false,
-      "clip": "Armature|Regular_Jump|baselayer",
-      "file": "jump.png"
-    },
-    "hitlight": {
-      "frames": 3,
-      "loop": false,
-      "clip": "Armature|Slap_Reaction|baselayer",
-      "file": "hitlight.png"
-    },
-    "hitstun": {
       "frames": 4,
       "loop": false,
-      "clip": "Armature|Face_Punch_Reaction|baselayer",
-      "file": "hitstun.png"
+      "clip": "Armature|Block1|baselayer",
+      "file": "block.png",
+      "times": [
+        0,
+        0.4481,
+        0.7701,
+        1
+      ]
     },
-    "launched": {
+    "slap": {
+      "frames": 10,
+      "loop": false,
+      "clip": "Armature|Left_Jab_from_Guard|baselayer",
+      "file": "slap.png",
+      "times": [
+        0,
+        0.1167,
+        0.1607,
+        0.2066,
+        0.2949,
+        0.4521,
+        0.5376,
+        0.6182,
+        0.72,
+        1
+      ]
+    },
+    "punch": {
+      "frames": 10,
+      "loop": false,
+      "clip": "Armature|Right_Jab_from_Guard|baselayer",
+      "file": "punch.png",
+      "times": [
+        0,
+        0.1626,
+        0.2192,
+        0.2487,
+        0.2835,
+        0.3934,
+        0.4384,
+        0.4901,
+        0.6604,
+        1
+      ]
+    },
+    "kick": {
+      "frames": 12,
+      "loop": false,
+      "clip": "Armature|Boxing_Guard_Right_Straight_Kick|baselayer",
+      "file": "kick.png",
+      "times": [
+        0,
+        0.2502,
+        0.32,
+        0.3709,
+        0.4049,
+        0.4473,
+        0.5392,
+        0.6165,
+        0.6612,
+        0.7158,
+        0.7909,
+        1
+      ]
+    },
+    "launch": {
+      "frames": 12,
+      "loop": false,
+      "clip": "Armature|Right_Uppercut_from_Guard|baselayer",
+      "file": "launch.png",
+      "times": [
+        0,
+        0.1462,
+        0.2288,
+        0.347,
+        0.4221,
+        0.474,
+        0.5166,
+        0.5705,
+        0.6763,
+        0.7906,
+        0.8524,
+        1
+      ]
+    },
+    "jump": {
+      "frames": 9,
+      "loop": false,
+      "clip": "Armature|Regular_Jump|baselayer",
+      "file": "jump.png",
+      "times": [
+        0,
+        0.1239,
+        0.229,
+        0.3108,
+        0.3914,
+        0.5239,
+        0.6181,
+        0.7266,
+        1
+      ]
+    },
+    "hitlight": {
       "frames": 5,
       "loop": false,
-      "clip": "Armature|BeHit_FlyUp|baselayer",
-      "file": "launched.png"
+      "clip": "Armature|Slap_Reaction|baselayer",
+      "file": "hitlight.png",
+      "times": [
+        0,
+        0.181,
+        0.3743,
+        0.5268,
+        1
+      ]
     },
-    "ko": {
+    "hitstun": {
+      "frames": 6,
+      "loop": false,
+      "clip": "Armature|Face_Punch_Reaction|baselayer",
+      "file": "hitstun.png",
+      "times": [
+        0,
+        0.1928,
+        0.2397,
+        0.458,
+        0.7701,
+        1
+      ]
+    },
+    "launched": {
       "frames": 8,
       "loop": false,
+      "clip": "Armature|BeHit_FlyUp|baselayer",
+      "file": "launched.png",
+      "times": [
+        0,
+        0.0221,
+        0.0528,
+        0.0983,
+        0.2289,
+        0.3924,
+        0.5176,
+        1
+      ]
+    },
+    "ko": {
+      "frames": 12,
+      "loop": false,
       "clip": "Armature|Knock_Down|baselayer",
-      "file": "ko.png"
+      "file": "ko.png",
+      "times": [
+        0,
+        0.0917,
+        0.14,
+        0.1907,
+        0.2387,
+        0.2854,
+        0.3417,
+        0.403,
+        0.5047,
+        0.6162,
+        0.7036,
+        1
+      ]
     }
   }
 }
