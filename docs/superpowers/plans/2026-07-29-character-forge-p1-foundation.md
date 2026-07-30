@@ -1341,12 +1341,38 @@ git commit -m "feat: adapt the shipped roster to schema v1"
 
 ---
 
+## Finding during execution: the shading buffer leaked between characters
+
+Task 7 as written used a single grow-only shading buffer. That was wrong.
+
+`shadeBuffer` fills its gradients over the **whole buffer rect**, so once a
+big-bodied fighter enlarged the buffer, every *other* fighter's shading shifted —
+same silhouette, same pixel count, ~0.01% different brightness. A character's
+appearance therefore depended on who else happened to be on screen, and no render
+was byte-reproducible.
+
+The plain golden check could never catch this, because no shipped character has a
+non-neutral body: `CHECK` passes either way. It only surfaced when deliberately
+rendering an extreme body *first* and then re-checking the neutral roster — at
+which point all 117 entries mismatched.
+
+**Fix:** buffers are keyed by size (`src/engine/drawFighter.js`), so a neutral body
+always lands on the historical 280×300 at (130, 250) and at most two buffers are
+live in a match. Perf is unchanged at 0.13–0.16 ms per fighter.
+
+**Guard added:** a `CHECK isolation (big bodies first)` button in the harness, which
+renders three extreme bodies and then re-verifies the neutral roster. This is now a
+standing gate — the plain check alone is not sufficient.
+
 ## Acceptance for P1
 
-- [ ] `npm test` passes with 31 tests
-- [ ] Golden harness reports `ALL 117 MATCH`
-- [ ] A full match plays with no console errors and no felt difference
-- [ ] Frame time stays under 1.5 ms (check the `?debug` overlay; baseline is 1.2 ms)
-- [ ] `validateCharacter` accepts all nine roster entries except `ava`, which is the known PHANTOM finding
+- [x] `npm test` passes with 31 tests
+- [x] Golden harness reports `ALL 117 MATCH`
+- [x] Golden harness reports `ISOLATED` after extreme bodies render first
+- [x] A full match plays with no console errors — verified intro → fighting → roundEnd, AI took an idle player 100 → 0 HP, `roundWins [0,1]`
+- [x] Frame cost well under budget: 0.023 ms simulation + 0.33 ms for both fighters cel-shaded
+- [x] Extreme bodies render without clipping and give genuinely different silhouettes (max 197×95 px vs min 142×75 px)
+- [x] All six special archetypes verified through the new dispatch: 3 slides, 3 coins, teleport lands behind and flips facing, rush advances 320 px, aoe and grab shape correctly
+- [x] `validateCharacter` accepts all nine roster entries except `ava`, the known PHANTOM finding; all 16 base characters validate clean
 
 Nothing visible changes. That is the point — it is what proves the schema fits the characters that already exist, before the Incubator UI is built on top of it.
