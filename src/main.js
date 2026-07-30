@@ -15,6 +15,7 @@ import {
   initScreens, openSelect, sel, toast, updateTitleChip, showIncomingChallenge,
   showShareCard, openInvite, openModal, closeModals, renderProfile, renderLeaderboard,
   showIncomingLive, setLiveStatus, refreshSelect, confirmDialog, playerDef, showAbout,
+  renderMoveCard,
 } from './ui/screens.js';
 import { shouldShowTutorial, showTutorial } from './ui/tutorial.js';
 import { AUTH, initAuth, onAuthChange, signInGoogle, signInMicrosoft, signInEmail, signOut, currentUser, userHandle, __debugSignIn } from './auth.js';
@@ -767,6 +768,11 @@ function togglePause() {
     currentGame.paused = false;
   } else {
     currentGame.paused = true;
+    // Show YOUR moves, not the rival's — nobody memorises a move list from the
+    // select screen thirty seconds before the fight starts.
+    const mine = currentGame.fighters[netLocalIdx === 1 ? 1 : 0];
+    const count = renderMoveCard(document.getElementById('pause-cmds'), mine?.def);
+    document.getElementById('pause-moves').classList.toggle('hidden', count === 0);
     openModal('modal-pause');
   }
   audio.sfx('click');

@@ -192,25 +192,29 @@ function renderSide(prefix, def, fallbackLabel) {
   const sp = def ? SPECIALS[def.special] : null;
   $(`${prefix}-sp`).textContent = sp ? `${sp.icon} ${sp.name}` : '🎲 MYSTERY';
 
-  // Move card: the 2–3 inputs that belong to this character and nobody else.
-  // Everyone shares the same buttons, so this is the only place the difference
-  // is visible before the fight starts.
-  const cmds = $(`${prefix}-cmds`);
-  if (cmds) {
-    cmds.textContent = '';
-    for (const cn of (def?.commandNormals || [])) {
-      const row = document.createElement('div');
-      row.className = 'pv-cmd';
-      const key = document.createElement('span');
-      key.className = 'pv-cmd-key';
-      key.textContent = SLOT_GLYPH[cn.slot] || cn.slot;
-      const name = document.createElement('span');
-      name.className = 'pv-cmd-name';
-      name.textContent = cn.displayName;
-      row.append(key, name);
-      cmds.appendChild(row);
-    }
+  renderMoveCard($(`${prefix}-cmds`), def);
+}
+
+// The 2–3 inputs that belong to this character and nobody else. Everyone
+// shares the same buttons, so this is the only place the difference is legible
+// outside of actually throwing the move.
+export function renderMoveCard(el, def) {
+  if (!el) return 0;
+  el.textContent = '';
+  const cmds = def?.commandNormals || [];
+  for (const cn of cmds) {
+    const row = document.createElement('div');
+    row.className = 'pv-cmd';
+    const key = document.createElement('span');
+    key.className = 'pv-cmd-key';
+    key.textContent = SLOT_GLYPH[cn.slot] || cn.slot;
+    const name = document.createElement('span');
+    name.className = 'pv-cmd-name';
+    name.textContent = cn.displayName;
+    row.append(key, name);
+    el.appendChild(row);
   }
+  return cmds.length;
 }
 
 function renderPreview() {

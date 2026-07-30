@@ -326,6 +326,14 @@ input, textarea { user-select: text; -webkit-user-select: text; }
   font: 900 10px/1.2 system-ui; letter-spacing: .8px; color: #eef1ff;
   overflow-wrap: anywhere;
 }
+.pause-moves { width: 100%; margin-bottom: 4px; }
+.pause-moves-label {
+  font: 900 10px/1 system-ui; letter-spacing: 2px; color: var(--muted);
+  margin-bottom: 5px; text-align: center;
+}
+.pause-moves .pv-cmd { padding: 5px 9px; }
+.pause-moves .pv-cmd-key { font-size: 13px; }
+.pause-moves .pv-cmd-name { font-size: 11px; }
 #btn-fight { width: 100%; }
 
 /* ---------- Fight ---------- */
