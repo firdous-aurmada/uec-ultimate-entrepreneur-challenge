@@ -23,7 +23,7 @@ ownership of position. All frames share one projection, so nothing jitters betwe
 <div>
   <label>frames <input type="number" id="frames" value="10" min="2" max="24"></label>
   <label>height px <input type="number" id="fh" value="300" min="64" max="512"></label>
-  <label>yaw° <input type="number" id="yaw" value="78" min="0" max="180"></label>
+  <label>yaw° <input type="number" id="yaw" value="30" min="0" max="180"></label>
   <label><input type="checkbox" id="lock" checked> lock yaw</label>
   <label><input type="checkbox" id="strip" checked> strip root</label>
 </div>
@@ -43,10 +43,23 @@ const out = document.getElementById('out');
 const num = (id) => +document.getElementById(id).value;
 const on = (id) => document.getElementById(id).checked;
 
-const buf = await (await fetch('./assets/base-boxing.glb')).arrayBuffer();
-const model = loadModel(buf);
+// The mesh always comes from the full-detail base model. `?clip=` names an
+// animation source whose motion is retargeted onto it — the cheap rigging
+// call returns a decimated mesh, so we take only its rotations.
+const qs = new URLSearchParams(location.search);
+const CLIP = qs.get('clip');
+const model = loadModel(await (await fetch('./assets/base-boxing.glb')).arrayBuffer());
+let animSrc = null;
+log(`mesh: base-boxing.glb — ${model.POS.length / 3} verts · ${model.IDX.length / 3} tris`);
+if (CLIP) {
+  animSrc = loadModel(await (await fetch(`./assets/${CLIP}.glb`)).arrayBuffer());
+  log(`anim: ${CLIP}.glb — ${animSrc.animName} · ${animSrc.duration.toFixed(2)}s` +
+      ` (source mesh ${animSrc.IDX.length / 3} tris, discarded)`);
+} else {
+  log(`anim: built-in — ${model.animName} · ${model.duration.toFixed(2)}s`);
+}
+const clipDur = () => (animSrc || model).duration;
 log(`model: ${model.POS.length / 3} verts · ${model.IDX.length / 3} tris · ${model.jointNames.length} joints`);
-log(`clip: ${model.animName} · ${model.duration.toFixed(2)}s`);
 
 let lastBake = null;
 
@@ -60,8 +73,8 @@ function bake({ frames, fh, yaw, lockYaw, stripRoot }) {
   const raw = [];
   let uni = null;
   for (let i = 0; i < frames; i++) {
-    const t = (i / frames) * model.duration;
-    const { P, N } = skinAt(model, t, { lockYaw, stripRoot });
+    const t = (i / frames) * clipDur();
+    const { P, N } = skinAt(model, t, { lockYaw, stripRoot, anim: animSrc });
     const r = renderPose(W, H, model, P, N, { yaw, scale, originX: W / 2, baselineY });
     raw.push(r);
     if (r.bounds) {
@@ -127,13 +140,14 @@ document.getElementById('save').onclick = async () => {
   b.frameCvs.forEach((c, i) => cx.drawImage(c, i * b.bw, 0));
   const blob = await new Promise(r => atlas.toBlob(r, 'image/png'));
   const meta = {
-    clip: model.animName, frames: b.frames,
+    clip: (animSrc || model).animName, frames: b.frames,
     frameWidth: b.bw, frameHeight: b.bh,
-    anchor: b.anchor, duration: model.duration,
+    anchor: b.anchor, duration: clipDur(),
     note: 'anchor is the rig origin (feet) within each frame; draw so anchor lands on the fighter position',
   };
-  const r1 = await fetch('/lab/atlas/idle.png', { method: 'PUT', body: blob });
-  const r2 = await fetch('/lab/atlas/idle.json', { method: 'PUT', body: JSON.stringify(meta, null, 2) });
+  const name = CLIP || 'idle';
+  const r1 = await fetch(`/lab/atlas/${name}.png`, { method: 'PUT', body: blob });
+  const r2 = await fetch(`/lab/atlas/${name}.json`, { method: 'PUT', body: JSON.stringify(meta, null, 2) });
   log(`exported atlas ${atlas.width}x${atlas.height} (PUT ${r1.status}) + meta (PUT ${r2.status})`);
 };
 

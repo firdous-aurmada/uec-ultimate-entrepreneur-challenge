@@ -228,19 +228,55 @@ function dominant(m, v) {
 // ---------------------------------------------------------------- skinning
 // opts.lockYaw   — remove world-Y rotation from the Hips (stay side-on)
 // opts.stripRoot — zero Hips horizontal translation (the game owns position)
+// opts.anim      — retarget: take motion from ANOTHER model's animation.
+//
+// Retargeting matters because the cheap rigging call (8 credits) returns a
+// mesh decimated from ~31k triangles to ~469 — unusable — while the expensive
+// call (38) keeps full detail. Both produce the same 24 named joints in the
+// same hierarchy, so we can buy motion cheaply and graft it onto the good
+// mesh. Only ROTATIONS transfer: the two skeletons' bone lengths differ by a
+// few percent, and rotations are proportion-independent while translations
+// are not. Non-Hips joints keep their own bind translation; the Hips takes
+// the source's animated delta from its own bind pose.
 export function skinAt(m, time, opts = {}) {
-  const { lockYaw = true, stripRoot = true } = opts;
+  const { lockYaw = true, stripRoot = true, anim = null } = opts;
   const cache = new Map();
   const hipsNode = m.jointNodes[m.hipsJoint];
 
+  // name -> node index in the animation source
+  let srcByName = null, srcHipsBind = null;
+  if (anim) {
+    srcByName = new Map();
+    anim.jointNodes.forEach((ni, j) => srcByName.set(anim.jointNames[j], ni));
+    srcHipsBind = anim.json.nodes[anim.jointNodes[anim.hipsJoint]].translation || [0, 0, 0];
+  }
+
   const local = (ni) => {
     const nd = m.json.nodes[ni];
-    const ch = m.channels.get(ni);
-    let t = ch?.translation ? sampleChannel(m, ch.translation, time, 3) : (nd.translation || [0, 0, 0]);
-    let r = ch?.rotation ? sampleChannel(m, ch.rotation, time, 4) : (nd.rotation || [0, 0, 0, 1]);
-    const s = ch?.scale ? sampleChannel(m, ch.scale, time, 3) : (nd.scale || [1, 1, 1]);
+    const bind = nd.translation || [0, 0, 0];
+    let t, r, s;
+
+    if (anim) {
+      const srcNi = srcByName.get(nd.name);
+      const sch = srcNi === undefined ? null : anim.channels.get(srcNi);
+      r = sch?.rotation ? sampleChannel(anim, sch.rotation, time, 4) : (nd.rotation || [0, 0, 0, 1]);
+      s = nd.scale || [1, 1, 1];
+      if (ni === hipsNode && sch?.translation) {
+        const st = sampleChannel(anim, sch.translation, time, 3);
+        t = [bind[0] + (st[0] - srcHipsBind[0]),
+             bind[1] + (st[1] - srcHipsBind[1]),
+             bind[2] + (st[2] - srcHipsBind[2])];
+      } else {
+        t = bind;
+      }
+    } else {
+      const ch = m.channels.get(ni);
+      t = ch?.translation ? sampleChannel(m, ch.translation, time, 3) : bind;
+      r = ch?.rotation ? sampleChannel(m, ch.rotation, time, 4) : (nd.rotation || [0, 0, 0, 1]);
+      s = ch?.scale ? sampleChannel(m, ch.scale, time, 3) : (nd.scale || [1, 1, 1]);
+    }
+
     if (ni === hipsNode) {
-      const bind = m.json.nodes[ni].translation || [0, 0, 0];
       if (stripRoot) t = [bind[0], t[1], bind[2]];
       if (lockYaw) r = stripYaw(r);
     }
@@ -290,7 +326,7 @@ export function skinAt(m, time, opts = {}) {
 // position between poses. Returns {img, bounds} where bounds is the ink extent.
 export function renderPose(W, H, m, P, N, opts = {}) {
   const {
-    yaw = 78, scale = 190, originX = W / 2, baselineY = H - 8,
+    yaw = 30, scale = 190, originX = W / 2, baselineY = H - 8,
     palette = DEFAULT_PALETTE, ink = true, flip = false,
   } = opts;
   const img = new ImageData(W, H);
