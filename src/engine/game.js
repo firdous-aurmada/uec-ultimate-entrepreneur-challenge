@@ -423,7 +423,11 @@ export class Game {
 
   spawnSlide(owner, i) {
     this.audio.sfx('projectile');
-    const sp = owner.special;
+    // Read the params of the move that FIRED, not the character's signature
+    // special — otherwise a projectile command normal quietly borrows the
+    // signature's numbers. During a signature special the two are the same
+    // object, so shipped behaviour is unchanged.
+    const sp = owner.attack?.special || owner.special;
     this.projectiles.push({
       type: 'slide', owner, delay: 0,
       x: owner.x + owner.facing * 48, y: owner.y - 112 + (i - 1) * 10,
@@ -437,7 +441,7 @@ export class Game {
   spawnRain(owner) {
     this.audio.sfx('special');
     const opp = this.other(owner);
-    const sp = owner.special;
+    const sp = owner.attack?.special || owner.special;
     for (let i = 0; i < sp.count; i++) {
       this.projectiles.push({
         type: 'coin', owner, delay: i * 0.16,
