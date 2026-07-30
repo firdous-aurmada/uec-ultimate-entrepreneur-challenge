@@ -4,6 +4,7 @@
 import { STAGE, PHYS, ATTACKS, METER, UNICORN, BOMB, DASH, DROPS, COMBO, STEAL, STYLES, PLAYER_STATS } from '../config.js';
 import { SPECIALS } from '../data/fighters.js';
 import { clampBody } from './proportions.js';
+import { shapeAttack, ARCHETYPE_TICKS } from './moves.js';
 
 function blankPad() {
   return { left: false, right: false, up: false, block: false, punch: false, kick: false, special: false, super: false };
@@ -384,14 +385,7 @@ export class Fighter {
       stun: 0.34, shake: 9, words: ['ZAP!'],
       fired: 0, fireT: 0, rushT: 0, lastRushHit: -1, teleported: false,
     };
-    // per-type shaping
-    if (sp.type === 'projectile') { a.active = 0.05 + sp.count * sp.interval; a.words = ['SLIDE!', 'DECK!']; }
-    if (sp.type === 'aoe')       { a.words = ['BURN!', 'TORCHED!']; a.hitY = -80; }
-    if (sp.type === 'teleport')  { a.words = ['PIVOT!']; a.reach = 92; a.hitY = -95; }
-    if (sp.type === 'rush')      { a.active = sp.duration; a.words = ['VIRAL!', 'GROWTH!']; a.reach = 70; a.hitY = -90; }
-    if (sp.type === 'rain')      { a.words = ['FUNDED!']; }
-    if (sp.type === 'grab')      { a.words = ['ACQUIRED!']; a.hitY = -95; }
-    this.attack = a;
+    this.attack = shapeAttack(a, sp);
     this.setState('attack');
     game.onSpecialStart(this, sp);
   }
@@ -409,34 +403,9 @@ export class Fighter {
     if (!sp) return;
     const activeT = this.stateT - a.startup;
 
-    if (sp.type === 'projectile' && activeT >= 0) {
-      a.fireT -= dt;
-      if (a.fired < sp.count && a.fireT <= 0) {
-        game.spawnSlide(this, a.fired);
-        a.fired++;
-        a.fireT = sp.interval;
-      }
-    } else if (sp.type === 'rain' && activeT >= 0 && !a.hasFired) {
-      a.hasFired = true;
-      game.spawnRain(this);
-    } else if (sp.type === 'teleport' && activeT >= 0 && !a.teleported) {
-      a.teleported = true;
-      game.doTeleport(this);
-    } else if (sp.type === 'rush' && activeT >= 0 && activeT <= a.active) {
-      // free flight until contact; after lock-on, chase to stay glued for the flurry
-      const opp = game.other(this);
-      const gap = (opp.x - this.x) * this.facing;
-      if (!a.lockedOn) {
-        this.x += this.facing * sp.speed * dt;
-      } else if (gap > 62) {
-        this.x += this.facing * Math.min(sp.speed * dt, gap - 58);
-      }
-      if (Math.random() < 30 * dt) game.fx.spark(this.x - this.facing * 30, this.y - 80, this.def.c.accent, 2, 160);
-      game.pushAfterimage(this);
-    } else if (sp.type === 'aoe' && activeT >= 0 && activeT < 0.1 && !a.fxDone) {
-      a.fxDone = true;
-      game.onBurnBlast(this);
-    }
+    if (activeT < 0) return;
+    const tick = ARCHETYPE_TICKS[sp.type];
+    if (tick) tick(this, a, sp, dt, game, activeT);
   }
 
   activateUnicorn(game) {
