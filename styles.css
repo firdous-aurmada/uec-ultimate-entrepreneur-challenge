@@ -308,6 +308,24 @@ input, textarea { user-select: text; -webkit-user-select: text; }
 .pv-special { text-align: center; margin-top: 8px; background: var(--bg2); border-radius: 12px; padding: 8px 12px; width: 100%; }
 .pv-sp-name { color: var(--gold); font-weight: 900; letter-spacing: 1px; font-size: 13px; }
 .pv-sp-desc { color: var(--muted); font-size: 12px; margin-top: 2px; }
+
+/* Move card — the inputs that belong to this character and nobody else.
+   Everyone shares the same buttons, so this is where the difference shows
+   before the fight starts. */
+.pv-cmds { display: flex; flex-direction: column; gap: 3px; margin-top: 6px; width: 100%; }
+.pv-cmd {
+  display: flex; align-items: center; gap: 7px; justify-content: center;
+  background: rgba(41,217,255,.08); border: 1px solid rgba(41,217,255,.28);
+  border-radius: 5px; padding: 3px 7px;
+}
+.pv-cmd-key {
+  font: 900 11px/1 ui-monospace, monospace; color: var(--cyan);
+  letter-spacing: .5px; white-space: nowrap;
+}
+.pv-cmd-name {
+  font: 900 10px/1.2 system-ui; letter-spacing: .8px; color: #eef1ff;
+  overflow-wrap: anywhere;
+}
 #btn-fight { width: 100%; }
 
 /* ---------- Fight ---------- */

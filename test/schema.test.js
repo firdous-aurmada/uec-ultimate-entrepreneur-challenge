@@ -168,6 +168,32 @@ test('adding launch to a basic that does not launch is charged for', () => {
   assert.ok(launcher > flat + 2, `launcher ${launcher} should carry a real premium over ${flat}`);
 });
 
+// A trap laid at your feet is not weak for being close. Pricing its placing
+// animation's reach refunded it so hard that having a trap beat having no move.
+test('a non-swinging archetype is not refunded for its wind-up reach', () => {
+  const short = commandCost(cmd({
+    slot: 'fwd+kick', archetype: 'trap',
+    frameData: { ...ATTACKS.kick, reach: 40 },
+    params: { dmg: ATTACKS.kick.dmg },
+  }));
+  const long = commandCost(cmd({
+    slot: 'fwd+kick', archetype: 'trap',
+    frameData: { ...ATTACKS.kick, reach: 160 },
+    params: { dmg: ATTACKS.kick.dmg },
+  }));
+  assert.ok(Math.abs(short - long) < 0.001, 'reach must not move a trap\'s price');
+  assert.ok(short > 0, 'and a trap still costs something for being a trap');
+});
+
+test('a trap is priced on the hazard it places, not the animation that places it', () => {
+  const mk = (hazardDmg) => commandCost(cmd({
+    slot: 'fwd+kick', archetype: 'trap',
+    frameData: { ...ATTACKS.kick },
+    params: { dmg: hazardDmg },
+  }));
+  assert.ok(mk(ATTACKS.kick.dmg * 1.5) > mk(ATTACKS.kick.dmg));
+});
+
 test('a launching basic is not charged twice for launching', () => {
   // ATTACKS.launch already launches, so keeping that property is free
   const asIs = commandCost(cmd({ slot: 'fwd+launch', frameData: { ...ATTACKS.launch } }));

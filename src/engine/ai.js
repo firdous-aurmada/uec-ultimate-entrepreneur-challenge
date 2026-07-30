@@ -2,6 +2,23 @@
 // personality-flavored per fighter (aggression / jumpiness / preferred range).
 
 import { AI_LEVELS, METER, STAGE } from '../config.js';
+import { slotButton } from '../data/schema.js';
+
+// When a command normal is worth throwing, by its combo verb. An AI that never
+// used its character's own moves would make every ghost play like the same
+// fighter wearing a different suit — which is the whole problem we are solving.
+const CMD_FIT = {
+  'command-grab': (d) => d < 130,
+  launcher:       (d) => d < 150,
+  overhead:       (d) => d < 150,
+  low:            (d) => d < 140,
+  gapCloser:      (d) => d > 150 && d < 400,
+  ranged:         (d) => d > 240,
+  trap:           (d) => d > 170,      // lay it in the space they must cross
+  punish:         (d) => d < 160,
+  safe:           (d) => d < 160,
+  counter:        () => false,         // reactive — handled in threat response
+};
 
 export class AIController {
   constructor(levelKey, def) {
@@ -13,6 +30,26 @@ export class AIController {
     this.blockT = 0;
     this.pulse = {};           // one-frame button presses
     this.isHuman = false;
+    this.cmds = (def.commandNormals || []).filter(cn => cn && cn.slot);
+  }
+
+  // Pulses a command normal if one fits the range, and holds forward so it
+  // actually comes out — the button alone would produce the neutral basic.
+  // Returns true when it committed to one.
+  tryCommand(dist, toward) {
+    if (!this.cmds.length) return false;
+    const P = this.persona;
+    for (const cn of this.cmds) {
+      const tags = cn.tags && cn.tags.length ? cn.tags : ['safe'];
+      if (!tags.some(t => (CMD_FIT[t] || (() => false))(dist))) continue;
+      // Aggressive characters reach for their own move more often; a coin flip
+      // for everyone would make every roster fighter feel the same again.
+      if (Math.random() > 0.35 + P.aggr * 0.45) continue;
+      this.pulse[slotButton(cn.slot)] = true;
+      this.dir = toward;                 // forward MUST be held on the press frame
+      return true;
+    }
+    return false;
   }
 
   update(f, game) {
@@ -132,6 +169,8 @@ export class AIController {
         this.dir = 0;
         return;
       }
+      // Its own move first, before falling back to the shared basics.
+      if (this.tryCommand(dist, toward)) return;
       const r = Math.random();
       if (r < L.aggr * 0.28) this.pulse.slap = true;        // quick slap to start a string
       else if (r < L.aggr * 0.66) this.pulse.punch = true;
@@ -143,6 +182,8 @@ export class AIController {
     }
 
     // --- neutral: approach, space, or jump in ---
+    // Ranged and area-denial normals belong out here, not in the scramble.
+    if (this.tryCommand(dist, toward)) return;
     const wantRange = P.prefRange === 'far' ? 330 : P.prefRange === 'mid' ? 210 : 110;
     if (dist > wantRange + 60) {
       this.dir = toward;

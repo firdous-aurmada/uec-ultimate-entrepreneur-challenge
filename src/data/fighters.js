@@ -104,6 +104,25 @@ export const FIGHTERS = [
     special: 'growthhack', style: 'rushdown',
     stats: { speed: 1.1, power: 0.95, hp: 95 },
     ai: { aggr: 0.75, jump: 0.5, prefRange: 'mid' },
+    // Pump it, then pull the floor out. PUMP launches so she can juggle;
+    // RUG PULL denies the ground she just knocked you onto. Both pay for
+    // themselves with slower startup than her neutral buttons.
+    commandNormals: [
+      {
+        slot: 'fwd+punch', archetype: 'strike', displayName: 'PUMP',
+        tags: ['launcher'],
+        frameData: {
+          startup: 0.0625, active: 0.06, recovery: 0.1265,
+          dmg: 8, reach: 78, hitY: -120, kb: 90, kbUp: -400, stun: 0.3,
+        },
+      },
+      {
+        slot: 'fwd+kick', archetype: 'trap', displayName: 'RUG PULL',
+        tags: ['trap'],
+        frameData: { startup: 0.115, active: 0.09, recovery: 0.187, dmg: 12, reach: 60 },
+        params: { lifetime: 5.5, radius: 78, armTime: 0.35, dmg: 12, maxActive: 1 },
+      },
+    ],
     c: { skin: '#8a5a3b', suit: '#e332a9', suit2: '#a91277', accent: '#57ff8a', hair: '#1c1424', pants: '#2c1a3d', shoe: '#57ff8a' },
     hairStyle: 'puffs', outfit: 'bomber', accessory: 'earrings',
   },
@@ -124,6 +143,19 @@ export const FIGHTERS = [
     special: 'takeover', style: 'grappler',
     stats: { speed: 0.85, power: 1.25, hp: 110 },
     ai: { aggr: 0.8, jump: 0.15, prefRange: 'close' },
+    // A raider takes what he can reach. ASSET SEIZURE is unblockable and hits
+    // hard, and buys that with a short grasp and a slow, punishable wind-up —
+    // walk into him and you lose the asset; keep him out and he has nothing.
+    commandNormals: [
+      {
+        slot: 'fwd+kick', archetype: 'grab', displayName: 'ASSET SEIZURE',
+        tags: ['command-grab'],
+        frameData: {
+          startup: 0.13, active: 0.08, recovery: 0.204,
+          dmg: 16, reach: 70, hitY: -95, kb: 300, kbUp: -180, stun: 0.34,
+        },
+      },
+    ],
     c: { skin: '#d9a06b', suit: '#2c2f3a', suit2: '#191b23', accent: '#ff3d6e', hair: '#101116', pants: '#22242e', shoe: '#101116' },
     hairStyle: 'slick', outfit: 'pinstripe', accessory: 'shades',
   },

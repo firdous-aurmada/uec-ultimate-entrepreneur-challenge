@@ -25,6 +25,15 @@ export function slotButton(slot) {
   return typeof slot === 'string' ? slot.split('+')[1] : undefined;
 }
 
+// How an input reads on a move card. Shared so the game and the authoring tool
+// can never disagree about what a player is supposed to press.
+export const SLOT_GLYPH = {
+  'fwd+slap':   '→ 🖐',
+  'fwd+punch':  '→ 👊',
+  'fwd+kick':   '→ 👟',
+  'fwd+launch': '→ 🚀',
+};
+
 // Combo verbs. These drive AI preference and the move card's wording; they
 // carry no frame data of their own, so a wrong tag is a mislabel, not a bug.
 export const MOVE_TAGS = [
@@ -33,6 +42,10 @@ export const MOVE_TAGS = [
 ];
 
 const CMD_FRAME_KEYS = ['startup', 'active', 'recovery', 'dmg', 'reach'];
+
+// Archetypes whose animation is not the threat: a counter absorbs, a trap
+// places. Their reach describes a wind-up, not a swing.
+const NO_SWING = new Set(['counter', 'trap']);
 
 // What one command normal costs, priced against the neutral basic it replaces.
 // Zero means "this is that basic, on a direction" — which is exactly free.
@@ -48,11 +61,24 @@ export function commandCost(cmd) {
   // base move could not already do it.
   if ((fd.kbUp || 0) < 0 && !(base.kbUp < 0)) cost += C.LAUNCHER;
 
-  const deltas =
-      W.dmg      * (r('dmg')   - 1)
-    + W.reach    * (r('reach') - 1)
-    + W.startup  * (1 - r('startup'))
+  // Committing to a move you cannot cancel is the cost the frame data captures.
+  const commitment =
+      W.startup  * (1 - r('startup'))
     + W.recovery * (1 - r('recovery'));
+
+  if (NO_SWING.has(cmd.archetype)) {
+    // Charge the hazard's damage, not the placing animation's, and charge no
+    // reach at all — a trap laid at your feet is not weak for being close, and
+    // refunding it for that made a trap cheaper than having no move.
+    const p = cmd.params || {};
+    const dmgR = (typeof p.dmg === 'number' ? p.dmg : base.dmg) / base.dmg;
+    return cost + C.SCALE * (W.dmg * (dmgR - 1) + commitment) * 100;
+  }
+
+  const deltas =
+      W.dmg   * (r('dmg')   - 1)
+    + W.reach * (r('reach') - 1)
+    + commitment;
   return cost + C.SCALE * deltas * 100;
 }
 
