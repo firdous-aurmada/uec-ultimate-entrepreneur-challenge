@@ -4,7 +4,8 @@
 // Roster stats vary on purpose, but ONLY ever as AI opponents. Human players
 // always get PLAYER_STATS, so nobody gains an edge from a cosmetic pick.
 
-import { PLAYER_STATS } from '../config.js';
+import { PLAYER_STATS, STYLES } from '../config.js';
+import { SCHEMA_VERSION, DEFAULT_BODY } from './schema.js';
 
 export const SPECIALS = {
   pitchdeck: {
@@ -348,4 +349,44 @@ export function shade(hex, amt) {
   const g = Math.max(0, Math.min(255, ((n >> 8) & 0xff) + amt));
   const b = Math.max(0, Math.min(255, (n & 0xff) + amt));
   return '#' + ((r << 16) | (g << 8) | b).toString(16).padStart(6, '0');
+}
+
+// Adapts a legacy roster entry to a schema v1 character. Roster entries stay
+// in their current shape so the rest of the game keeps working unchanged;
+// this is the seam the validator and the authoring tool read through.
+export function toCharacter(def) {
+  const st = STYLES[def.style] || STYLES.balanced;
+  const sp = SPECIALS[def.special] || SPECIALS.pitchdeck;
+  return {
+    schema: SCHEMA_VERSION,
+    id: def.id,
+    identity: {
+      name: def.name,
+      title: def.title || 'CHALLENGER',
+      company: def.company || 'STEALTH STARTUP',
+      tagline: def.tagline || 'Player-founded. Player-funded.',
+      rap: def.rap || 'No convictions — yet',
+    },
+    body: { ...DEFAULT_BODY, ...(def.body || {}) },
+    look: {
+      ...def.c,
+      hairStyle: def.hairStyle, outfit: def.outfit,
+      headwear: def.headwear, eyewear: def.eyewear, facialHair: def.facialHair,
+      stance: st.stance,
+    },
+    fighting: {
+      preset: def.style || 'balanced',
+      startup: st.startup, dmg: st.dmg, reach: st.reach,
+      recovery: st.recovery, speed: st.speed, hp: st.hp,
+      moves: {
+        special: { archetype: sp.type, ...sp },
+        signature: null,
+      },
+    },
+    ai: {
+      aggr: def.ai?.aggr ?? 0.6,
+      jump: def.ai?.jump ?? 0.35,
+      prefRange: def.ai?.prefRange ?? 'mid',
+    },
+  };
 }
