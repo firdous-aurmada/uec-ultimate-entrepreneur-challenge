@@ -2,18 +2,73 @@
   "_comment": "3d_rigging job ids per fighter state. The mesh is always base-boxing.glb; these supply motion only, retargeted onto it. 8 credits each.",
   "_mesh": "https://d3u0tzju9qaucj.cloudfront.net/7d051b5a-7bfe-49fe-a484-24e7b3a9458a/5015ab21-d52a-44ec-9803-bd19fa86fb41.glb",
   "jobs": {
-    "punch":    { "action": 192, "job": "2a32d8a2-d2a0-4c10-8534-9612da5600a9", "done": true },
-    "idle":     { "action": 609, "job": "34be6b47-c7d2-419e-b1e1-87c8fb43a364", "loop": true },
-    "slap":     { "action": 191, "job": "12989dec-6be3-48b7-8fa6-02e8cfa4ae02" },
-    "kick":     { "action": 209, "job": "33f5218a-477b-4606-b01f-8e181b021cd5" },
-    "launch":   { "action": 194, "job": "963c784b-2890-4208-af2f-0eecc8b8166a" },
-    "block":    { "action": 138, "job": "2e16c4a1-9df4-4e0a-aed9-6b69568fcba4" },
-    "hitstun":  { "action": 174, "job": "f79463a5-c014-4dcd-bb5b-7edd62012f9c" },
-    "ko":       { "action": 187, "job": "3e060177-30a8-4caf-bf0d-c03c1365c2ab" },
-    "walk":     { "action": 613, "job": "7c620806-114e-456f-a952-3664f6dd3021", "loop": true },
-    "crouch":   { "action": 616, "job": "8d63fda7-2f29-4536-a6f7-c9613a16d090", "loop": true },
-    "jump":     { "action": 466, "job": "52d3f16c-fa72-4808-97f8-745c470fabb2" },
-    "launched": { "action": 7,   "job": "aff58ba3-d890-4027-97c0-6ca3c09e0d3a" },
-    "hitlight": { "action": 173, "job": "6c17d005-e823-46a2-9212-26c3ddd9982e" }
+    "punch": {
+      "action": 192,
+      "job": "2a32d8a2-d2a0-4c10-8534-9612da5600a9",
+      "done": true
+    },
+    "idle": {
+      "action": 609,
+      "job": "34be6b47-c7d2-419e-b1e1-87c8fb43a364",
+      "loop": true,
+      "status": "FAILED \u2014 action 609 rejected. Falls back to the base mesh's own Boxing_Practice, which is free. 613/616 are also _inplace ids and succeeded, so this was not a variant problem."
+    },
+    "slap": {
+      "action": 191,
+      "job": "12989dec-6be3-48b7-8fa6-02e8cfa4ae02",
+      "done": true
+    },
+    "kick": {
+      "action": 209,
+      "job": "33f5218a-477b-4606-b01f-8e181b021cd5",
+      "done": true
+    },
+    "launch": {
+      "action": 194,
+      "job": "963c784b-2890-4208-af2f-0eecc8b8166a",
+      "done": true
+    },
+    "block": {
+      "action": 138,
+      "job": "2e16c4a1-9df4-4e0a-aed9-6b69568fcba4",
+      "done": true
+    },
+    "hitstun": {
+      "action": 174,
+      "job": "f79463a5-c014-4dcd-bb5b-7edd62012f9c",
+      "done": true
+    },
+    "ko": {
+      "action": 187,
+      "job": "3e060177-30a8-4caf-bf0d-c03c1365c2ab",
+      "done": true
+    },
+    "walk": {
+      "action": 613,
+      "job": "7c620806-114e-456f-a952-3664f6dd3021",
+      "loop": true,
+      "done": true
+    },
+    "crouch": {
+      "action": 616,
+      "job": "8d63fda7-2f29-4536-a6f7-c9613a16d090",
+      "loop": true,
+      "done": true
+    },
+    "jump": {
+      "action": 466,
+      "job": "52d3f16c-fa72-4808-97f8-745c470fabb2",
+      "done": true
+    },
+    "launched": {
+      "action": 7,
+      "job": "aff58ba3-d890-4027-97c0-6ca3c09e0d3a",
+      "done": true
+    },
+    "hitlight": {
+      "action": 173,
+      "job": "6c17d005-e823-46a2-9212-26c3ddd9982e",
+      "done": true
+    }
   }
 }

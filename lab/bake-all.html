@@ -1,0 +1,134 @@
+<meta charset="utf-8">
+<title>Bake all states</title>
+<style>
+  body { background:#0b0e1a; color:#eef1ff; font:13px ui-monospace,monospace; padding:16px; margin:0; }
+  h1 { font:700 17px system-ui; margin:0 0 4px; }
+  p.sub { color:#8b93ad; font:12px/1.6 system-ui; margin:0 0 12px; max-width:900px; }
+  button { font:inherit; padding:7px 16px; margin-right:10px; background:#232a3d; color:#eef1ff;
+           border:1px solid #3a4257; border-radius:6px; cursor:pointer; }
+  #log { color:#8b93ad; white-space:pre; font-size:12px; margin-top:10px; line-height:1.5; }
+  .row { margin:12px 0; }
+  .row h2 { font:700 12px system-ui; letter-spacing:.08em; text-transform:uppercase; color:#ffd23f; margin:0 0 4px; }
+  .row .f { display:flex; gap:3px; flex-wrap:wrap; align-items:flex-end; }
+  .row canvas { background:linear-gradient(#1a1f30,#11141f); border-radius:3px; }
+</style>
+<h1>Bake all fighter states</h1>
+<p class="sub">Every state is the same base mesh with a different clip's motion retargeted onto it.
+Frames are spaced by equal motion, the Hips yaw is locked so the fighter stays side-on, and root
+motion is stripped so the game owns position. Exports one PNG atlas per state plus a manifest.</p>
+<button id="go">BAKE ALL</button>
+<button id="save">EXPORT all atlases + manifest</button>
+<div id="out"></div>
+<div id="log"></div>
+
+<script type="module">
+import { loadModel, skinAt, renderPose, motionTimes } from './glb.js';
+
+const log = (s) => { document.getElementById('log').textContent += s + '\n'; };
+const out = document.getElementById('out');
+
+// frames tuned per state: more where the motion carries meaning
+const STATES = [
+  { id: 'idle',     clip: null,       frames: 8, loop: true  },
+  { id: 'walk',     clip: 'walk',     frames: 8, loop: true  },
+  { id: 'crouch',   clip: 'crouch',   frames: 4, loop: true  },
+  { id: 'block',    clip: 'block',    frames: 3 },
+  { id: 'slap',     clip: 'slap',     frames: 6 },
+  { id: 'punch',    clip: 'punch',    frames: 6 },
+  { id: 'kick',     clip: 'kick',     frames: 7 },
+  { id: 'launch',   clip: 'launch',   frames: 7 },
+  { id: 'jump',     clip: 'jump',     frames: 6 },
+  { id: 'hitlight', clip: 'hitlight', frames: 3 },
+  { id: 'hitstun',  clip: 'hitstun',  frames: 4 },
+  { id: 'launched', clip: 'launched', frames: 5 },
+  { id: 'ko',       clip: 'ko',       frames: 8 },
+];
+
+const YAW = 30, FH = 300;
+const model = loadModel(await (await fetch('./assets/base-boxing.glb')).arrayBuffer());
+log(`mesh: ${model.IDX.length / 3} tris · ${model.jointNames.length} joints`);
+
+let baked = null;
+
+// Every state must share ONE projection, or the fighter changes size between
+// idle and kick. So: render all states at a fixed scale into a fixed canvas,
+// collect the union ink box across ALL of them, then crop everything to it.
+async function bakeAll() {
+  out.innerHTML = '';
+  const PAD = 60;
+  const W = Math.round(FH * 1.5), H = FH + PAD;
+  const scale = FH * 0.55, baselineY = H - PAD * 0.5;
+  const perState = [];
+  let uni = null;
+
+  for (const st of STATES) {
+    const anim = st.clip ? loadModel(await (await fetch(`./assets/${st.clip}.glb`)).arrayBuffer()) : null;
+    const times = motionTimes(model, { anim, frames: st.frames, loop: !!st.loop });
+    const raw = times.map(t => {
+      const { P, N } = skinAt(model, t, { lockYaw: true, stripRoot: true, anim });
+      return renderPose(W, H, model, P, N, { yaw: YAW, scale, originX: W / 2, baselineY });
+    });
+    for (const r of raw) {
+      if (!r.bounds) continue;
+      uni = uni ? {
+        minX: Math.min(uni.minX, r.bounds.minX), minY: Math.min(uni.minY, r.bounds.minY),
+        maxX: Math.max(uni.maxX, r.bounds.maxX), maxY: Math.max(uni.maxY, r.bounds.maxY),
+      } : { ...r.bounds };
+    }
+    perState.push({ st, raw, times, clipName: (anim || model).animName });
+    log(`  ${st.id.padEnd(9)} ${st.frames} frames · ${(anim || model).animName.replace('Armature|', '').replace('|baselayer', '')}`);
+  }
+
+  const M = 2;
+  const bx = Math.max(0, uni.minX - M), by = Math.max(0, uni.minY - M);
+  const bw = Math.min(W, uni.maxX + M) - bx + 1, bh = Math.min(H, uni.maxY + M) - by + 1;
+  const anchor = { x: Math.round(W / 2 - bx), y: Math.round(baselineY - by) };
+  log(`shared frame ${bw}x${bh} · anchor ${anchor.x},${anchor.y}`);
+
+  baked = { bw, bh, anchor, states: [] };
+  for (const { st, raw, times, clipName } of perState) {
+    const cvs = raw.map(r => {
+      const src = new OffscreenCanvas(W, H);
+      src.getContext('2d').putImageData(r.img, 0, 0);
+      const d = document.createElement('canvas');
+      d.width = bw; d.height = bh;
+      d.getContext('2d').drawImage(src, bx, by, bw, bh, 0, 0, bw, bh);
+      return d;
+    });
+    baked.states.push({ id: st.id, loop: !!st.loop, frames: st.frames, clip: clipName, times, cvs });
+
+    const row = document.createElement('div'); row.className = 'row';
+    row.innerHTML = `<h2>${st.id} — ${st.frames}f ${st.loop ? '(loop)' : ''}</h2>`;
+    const f = document.createElement('div'); f.className = 'f';
+    cvs.forEach(c => { c.style.width = Math.round(bw * 0.55) + 'px'; f.appendChild(c); });
+    row.appendChild(f); out.appendChild(row);
+  }
+  log('done — press EXPORT to write atlases');
+}
+
+document.getElementById('go').onclick = async () => {
+  document.getElementById('log').textContent = '';
+  const t0 = performance.now();
+  await bakeAll();
+  log(`total ${Math.round(performance.now() - t0)}ms`);
+};
+
+document.getElementById('save').onclick = async () => {
+  if (!baked) return log('bake first');
+  const manifest = { frameWidth: baked.bw, frameHeight: baked.bh, anchor: baked.anchor, states: {} };
+  for (const s of baked.states) {
+    const a = document.createElement('canvas');
+    a.width = baked.bw * s.frames; a.height = baked.bh;
+    const cx = a.getContext('2d');
+    s.cvs.forEach((c, i) => cx.drawImage(c, i * baked.bw, 0));
+    const blob = await new Promise(r => a.toBlob(r, 'image/png'));
+    const res = await fetch(`/lab/atlas/${s.id}.png`, { method: 'PUT', body: blob });
+    manifest.states[s.id] = { frames: s.frames, loop: s.loop, clip: s.clip, file: `${s.id}.png` };
+    log(`  ${s.id}.png ${a.width}x${a.height} → ${res.status}`);
+  }
+  const r = await fetch('/lab/atlas/manifest.json', { method: 'PUT', body: JSON.stringify(manifest, null, 2) });
+  log(`manifest → ${r.status}`);
+};
+
+log('ready — press BAKE ALL');
+</script>
