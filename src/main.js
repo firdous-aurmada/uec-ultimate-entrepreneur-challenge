@@ -2,7 +2,7 @@
 
 import { STAGE, DEBUG, VERSION, rankFor } from './config.js';
 import { Save, parseChallengeFromURL, buildChallengeLink } from './state.js';
-import { FIGHTERS, DEFAULT_BASE_ID, pickLook, getFighter, buildCustomFighter, buildGhostFighter } from './data/fighters.js';
+import { FIGHTERS, DEFAULT_BASE_ID, pickLook, getFighter, buildCustomFighter, buildGhostFighter, toCharacter } from './data/fighters.js';
 import { randomArena, getArena } from './data/arenas.js';
 import { audio, installAudioUnlock } from './engine/audio.js';
 import { input, HumanController, isTouchDevice } from './engine/input.js';
@@ -21,8 +21,9 @@ import { AUTH, initAuth, onAuthChange, signInGoogle, signInMicrosoft, signInEmai
 import { syncProfileUp, syncProfileDown, reportOnlineMatch, fetchProfile } from './net/cloud.js';
 import {
   NetSession, LobbySession, pairFromRoster, MaskController, makeRoomId, padToMask,
-  STEP as NET_STEP,
+  STEP as NET_STEP, CHARACTER_WIRE_VERSION, validatePeerCharacter,
 } from './net/online.js';
+import { SCHEMA_VERSION } from './data/schema.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -335,7 +336,12 @@ const netEvents = {
       renderResults();
     }
   },
-  onPeerPick() {
+  onPeerPick(spec) {
+    // Refuse at the handshake rather than at the first hit. A character we do
+    // not agree to fight would otherwise desync the match several seconds in,
+    // which reads to both players as a network fault.
+    const why = specRejection(spec);
+    if (why) { abortOnline(`⚠ Match refused — ${why}.`); return; }
     toast('⚔ Your rival locked in!');
     maybeHostStart();
   },
@@ -489,27 +495,51 @@ async function joinLiveRoom(roomId) {
 }
 
 function defToSpec(def) {
+  // Every pick carries the sender's whole character alongside the look, so the
+  // receiver can check the numbers rather than resolve an id and hope. `wv`/`sv`
+  // version the exchange; the receiver refuses on any mismatch.
+  const base = { wv: CHARACTER_WIRE_VERSION, sv: SCHEMA_VERSION, ch: toCharacter(def) };
   if (def.id === 'custom' && Save.profile) {
     const p = Save.profile;
     return {
+      ...base,
       kind: 'custom', name: p.name, company: p.company || 'Stealth Startup',
       baseId: p.baseId || DEFAULT_BASE_ID, c1: p.c1, c2: p.c2, special: p.special, photo: p.photo || null,
       // skin/hair/look too, or your rival fights a differently-coloured you
       skin: p.skin || null, hair: p.hair || null, ...pickLook(p),
     };
   }
-  return { kind: 'roster', id: def.id };
+  return { ...base, kind: 'roster', id: def.id };
 }
 
+// Returns a fighter def, or null if the peer's character is not one we agree to
+// fight. Callers must treat null as "do not start".
 function specToDef(spec) {
+  const check = validatePeerCharacter(spec);
+  if (!check.ok) {
+    console.warn('[net] rejected peer character:', check.reason);
+    return null;
+  }
   if (spec.kind === 'custom') {
-    return buildCustomFighter({
+    const def = buildCustomFighter({
       name: spec.name, company: spec.company, baseId: spec.baseId,
       c1: spec.c1, c2: spec.c2, special: spec.special, photo: spec.photo || null,
       skin: spec.skin || null, hair: spec.hair || null, ...pickLook(spec),
     });
+    // The validated character is authoritative for anything that decides a
+    // fight; the look fields above only decide what it looks like.
+    def.commandNormals = spec.ch.commandNormals || [];
+    def.body = spec.ch.body;
+    return def;
   }
   return getFighter(spec.id);
+}
+
+// Why a peer's pick was refused, or null if it is fine. Used to show the
+// player a reason instead of a match that silently never starts.
+function specRejection(spec) {
+  const check = validatePeerCharacter(spec);
+  return check.ok ? null : check.reason;
 }
 
 function onlinePick(def, arenaId) {
@@ -545,6 +575,12 @@ function startOnlineMatch(cfg) {
   netAccum = 0;
   const hostDef = specToDef(cfg.host);
   const guestDef = specToDef(cfg.guest);
+  // Both sides run this, so a character either peer rejects stops the match on
+  // both clients rather than starting a fight only one of them believes in.
+  if (!hostDef || !guestDef) {
+    abortOnline('⚠ Match refused — a fighter failed validation.');
+    return;
+  }
   netLocalIdx = net.role === 'host' ? 0 : 1;
   netCtl = [new MaskController(), new MaskController()];
   ensureNetWorker();

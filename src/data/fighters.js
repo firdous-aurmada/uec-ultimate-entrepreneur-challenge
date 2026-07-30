@@ -331,6 +331,12 @@ export function buildGhostFighter(ch) {
     special: ch.sp && SPECIALS[ch.sp] ? ch.sp : base.special,
     photo: ch.photo || null,
     stats: { ...PLAYER_STATS },   // a ghost is another human — same footing
+    // Their fighting identity, already validated by the link decoder — a ghost
+    // that threw a different moveset from the player who made it would not be
+    // the fight the link promised. v1 links carry neither, so they fall back.
+    style: ch.style || base.style,
+    body: ch.body || base.body,
+    commandNormals: ch.commandNormals || [],
 
     c: {
       ...base.c,

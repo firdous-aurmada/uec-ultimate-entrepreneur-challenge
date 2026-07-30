@@ -1,9 +1,12 @@
 // Persistent app state: profile, career stats, settings, tutorial flags.
 // localStorage-backed with an in-memory fallback (private browsing, etc).
 
-import { SAVE_KEY, POINTS, AI_LEVELS, rankFor } from './config.js';
+import { SAVE_KEY, POINTS, AI_LEVELS, STYLES, rankFor } from './config.js';
 import { SEED_PLAYERS } from './data/seed.js';
-import { DEFAULT_BASE_ID } from './data/fighters.js';
+import { DEFAULT_BASE_ID, SPECIALS } from './data/fighters.js';
+import {
+  validateCharacter, SCHEMA_VERSION, COMMAND_SLOTS, ARCHETYPES,
+} from './data/schema.js';
 import { currentUser } from './auth.js';
 
 const DEFAULTS = () => ({
@@ -127,6 +130,23 @@ export const Save = {
 };
 
 // ---------------- Challenge links ----------------
+//
+// A challenge link carries a whole fighter in a URL. Everything here is
+// attacker-controlled by construction — anyone can hand-edit the payload — so
+// the decoder validates rather than trusts, and the schema validator is the
+// line that stops inflated frame data from reaching a match.
+//
+// Animation is deliberately NOT carried. Keyframes are render-only, they would
+// dwarf the link, and nothing about them can change a fight.
+
+export const CODEC_VERSION = 2;
+
+// Compact ids keep a link short enough to paste into a DM. These arrays are
+// the wire contract: append only, never reorder.
+const FRAME_KEYS = ['startup', 'active', 'recovery', 'dmg', 'reach', 'kbUp'];
+const BODY_KEYS = ['height', 'build', 'reach', 'stride', 'shoulders', 'head'];
+
+const r4 = (v) => (typeof v === 'number' && Number.isFinite(v) ? +v.toFixed(4) : null);
 
 function b64urlEncode(str) {
   return btoa(unescape(encodeURIComponent(str))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
@@ -137,17 +157,113 @@ function b64urlDecode(str) {
   return decodeURIComponent(escape(atob(b + pad)));
 }
 
-export function buildChallengeLink() {
-  const p = Save.profile;
-  const payload = {
-    v: 1,
-    n: p?.name || 'A mystery founder',
-    co: p?.company || 'Stealth Startup',
-    f: p?.baseId || DEFAULT_BASE_ID,
-    sp: p?.special || null,
-    pts: Save.stats.points || 0,
-    u: currentUser()?.id || undefined,   // lets the recipient fetch the real photo/colors
+function packCommand(cn) {
+  return {
+    s: COMMAND_SLOTS.indexOf(cn.slot),
+    a: ARCHETYPES.indexOf(cn.archetype),
+    d: String(cn.displayName || '').slice(0, 24),
+    f: FRAME_KEYS.map(k => r4(cn.frameData?.[k])),
   };
+}
+
+function unpackCommand(p) {
+  if (!p || typeof p !== 'object' || !Array.isArray(p.f)) return null;
+  const frameData = {};
+  FRAME_KEYS.forEach((k, i) => { if (typeof p.f[i] === 'number') frameData[k] = p.f[i]; });
+  return {
+    slot: COMMAND_SLOTS[p.s],           // undefined for a bogus index — validator catches it
+    archetype: ARCHETYPES[p.a],
+    displayName: String(p.d || '').slice(0, 24),
+    frameData,
+  };
+}
+
+// Builds the object that goes in the URL. Kept pure and separate from
+// `location` so the round trip is testable off a browser.
+export function challengePayload({ profile, points = 0, userId = null }) {
+  const p = profile || {};
+  const body = p.body || {};
+  return {
+    v: CODEC_VERSION,
+    n: p.name || 'A mystery founder',
+    co: p.company || 'Stealth Startup',
+    f: p.baseId || DEFAULT_BASE_ID,
+    sp: p.special || null,
+    st: p.style || 'balanced',
+    bd: BODY_KEYS.map(k => r4(body[k]) ?? 1),
+    cn: (p.commandNormals || []).map(packCommand),
+    pts: points,
+    u: userId || undefined,             // lets the recipient fetch the real photo/colors
+  };
+}
+
+// Decodes and VALIDATES. Returns null for anything malformed, unknown-version,
+// or out of budget — a rejected link simply is not a challenge.
+export function decodeChallenge(raw) {
+  let data;
+  try {
+    data = JSON.parse(b64urlDecode(raw));
+  } catch (e) {
+    return null;
+  }
+  if (!data || (data.v !== 1 && data.v !== CODEC_VERSION)) return null;
+
+  const out = {
+    n: String(data.n || 'Rival').slice(0, 24),
+    co: String(data.co || 'Rival Ventures').slice(0, 28),
+    f: String(data.f || 'b-neo'),
+    sp: data.sp ? String(data.sp) : null,
+    pts: Math.max(0, Math.min(999999, Number(data.pts) || 0)),
+    u: typeof data.u === 'string' && /^[0-9a-fA-F-]{10,40}$/.test(data.u) ? data.u : null,
+    style: 'balanced',
+    body: null,
+    commandNormals: [],
+  };
+
+  // v1 links predate everything below and stay playable — they simply describe
+  // a fighter with no proportions and no vocabulary of its own.
+  if (data.v === 1) return out;
+
+  const style = STYLES[data.st] ? data.st : 'balanced';
+  const body = {};
+  BODY_KEYS.forEach((k, i) => { body[k] = Number(data.bd?.[i]); });
+  const commandNormals = Array.isArray(data.cn)
+    ? data.cn.map(unpackCommand).filter(Boolean)
+    : [];
+
+  // The anti-cheat line. Everything above is cosmetic and clamped by slicing;
+  // these are the numbers that decide a fight, so they go through the same
+  // validator the authoring tool exports through.
+  const st = STYLES[style];
+  const check = validateCharacter({
+    schema: SCHEMA_VERSION,
+    id: 'challenger',
+    identity: { name: out.n, title: 'CHALLENGER', company: out.co, tagline: '-', rap: '-' },
+    body,
+    look: {},
+    fighting: {
+      preset: style,
+      startup: st.startup, dmg: st.dmg, reach: st.reach,
+      recovery: st.recovery, speed: st.speed, hp: st.hp,
+      moves: { special: { archetype: (SPECIALS[out.sp] || SPECIALS.pitchdeck).type }, signature: null },
+    },
+    commandNormals,
+    ai: { aggr: 0.6, jump: 0.35, prefRange: 'mid' },
+  });
+  if (!check.ok) return null;
+
+  out.style = style;
+  out.body = body;
+  out.commandNormals = commandNormals;
+  return out;
+}
+
+export function buildChallengeLink() {
+  const payload = challengePayload({
+    profile: Save.profile,
+    points: Save.stats.points || 0,
+    userId: currentUser()?.id || null,
+  });
   const url = new URL(location.href);
   url.search = '';
   url.hash = '';
@@ -158,18 +274,14 @@ export function buildChallengeLink() {
 export function parseChallengeFromURL() {
   try {
     const c = new URLSearchParams(location.search).get('c');
-    if (!c) return null;
-    const data = JSON.parse(b64urlDecode(c));
-    if (!data || data.v !== 1) return null;
-    return {
-      n: String(data.n || 'Rival').slice(0, 24),
-      co: String(data.co || 'Rival Ventures').slice(0, 28),
-      f: String(data.f || 'b-neo'),
-      sp: data.sp ? String(data.sp) : null,
-      pts: Math.max(0, Math.min(999999, Number(data.pts) || 0)),
-      u: typeof data.u === 'string' && /^[0-9a-fA-F-]{10,40}$/.test(data.u) ? data.u : null,
-    };
+    return c ? decodeChallenge(c) : null;
   } catch (e) {
     return null;
   }
+}
+
+// Exposed so the netcode handshake validates an incoming character through
+// exactly the same path a challenge link does — one gate, not two.
+export function encodeChallengePayload(payload) {
+  return b64urlEncode(JSON.stringify(payload));
 }
