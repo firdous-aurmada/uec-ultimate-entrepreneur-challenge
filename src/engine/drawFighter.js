@@ -6,6 +6,8 @@ import { shade } from '../data/fighters.js';
 import { STYLES } from '../config.js';
 import { clampBody, applyProportions, bufferMetrics } from './proportions.js';
 import { loadSpriteSet, drawSprite } from './sprites.js';
+import { samplePose, attackPhaseT, trackFor, REST } from './anim.js';
+import { BASE_TRACKS, ATTACK_TRACK, NOMINAL_REACH } from '../data/tracks.js';
 
 const OUTLINE = '#0a0c16';
 const FILTER_OK = typeof CanvasRenderingContext2D !== 'undefined' && 'filter' in CanvasRenderingContext2D.prototype;
@@ -78,6 +80,33 @@ const ease = {
 
 // ---------------------------------------------------------------- pose
 
+// Samples the authored track for an attack, or null when there is none to use.
+//
+// Tracks are authored against a NOMINAL reach, so the strike is re-scaled to
+// the move's real reach — a zoner visibly out-ranges a grappler off the same
+// keyframes, and a command normal with its own reach extends to match. Only
+// the forward limbs scale; the back arm and planted foot are posture, not range.
+function trackedAttackPose(f, atk) {
+  const name = ATTACK_TRACK[atk.kind];
+  if (!name) return null;
+  const track = trackFor(f.def, name, BASE_TRACKS);
+  if (!track) return null;
+  const t = attackPhaseT(f.stateT, atk.startup, atk.active, atk.recovery);
+  const pose = samplePose(track, t);
+  if (!pose) return null;
+
+  const nominal = NOMINAL_REACH[name];
+  const k = nominal && atk.reach ? atk.reach / nominal : 1;
+  if (Math.abs(k - 1) > 0.01) {
+    for (const limb of ['armF', 'legF']) {
+      pose[limb].x = REST[limb].x + (pose[limb].x - REST[limb].x) * k;
+    }
+  }
+  // An airborne attack tucks the planted leg — there is no floor to push off.
+  if (f.airborne) { pose.legF.y -= 18; pose.legB.y -= 12; }
+  return pose;
+}
+
 // Returns limb targets in local space (+x = facing direction, y up = negative, origin at feet).
 function computePose(f, t) {
   // sx/sy = squash & stretch, applied around the feet in drawFighter. Purely
@@ -139,6 +168,15 @@ function computePose(f, t) {
     P.sy = 1 + 0.10 * rise; P.sx = 1 - 0.08 * rise;
   } else if (st === 'attack') {
     const atk = f.attack;
+    // Authored keyframes take over where a track exists. Phase-space timing
+    // means the same track reads correctly on a 4-frame slap and a 12-frame
+    // kick; the computed chain below stays as the fallback, so an archetype
+    // with no track — or a character with a broken override — still animates.
+    const posed = trackedAttackPose(f, atk);
+    if (posed) {
+      posed.face = 'angry';
+      return posed;
+    }
     const total = atk.startup + atk.active + atk.recovery;
     const k = Math.min(1, f.stateT / total);
     const inStartup = f.stateT < atk.startup;

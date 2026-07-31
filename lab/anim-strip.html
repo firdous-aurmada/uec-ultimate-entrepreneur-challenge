@@ -1,0 +1,77 @@
+<meta charset="utf-8">
+<title>Attack beats — filmstrip</title>
+<style>
+  body { background:#0b0e1a; color:#eef1ff; font:13px ui-monospace,monospace; padding:16px; margin:0; }
+  h1 { font:700 17px system-ui; margin:0 0 4px; }
+  p.sub { color:#8b93ad; font:12px/1.6 system-ui; margin:0 0 14px; max-width:900px; }
+  h2 { font:700 12px system-ui; letter-spacing:.08em; text-transform:uppercase; color:#ffd23f; margin:16px 0 5px; }
+  .row { display:flex; gap:4px; flex-wrap:wrap; align-items:flex-end; }
+  .cell { position:relative; }
+  .cell canvas { background:linear-gradient(#1a1f30,#11141f); border-radius:3px; display:block; }
+  .cell .lb { position:absolute; left:3px; top:2px; font:700 9px ui-monospace,monospace; color:#8b93ad; }
+  .cell.anticip .lb { color:#8fd8ff; }
+  .cell.impact  .lb { color:#ff3d6e; }
+  .cell.recover .lb { color:#ffd23f; }
+  .cell.impact canvas { outline:1px solid rgba(255,61,110,.55); }
+  .legend { color:#8b93ad; font:12px system-ui; margin-top:10px; }
+  .legend b { color:#8fd8ff; } .legend i { color:#ff3d6e; font-style:normal; } .legend u { color:#ffd23f; text-decoration:none; }
+</style>
+<h1>Attack beats — anticipation · impact · recovery</h1>
+<p class="sub">Each strip walks one attack through PHASE SPACE: 0–1 wind-up, 1–2 hitbox out, 2–3 recovery.
+Frames are evenly spaced in phase, so if the pose barely moves across the wind-up and then jumps between
+0.95 and 1.15, the snap is real. Rendered through the shipping <code>drawFighter</code> at in-game size.</p>
+<div id="out"></div>
+<p class="legend"><b>blue = anticipation</b> · <i>red = impact (hitbox live)</i> · <u>gold = recovery</u></p>
+
+<script type="module">
+import { drawFighter } from '../src/engine/drawFighter.js';
+import { Fighter } from '../src/engine/fighter.js';
+import { FIGHTERS } from '../src/data/fighters.js';
+import { ATTACKS } from '../src/config.js';
+
+const out = document.getElementById('out');
+const W = 150, H = 210, SCALE = 0.62;   // ~196px fighter, the real in-game size
+
+const def = FIGHTERS.find(f => f.id === 'kai');   // Steve Nojobs, showman/neutral-ish
+const KINDS = ['slap', 'punch', 'kick', 'launch'];
+
+// evenly spaced through phase space, so the eye can judge where travel happens
+const PHASES = [0, 0.35, 0.7, 0.95, 1.05, 1.15, 1.4, 1.7, 2.0, 2.3, 2.6, 3.0];
+
+for (const kind of KINDS) {
+  const base = ATTACKS[kind];
+  const h = document.createElement('h2');
+  h.textContent = `${kind} — startup ${base.startup}s · active ${base.active}s · recovery ${base.recovery}s`;
+  out.appendChild(h);
+  const row = document.createElement('div');
+  row.className = 'row';
+  out.appendChild(row);
+
+  for (const p of PHASES) {
+    const f = new Fighter(def, 0, { update() {} });
+    f.state = 'attack';
+    f.facing = 1;
+    f.x = 0; f.y = 0;
+    f.attack = { ...base, kind, button: kind, cmd: null, hasHit: false };
+    // invert the phase mapping so the fighter sits exactly at phase p
+    const { startup: s, active: a, recovery: r } = f.attack;
+    f.stateT = p < 1 ? p * s : p < 2 ? s + (p - 1) * a : s + a + Math.min(1, p - 2) * r;
+
+    const cell = document.createElement('div');
+    cell.className = 'cell ' + (p < 1 ? 'anticip' : p < 2 ? 'impact' : 'recover');
+    const cv = document.createElement('canvas');
+    cv.width = W; cv.height = H;
+    const cx = cv.getContext('2d');
+    cx.save();
+    cx.translate(W / 2, H - 12);
+    cx.scale(SCALE, SCALE);
+    drawFighter(cx, f, 0);
+    cx.restore();
+    const lb = document.createElement('div');
+    lb.className = 'lb';
+    lb.textContent = 't=' + p.toFixed(2);
+    cell.append(cv, lb);
+    row.appendChild(cell);
+  }
+}
+</script>
