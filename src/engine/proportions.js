@@ -6,11 +6,8 @@
 // edit to every hardcoded offset in drawFighter.js. The neutral case returns
 // the same object reference, which is what makes pixel-identity structural.
 
-import { BODY } from '../config.js';
+import { BODY, STYLIZE } from '../config.js';
 import { DEFAULT_BODY } from '../data/schema.js';
-
-// Baselines the literals in drawFighter.js are written against.
-const BASE_ARM_W = 13, BASE_LEG_W = 15, BASE_HEAD_R = 22;
 const BASE = { BUF_OX: 130, BUF_OY: 250, BUF_W: 280, BUF_H: 300 };
 
 export function clampBody(body) {
@@ -57,9 +54,9 @@ export function applyProportions(P, body) {
     leg.y *= body.stride;
   }
 
-  P.armW = BASE_ARM_W * body.build;
-  P.legW = BASE_LEG_W * body.build;
-  P.headR = BASE_HEAD_R * body.head;
+  // Limb gauges now come from STYLIZE at draw time, scaled by build — the head
+  // is the one part sized here, because `head` is its own proportion knob.
+  P.headR = STYLIZE.HEAD_R * body.head;
   P.shoulderW = body.shoulders;
   P.build = body.build;
   return P;

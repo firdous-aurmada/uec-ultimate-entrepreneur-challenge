@@ -2,6 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { clampBody, applyProportions, bufferMetrics } from '../src/engine/proportions.js';
 import { DEFAULT_BODY } from '../src/data/schema.js';
+import { STYLIZE } from '../src/config.js';
 
 function samplePose() {
   return {
@@ -38,12 +39,14 @@ test('a taller body raises hip, shoulder and head, keeping feet at the origin', 
   assert.ok(P.headY < P.shoulderY && P.shoulderY < P.hipY, 'ordering must hold');
 });
 
-test('proportions expose the derived widths the renderer needs', () => {
+// Limb gauges moved to draw time, where STYLIZE sets the arcade baseline and
+// build scales it. What proportions still owes the renderer is the head size
+// (its own knob) plus the two factors the draw path multiplies through.
+test('proportions expose what the renderer scales limbs by', () => {
   const P = applyProportions(samplePose(), clampBody({ build: 1.2, head: 1.1, shoulders: 1.15 }));
-  assert.ok(Math.abs(P.armW - 13 * 1.2) < 0.01);
-  assert.ok(Math.abs(P.legW - 15 * 1.2) < 0.01);
-  assert.ok(Math.abs(P.headR - 22 * 1.1) < 0.01);
+  assert.ok(Math.abs(P.headR - STYLIZE.HEAD_R * 1.1) < 0.01, 'head is sized here');
   assert.ok(Math.abs(P.shoulderW - 1.15) < 0.01);
+  assert.ok(Math.abs(P.build - 1.2) < 0.01);
 });
 
 test('a neutral body yields exactly the historical buffer dimensions', () => {

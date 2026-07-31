@@ -224,6 +224,33 @@ export const DEBUG = typeof location !== 'undefined'
 // and camera maths stay predictable and balance stays reasonable. Widening a
 // range later is safe; the clamp is the only thing enforcing it.
 // ---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// ARCADE PROPORTIONS
+//
+// An anatomically sane figure reads as a puppet at 196px. Arcade fighters read
+// because the parts that DO things are oversized: gloves, boots, forearms.
+// Everything here is exaggeration applied at draw time — hitboxes come from
+// ATTACKS and the hurtbox comes from PHYS, so none of it touches balance.
+//
+// Limbs also taper. A single-width capsule from shoulder to hand is a stick;
+// a thin upper arm running into a thick forearm running into a glove is a
+// limb, and it costs one extra segment to draw.
+// ---------------------------------------------------------------------------
+export const STYLIZE = {
+  HAND_F: 12.5,        // front glove — the thing that hits you
+  HAND_B: 10.5,
+  FOOT_W: 30, FOOT_H: 12,
+  UPPER_ARM: 11,       // narrow at the shoulder…
+  FOREARM: 15,         // …heavy at the glove
+  THIGH: 21, SHIN: 16,   // legs must out-weigh arms or the figure reads top-heavy
+  HEAD_R: 24,
+  // How far a folded limb bows at the joint. Scales to zero as it straightens,
+  // so a fully extended punch has a straight arm and a guard has a bent one.
+  ELBOW: 14, KNEE: 12,
+  ARM_SPAN: 118,       // limb length treated as fully extended
+  LEG_SPAN: 112,
+};
+
 export const BODY = {
   height:    [0.82, 1.22],   // overall scale
   build:     [0.85, 1.25],   // torso + limb thickness

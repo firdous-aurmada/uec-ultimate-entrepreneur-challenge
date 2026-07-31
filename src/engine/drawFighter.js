@@ -3,7 +3,7 @@
 // Also renders the portrait busts used across the UI.
 
 import { shade } from '../data/fighters.js';
-import { STYLES } from '../config.js';
+import { STYLES, STYLIZE } from '../config.js';
 import { clampBody, applyProportions, bufferMetrics } from './proportions.js';
 import { loadSpriteSet, drawSprite } from './sprites.js';
 import { samplePose, attackPhaseT, trackFor, REST } from './anim.js';
@@ -59,6 +59,41 @@ function capsule(ctx, x1, y1, x2, y2, w, color, outline = true) {
   }
   ctx.strokeStyle = color; ctx.lineWidth = w;
   ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+}
+
+// A limb with a joint in it. Two tapered segments meeting at an elbow/knee
+// that bows perpendicular to the limb and straightens as the limb extends —
+// so a guard has a bent arm and a landed punch has a straight one, for free,
+// off the same two endpoints the poses already provide.
+//
+// `bend` is signed: arms bow one way, legs the other, which is what stops a
+// kick from reading as a backwards knee.
+function jointed(ctx, x1, y1, x2, y2, wNear, wFar, color, bend, span) {
+  const dx = x2 - x1, dy = y2 - y1;
+  const len = Math.hypot(dx, dy);
+  if (len < 1) { capsule(ctx, x1, y1, x2, y2, wFar, color); return; }
+  const slack = Math.max(0, 1 - len / span);        // 0 when fully extended
+  const px = -dy / len, py = dx / len;              // perpendicular
+  const ex = x1 + dx * 0.5 + px * bend * slack;
+  const ey = y1 + dy * 0.5 + py * bend * slack;
+  capsule(ctx, x1, y1, ex, ey, wNear, color);
+  capsule(ctx, ex, ey, x2, y2, wFar, color);
+}
+
+// A boot that points where the leg points. Left axis-aligned, a horizontal
+// kicking leg ends in a flat plate seen edge-on, and the whole limb reads as a
+// plank; rotating it turns the sole toward the opponent, which is the single
+// clearest signal that the thing coming at you is a foot.
+//
+// A standing leg points almost straight down, so the rotation there is a couple
+// of degrees and the boot still sits flat on the floor.
+function boot(ctx, hipX, hipY, footX, footY, w, h, color, anchor) {
+  const rot = Math.atan2(footY - hipY, footX - hipX) - Math.PI / 2;
+  ctx.save();
+  ctx.translate(footX, footY);
+  ctx.rotate(rot);
+  blob(ctx, () => { ctx.roundRect(-w * anchor, -9, w, h, 5); }, color);
+  ctx.restore();
 }
 
 function blob(ctx, drawPath, fill) {
@@ -657,7 +692,9 @@ function drawHead(ctx, def, cx, cy, r, face, t, unicorn) {
 
 function drawTorso(ctx, def, P) {
   const c = def.c;
-  const w = 24;
+  // Shoulders drive the torso's width, so a heavy build actually reads heavy
+  // rather than being a normal torso with thicker arms bolted on.
+  const w = 24 * (P.shoulderW ?? 1) * (0.5 + 0.5 * (P.build ?? 1));
   const topY = P.shoulderY, botY = P.hipY;
   blob(ctx, () => {
     ctx.moveTo(-w + 3, botY + 8);
@@ -900,11 +937,35 @@ export function drawFighter(ctx, f, t) {
   // squash & stretch, anchored at the feet so the fighter never floats
   if (P.sx !== 1 || P.sy !== 1) g.scale(P.sx, P.sy);
 
-  // back arm, back leg
-  capsule(g, -10, P.shoulderY + 8, P.armB.x, P.armB.y, P.armW ?? 13, c.suit2);
-  blob(g, () => { g.arc(P.armB.x, P.armB.y, 8.5, 0, 7); }, c.skin);
-  capsule(g, -8, P.hipY, P.legB.x, P.legB.y - 6, P.legW ?? 15, c.pants);
-  blob(g, () => { g.roundRect(P.legB.x - 9, P.legB.y - 9, 26, 10, 5); }, c.shoe);
+  // Limb gauges. Body build scales them; STYLIZE sets the arcade baseline.
+  const bw = (P.build ?? 1);
+  const upperArm = STYLIZE.UPPER_ARM * bw, foreArm = STYLIZE.FOREARM * bw;
+  const thigh = STYLIZE.THIGH * bw, shin = STYLIZE.SHIN * bw;
+  const handF = STYLIZE.HAND_F * bw, handB = STYLIZE.HAND_B * bw;
+  const footW = STYLIZE.FOOT_W * bw, footH = STYLIZE.FOOT_H * bw;
+
+  // Limbs socket into the LEANED torso, not the upright one. The torso rotates
+  // about the hip, so a strong lean swings the shoulders several pixels — thin
+  // limbs hid the gap, thick ones do not, and a kicking leg that starts in
+  // mid-air is the first thing the eye catches.
+  const lean = (P.bodyLean || 0) * 0.6;
+  const cosL = Math.cos(lean), sinL = Math.sin(lean);
+  const socket = (x, y) => {
+    const dy = y - P.hipY;
+    return [x * cosL - dy * sinL, P.hipY + x * sinL + dy * cosL];
+  };
+  const [shFx, shFy] = socket(10, P.shoulderY + 8);
+  const [shBx, shBy] = socket(-10, P.shoulderY + 8);
+  const [hipFx, hipFy] = socket(8, P.hipY);
+  const [hipBx, hipBy] = socket(-8, P.hipY);
+
+  // back arm, back leg — one shade back so the near side reads in front
+  jointed(g, shBx, shBy, P.armB.x, P.armB.y, upperArm * 0.9, foreArm * 0.9,
+          c.suit2, STYLIZE.ELBOW, STYLIZE.ARM_SPAN);
+  blob(g, () => { g.arc(P.armB.x, P.armB.y, handB, 0, 7); }, c.skin);
+  jointed(g, hipBx, hipBy, P.legB.x, P.legB.y - 6, thigh * 0.92, shin * 0.92,
+          c.pants, -STYLIZE.KNEE, STYLIZE.LEG_SPAN);
+  boot(g, hipBx, hipBy, P.legB.x, P.legB.y, footW, footH, c.shoe, 0.34);
 
   // torso (with lean)
   g.save();
@@ -914,7 +975,7 @@ export function drawFighter(ctx, f, t) {
     g.translate(0, -P.hipY);
   }
   drawTorso(g, def, P);
-  drawHead(g, def, P.headX + (P.bodyLean * 26), P.headY, P.headR ?? 22, P.face, t, f.unicornT > 0);
+  drawHead(g, def, P.headX + (P.bodyLean * 26), P.headY, P.headR ?? STYLIZE.HEAD_R, P.face, t, f.unicornT > 0);
   g.restore();
 
   // motion smear behind the striking limb (sells the speed)
@@ -940,11 +1001,13 @@ export function drawFighter(ctx, f, t) {
     }
   }
 
-  // front leg, front arm
-  capsule(g, 8, P.hipY, P.legF.x, P.legF.y - 6, P.legW ?? 15, c.pants);
-  blob(g, () => { g.roundRect(P.legF.x - 7, P.legF.y - 9, 26, 10, 5); }, c.shoe);
-  capsule(g, 10, P.shoulderY + 8, P.armF.x, P.armF.y, P.armW ?? 13, c.suit);
-  blob(g, () => { g.arc(P.armF.x, P.armF.y, 9, 0, 7); }, c.skin);
+  // front leg, front arm — the striking limbs, so the heaviest gauge
+  jointed(g, hipFx, hipFy, P.legF.x, P.legF.y - 6, thigh, shin,
+          c.pants, -STYLIZE.KNEE, STYLIZE.LEG_SPAN);
+  boot(g, hipFx, hipFy, P.legF.x, P.legF.y, footW, footH, c.shoe, 0.26);
+  jointed(g, shFx, shFy, P.armF.x, P.armF.y, upperArm, foreArm,
+          c.suit, STYLIZE.ELBOW, STYLIZE.ARM_SPAN);
+  blob(g, () => { g.arc(P.armF.x, P.armF.y, handF, 0, 7); }, c.skin);
 
   if (P.briefcase) drawBriefcase(g, 34, -92, c.accent);
 
