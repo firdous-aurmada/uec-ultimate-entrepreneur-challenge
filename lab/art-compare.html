@@ -1,0 +1,352 @@
+<meta charset="utf-8">
+<title>UEC art pass — comparison</title>
+<style>
+  body { background:#0b0e1a; color:#eef1ff; font:13px ui-monospace,monospace; padding:18px; margin:0; }
+  h1 { font:700 18px/1.3 system-ui; margin:0 0 4px; letter-spacing:.02em; }
+  .sub { color:#8b93ad; margin:0 0 18px; max-width:900px; font:13px/1.6 system-ui; }
+  .row { display:flex; gap:14px; flex-wrap:wrap; }
+  .cell { background:#141824; border:1px solid #232a3d; border-radius:10px; padding:10px 10px 6px; }
+  .cell h2 { font:700 12px system-ui; letter-spacing:.09em; text-transform:uppercase; margin:0 0 2px; color:#ffd23f; }
+  .cell p { color:#8b93ad; font:11px/1.5 system-ui; margin:0 0 8px; max-width:340px; min-height:30px; }
+  canvas { display:block; background:
+     linear-gradient(#1a1f30,#11141f); border-radius:6px; }
+</style>
+<h1>Fighter rendering — current vs. proposed</h1>
+<p class="sub">Same character, same poses, same scale (2&times;). The gap to Street&nbsp;Fighter / Mortal&nbsp;Kombat is
+not shading — it is <strong>anatomy</strong>. Today every limb is one straight uniform-width capsule
+from shoulder to hand with no elbow, and hands are plain circles. That is what reads as a toy
+rather than an athlete.</p>
+
+<div class="row" id="row"></div>
+
+<script type="module">
+import { FIGHTERS } from '../src/data/fighters.js';
+import { drawFighter } from '../src/engine/drawFighter.js';
+import { clampBody } from '../src/engine/proportions.js';
+import { ATTACKS } from '../src/config.js';
+
+const DEF = FIGHTERS[5];               // Carl Icahnt — dark suit, reads clearly
+const OUTLINE = '#0a0c16';
+const SCALE = 2;
+const POSES = ['idle', 'punch', 'kick'];
+
+function cell(title, blurb, order) {
+  const d = document.createElement('div');
+  d.className = 'cell';
+  d.style.order = order;
+  d.innerHTML = `<h2>${title}</h2><p>${blurb}</p>`;
+  const cv = document.createElement('canvas');
+  cv.width = 340 * SCALE; cv.height = 205 * SCALE;
+  cv.style.width = 340 * SCALE + 'px';
+  d.appendChild(cv);
+  document.getElementById('row').appendChild(d);
+  const cx = cv.getContext('2d');
+  cx.scale(SCALE, SCALE);
+  cx.translate(0, -32);          // trim dead space above the head
+  return cx;
+}
+
+// ---------------------------------------------------------------- A: current
+{
+  const cx = cell('A — current (shipped)', 'One capsule per limb, uniform width, no elbow or knee. Hands and feet are circles and rounded rects.', 1);
+  POSES.forEach((p, i) => {
+    const isAtk = p !== 'idle';
+    drawFighter(cx, {
+      def: DEF, body: clampBody({}), side: 0, x: 58 + i * 110, y: 210, facing: 1,
+      state: isAtk ? 'attack' : 'idle', stateT: p === 'punch' ? 0.08 : 0.14,
+      walkPhase: 0, airborne: false, crouching: false, movingBack: false,
+      unicornT: 0, flashT: 0,
+      attack: isAtk ? { ...ATTACKS[p], kind: p, hasHit: false } : null,
+    }, 0.5);
+  });
+}
+
+// ------------------------------------------------- proposed limb machinery
+// Two-bone IK: given the shoulder, the hand target and both bone lengths,
+// solve for the elbow. This is what gives a limb a readable joint.
+function solveJoint(ax, ay, bx, by, l1, l2, bend) {
+  let dx = bx - ax, dy = by - ay;
+  let d = Math.hypot(dx, dy) || 0.0001;
+  const max = (l1 + l2) * 0.999, min = Math.abs(l1 - l2) * 1.001 + 0.001;
+  if (d > max) { const k = max / d; bx = ax + dx * k; by = ay + dy * k; dx *= k; dy *= k; d = max; }
+  if (d < min) { const k = min / d; bx = ax + dx * k; by = ay + dy * k; dx *= k; dy *= k; d = min; }
+  const a = (l1 * l1 - l2 * l2 + d * d) / (2 * d);
+  const h = Math.sqrt(Math.max(0, l1 * l1 - a * a));
+  const ux = dx / d, uy = dy / d;
+  return { jx: ax + a * ux - h * uy * bend, jy: ay + a * uy + h * ux * bend, ex: bx, ey: by };
+}
+
+// A limb as a tapered outline through 3 points with per-point half-widths,
+// so a bicep can bulge and a wrist can narrow.
+function taperedLimb(cx, pts, widths, fill, lineW = 3.4) {
+  const L = [], R = [];
+  for (let i = 0; i < pts.length; i++) {
+    const p = pts[i];
+    const prev = pts[Math.max(0, i - 1)], next = pts[Math.min(pts.length - 1, i + 1)];
+    let tx = next[0] - prev[0], ty = next[1] - prev[1];
+    const m = Math.hypot(tx, ty) || 1; tx /= m; ty /= m;
+    const w = widths[i];
+    L.push([p[0] - ty * w, p[1] + tx * w]);
+    R.push([p[0] + ty * w, p[1] - tx * w]);
+  }
+  cx.beginPath();
+  cx.moveTo(L[0][0], L[0][1]);
+  for (let i = 1; i < L.length; i++) {
+    const c = L[i - 1], n = L[i];
+    cx.quadraticCurveTo(c[0], c[1], (c[0] + n[0]) / 2, (c[1] + n[1]) / 2);
+  }
+  cx.lineTo(L[L.length - 1][0], L[L.length - 1][1]);
+  // round cap across the end
+  const e = pts[pts.length - 1], ew = widths[widths.length - 1];
+  cx.arc(e[0], e[1], ew, 0, Math.PI * 2);
+  for (let i = R.length - 1; i > 0; i--) {
+    const c = R[i], n = R[i - 1];
+    cx.quadraticCurveTo(c[0], c[1], (c[0] + n[0]) / 2, (c[1] + n[1]) / 2);
+  }
+  cx.closePath();
+  cx.fillStyle = fill; cx.strokeStyle = OUTLINE;
+  cx.lineWidth = lineW; cx.lineJoin = 'round';
+  cx.fill(); cx.stroke();
+}
+
+function fist(cx, x, y, r, skin, ang) {
+  cx.save(); cx.translate(x, y); cx.rotate(ang);
+  cx.beginPath();
+  cx.moveTo(-r, -r * 0.82);
+  cx.quadraticCurveTo(r * 1.18, -r * 1.02, r * 1.2, 0);
+  cx.quadraticCurveTo(r * 1.18, r * 1.02, -r, r * 0.86);
+  cx.quadraticCurveTo(-r * 1.5, 0, -r, -r * 0.82);
+  cx.closePath();
+  cx.fillStyle = skin; cx.strokeStyle = OUTLINE; cx.lineWidth = 3.2; cx.lineJoin = 'round';
+  cx.fill(); cx.stroke();
+  cx.beginPath();                                  // knuckle line
+  cx.moveTo(r * 0.25, -r * 0.72); cx.quadraticCurveTo(r * 0.72, 0, r * 0.25, r * 0.74);
+  cx.strokeStyle = 'rgba(10,12,22,0.45)'; cx.lineWidth = 1.5; cx.stroke();
+  cx.restore();
+}
+
+function boot(cx, x, y, w, h, col, ang) {
+  cx.save(); cx.translate(x, y); cx.rotate(ang);
+  cx.beginPath();
+  cx.moveTo(-w * 0.42, -h);
+  cx.lineTo(w * 0.34, -h * 0.94);
+  cx.quadraticCurveTo(w * 0.66, -h * 0.5, w * 0.72, h * 0.06);
+  cx.quadraticCurveTo(w * 0.2, h * 0.3, -w * 0.5, h * 0.22);
+  cx.quadraticCurveTo(-w * 0.62, -h * 0.4, -w * 0.42, -h);
+  cx.closePath();
+  cx.fillStyle = col; cx.strokeStyle = OUTLINE; cx.lineWidth = 3.2; cx.lineJoin = 'round';
+  cx.fill(); cx.stroke();
+  cx.restore();
+}
+
+// Heroic torso: broad deltoids, tapering V to the waist.
+function torsoPath(cx, P) {
+  const sh = P.shoulderY, hip = P.hipY, sw = 30, hw = 17;
+  cx.beginPath();
+  cx.moveTo(-sw, sh + 4);
+  cx.quadraticCurveTo(-sw - 4, sh - 8, -sw * 0.5, sh - 13);
+  cx.quadraticCurveTo(0, sh - 18, sw * 0.5, sh - 13);
+  cx.quadraticCurveTo(sw + 4, sh - 8, sw, sh + 4);
+  cx.quadraticCurveTo(sw * 0.82, (sh + hip) / 2, hw, hip + 4);
+  cx.quadraticCurveTo(0, hip + 11, -hw, hip + 4);
+  cx.quadraticCurveTo(-sw * 0.82, (sh + hip) / 2, -sw, sh + 4);
+  cx.closePath();
+  return { sh, hip, sw, hw };
+}
+
+function torsoV(cx, P, c, detail) {
+  const { sh, hip, sw, hw } = torsoPath(cx, P);
+  cx.fillStyle = c.suit; cx.strokeStyle = OUTLINE; cx.lineWidth = 3.6; cx.lineJoin = 'round';
+  cx.fill(); cx.stroke();
+  if (!detail) return;
+
+  // Costume detail, clipped inside the torso — this is what the first pass
+  // dropped and why it looked plainer than the shipped version.
+  cx.save();
+  torsoPath(cx, P); cx.clip();
+
+  cx.strokeStyle = 'rgba(255,255,255,0.16)'; cx.lineWidth = 1.1;   // pinstripes
+  for (let x = -sw; x <= sw; x += 6) {
+    cx.beginPath(); cx.moveTo(x, sh - 16); cx.lineTo(x * 0.6, hip + 10); cx.stroke();
+  }
+  cx.fillStyle = '#f4f6ff';                                        // shirt wedge
+  cx.beginPath();
+  cx.moveTo(-8, sh - 14); cx.lineTo(8, sh - 14);
+  cx.lineTo(5, hip - 6); cx.lineTo(-5, hip - 6); cx.closePath(); cx.fill();
+  cx.fillStyle = c.accent;                                         // tie
+  cx.beginPath();
+  cx.moveTo(-3.4, sh - 12); cx.lineTo(3.4, sh - 12);
+  cx.lineTo(2, hip - 8); cx.lineTo(-2, hip - 8); cx.closePath(); cx.fill();
+  cx.fillStyle = c.suit2;                                          // lapels over it
+  cx.beginPath();
+  cx.moveTo(-11, sh - 16); cx.lineTo(-1, sh - 13);
+  cx.lineTo(-6, hip - 14); cx.lineTo(-19, sh - 4); cx.closePath(); cx.fill();
+  cx.beginPath();
+  cx.moveTo(11, sh - 16); cx.lineTo(1, sh - 13);
+  cx.lineTo(6, hip - 14); cx.lineTo(19, sh - 4); cx.closePath(); cx.fill();
+
+  cx.strokeStyle = 'rgba(10,12,22,0.34)'; cx.lineWidth = 1.6;
+  cx.beginPath();                                                  // pec shadow
+  cx.moveTo(-sw * 0.72, sh + 4); cx.quadraticCurveTo(-sw * 0.3, sh + 18, -2, sh + 14);
+  cx.moveTo(sw * 0.72, sh + 4); cx.quadraticCurveTo(sw * 0.3, sh + 18, 2, sh + 14);
+  cx.stroke();
+  cx.beginPath();                                                  // waist folds
+  cx.moveTo(-hw * 0.8, hip - 10); cx.quadraticCurveTo(-2, hip - 4, hw * 0.7, hip - 12);
+  cx.stroke();
+  cx.restore();
+
+  cx.strokeStyle = OUTLINE; cx.lineWidth = 2;                      // lapel edges
+  cx.beginPath();
+  cx.moveTo(-11, sh - 16); cx.lineTo(-6, hip - 14);
+  cx.moveTo(11, sh - 16); cx.lineTo(6, hip - 14);
+  cx.stroke();
+}
+
+function headBlock(cx, x, y, r, c, detail) {
+  cx.beginPath();
+  cx.moveTo(x - r * 0.92, y - r * 0.3);
+  cx.quadraticCurveTo(x - r, y - r, x, y - r * 1.05);
+  cx.quadraticCurveTo(x + r, y - r, x + r * 0.94, y - r * 0.26);
+  cx.quadraticCurveTo(x + r * 0.9, y + r * 0.62, x + r * 0.2, y + r);
+  cx.quadraticCurveTo(x - r * 0.5, y + r * 0.98, x - r * 0.92, y - r * 0.3);
+  cx.closePath();
+  cx.fillStyle = c.skin; cx.strokeStyle = OUTLINE; cx.lineWidth = 3.4; cx.lineJoin = 'round';
+  cx.fill(); cx.stroke();
+  cx.fillStyle = c.hair;                              // slick hair mass
+  cx.beginPath();
+  cx.moveTo(x - r * 0.95, y - r * 0.34);
+  cx.quadraticCurveTo(x - r * 0.6, y - r * 1.16, x + r * 0.34, y - r * 1.08);
+  cx.quadraticCurveTo(x + r * 0.98, y - r * 0.98, x + r * 0.95, y - r * 0.3);
+  cx.quadraticCurveTo(x + r * 0.3, y - r * 0.62, x - r * 0.95, y - r * 0.34);
+  cx.closePath();
+  cx.strokeStyle = OUTLINE; cx.lineWidth = 3; cx.fill(); cx.stroke();
+  if (detail) {
+    // Wraparound shades — the shipped version has these and the first pass
+    // dropped them, which erased most of the character's identity.
+    cx.fillStyle = '#14161f';
+    cx.beginPath();
+    cx.moveTo(x - r * 0.42, y - r * 0.30);
+    cx.quadraticCurveTo(x + r * 0.5, y - r * 0.40, x + r * 0.94, y - r * 0.26);
+    cx.quadraticCurveTo(x + r * 0.90, y + r * 0.14, x + r * 0.34, y + r * 0.12);
+    cx.quadraticCurveTo(x - r * 0.30, y + r * 0.06, x - r * 0.42, y - r * 0.30);
+    cx.closePath();
+    cx.strokeStyle = OUTLINE; cx.lineWidth = 2.4; cx.lineJoin = 'round';
+    cx.fill(); cx.stroke();
+    cx.strokeStyle = 'rgba(255,240,210,0.5)'; cx.lineWidth = 1.6;   // lens glint
+    cx.beginPath();
+    cx.moveTo(x + r * 0.18, y - r * 0.22); cx.lineTo(x + r * 0.54, y - r * 0.12);
+    cx.stroke();
+
+    cx.strokeStyle = 'rgba(10,12,22,0.55)'; cx.lineWidth = 1.7;
+    cx.beginPath();                                                 // hard mouth
+    cx.moveTo(x + r * 0.42, y + r * 0.48); cx.lineTo(x + r * 0.84, y + r * 0.44); cx.stroke();
+    cx.beginPath();                                                 // cheek / jaw line
+    cx.moveTo(x - r * 0.06, y + r * 0.16);
+    cx.quadraticCurveTo(x + r * 0.18, y + r * 0.36, x - r * 0.02, y + r * 0.5);
+    cx.stroke();
+  }
+}
+
+// The three poses, as joint targets rather than capsule endpoints.
+const RIG = {
+  idle:  { hipY:-66, shoulderY:-118, headY:-142, armF:[34,-104], armB:[-20,-100], legF:[20,0], legB:[-22,0], bendF:1, bendB:-1, footAng:0.1 },
+  punch: { hipY:-68, shoulderY:-120, headY:-144, armF:[92,-108], armB:[-30,-92],  legF:[26,0], legB:[-30,0], bendF:1, bendB:-1, footAng:0.1 },
+  kick:  { hipY:-72, shoulderY:-124, headY:-148, armF:[-14,-124], armB:[-40,-96], legF:[96,-74], legB:[-16,0], bendF:-1, bendB:-1, footAng:-0.5 },
+};
+
+function drawProposed(cx, x, y, pose, detail) {
+  const c = DEF.c, P = RIG[pose];
+  cx.save(); cx.translate(x, y);
+
+  // back leg → back arm → torso+head → front leg → front arm  (depth order)
+  const bl = solveJoint(-8, P.hipY, P.legB[0], P.legB[1] - 10, 40, 42, P.bendB);
+  taperedLimb(cx, [[-8, P.hipY], [bl.jx, bl.jy], [bl.ex, bl.ey]], [10.5, 8, 6.2], c.pants);
+  boot(cx, bl.ex, bl.ey + 4, 22, 9, c.shoe, pose === 'kick' ? 0 : P.footAng);
+
+  const ba = solveJoint(-16, P.shoulderY + 8, P.armB[0], P.armB[1], 33, 32, P.bendB);
+  taperedLimb(cx, [[-16, P.shoulderY + 8], [ba.jx, ba.jy], [ba.ex, ba.ey]], [9.5, 7, 5.4], c.suit2);
+  fist(cx, ba.ex, ba.ey, 7, c.skin, 0);
+
+  torsoV(cx, P, c, detail);
+  headBlock(cx, 2, P.headY, 21, c, detail);
+
+  const fl = solveJoint(8, P.hipY, P.legF[0], P.legF[1] - 10, 40, 42, P.bendF);
+  taperedLimb(cx, [[8, P.hipY], [fl.jx, fl.jy], [fl.ex, fl.ey]], [11, 8.4, 6.4], c.pants);
+  boot(cx, fl.ex, fl.ey + 4, 23, 9.5, c.shoe, pose === 'kick' ? -0.5 : P.footAng);
+
+  const fa = solveJoint(16, P.shoulderY + 8, P.armF[0], P.armF[1], 34, 33, P.bendF);
+  taperedLimb(cx, [[16, P.shoulderY + 8], [fa.jx, fa.jy], [fa.ex, fa.ey]], [10.5, 7.6, 5.8], c.suit);
+  fist(cx, fa.ex, fa.ey, 7.6, c.skin, pose === 'punch' ? 0 : 0.5);
+
+  if (detail) {                                       // joint creases sell articulation
+    cx.strokeStyle = 'rgba(10,12,22,0.30)'; cx.lineWidth = 1.5;
+    for (const j of [fa, fl, ba, bl]) {
+      cx.beginPath(); cx.arc(j.jx, j.jy, 5.5, -0.9, 0.9); cx.stroke();
+    }
+  }
+  cx.restore();
+}
+
+{
+  const cx = cell('B — two-bone limbs + taper', 'Build-up step: real elbows and knees via IK, tapered limbs, shaped fists and boots, heroic V-torso. Unshaded.', 3);
+  POSES.forEach((p, i) => drawProposed(cx, 58 + i * 110, 210, p, false));
+}
+{
+  const cx = cell('C — B plus line detail', 'Build-up step: pec and cloth-fold linework, joint creases, defined jaw, brow and eye. Still unshaded.', 4);
+  POSES.forEach((p, i) => drawProposed(cx, 58 + i * 110, 210, p, true));
+}
+
+// ------------------------------------------------------- D: C + cel shading
+// Mirrors shadeBuffer() from the real renderer: form shadow + warm key / cool
+// fill, clipped to the silhouette, plus a rim light carved from an offset copy.
+// Without this, C is an unfair comparison against A, which IS shaded.
+function shadeLike(buf, tmp, ox, oy, SS) {
+  const b = buf.getContext('2d');
+  const W = buf.width, H = buf.height, oyS = oy * SS, oxS = ox * SS;
+  const tc = tmp.getContext('2d');
+  tc.setTransform(1, 0, 0, 1, 0, 0);
+  tc.clearRect(0, 0, W, H);
+  tc.globalCompositeOperation = 'source-over';
+  tc.drawImage(buf, 0, 0);
+  tc.globalCompositeOperation = 'source-in';
+  tc.fillStyle = '#fff5df'; tc.fillRect(0, 0, W, H);
+  tc.globalCompositeOperation = 'destination-out';
+  tc.drawImage(buf, -5 * SS, 6 * SS);
+
+  b.save();
+  b.globalCompositeOperation = 'source-atop';
+  const g = b.createLinearGradient(0, oyS - 178 * SS, 0, oyS + 8 * SS);
+  g.addColorStop(0, 'rgba(255,243,216,0.32)');
+  g.addColorStop(0.44, 'rgba(255,255,255,0)');
+  g.addColorStop(1, 'rgba(5,5,16,0.52)');
+  b.fillStyle = g; b.fillRect(0, 0, W, H);
+  const g2 = b.createLinearGradient(oxS - 84 * SS, 0, oxS + 84 * SS, 0);
+  g2.addColorStop(0, 'rgba(26,42,104,0.30)');
+  g2.addColorStop(0.5, 'rgba(0,0,0,0)');
+  g2.addColorStop(1, 'rgba(255,166,72,0.17)');
+  b.fillStyle = g2; b.fillRect(0, 0, W, H);
+  b.restore();
+
+  b.save();
+  b.globalCompositeOperation = 'lighter';
+  b.globalAlpha = 0.42;
+  b.drawImage(tmp, 0, 0);
+  b.restore();
+}
+
+{
+  const cx = cell('D — proposed, as it would ship', 'New anatomy running through the existing cel-shade pass. This is the fair comparison against A.', 2);
+  const SS = 2, OX = 130, OY = 250, BW = 280, BH = 300;
+  POSES.forEach((p, i) => {
+    const buf = document.createElement('canvas');
+    const tmp = document.createElement('canvas');
+    buf.width = tmp.width = BW * SS; buf.height = tmp.height = BH * SS;
+    const g = buf.getContext('2d');
+    g.setTransform(1, 0, 0, 1, 0, 0);
+    g.scale(SS, SS);
+    drawProposed(g, OX, OY, p, true);
+    shadeLike(buf, tmp, OX, OY, SS);
+    cx.drawImage(buf, 0, 0, buf.width, buf.height, 58 + i * 110 - OX, 210 - OY, BW, BH);
+  });
+}
+</script>

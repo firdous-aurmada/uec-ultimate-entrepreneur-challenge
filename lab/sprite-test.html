@@ -1,0 +1,119 @@
+<meta charset="utf-8">
+<title>Sprite renderer test</title>
+<style>
+  body { background:#0b0e1a; color:#eef1ff; font:13px ui-monospace,monospace; padding:16px; margin:0; }
+  h1 { font:700 17px system-ui; margin:0 0 4px; }
+  p.sub { color:#8b93ad; font:12px/1.6 system-ui; margin:0 0 12px; max-width:880px; }
+  canvas#stage { background:linear-gradient(#1e2438,#11141f); border-radius:6px; display:block; }
+  #log { color:#8b93ad; white-space:pre; font-size:12px; margin-top:10px; line-height:1.5; }
+  button { font:inherit; padding:6px 12px; margin:0 6px 8px 0; background:#232a3d; color:#eef1ff;
+           border:1px solid #3a4257; border-radius:6px; cursor:pointer; }
+</style>
+<h1>Sprite renderer — state coverage</h1>
+<p class="sub">Drives the real <code>pickFrame</code> through every fighter state the game can produce,
+using stub fighters. Verifies the state map has no holes and that frames advance sensibly, before
+any of this touches the game.</p>
+<div id="btns"></div>
+<canvas id="stage" width="960" height="300"></canvas>
+<div id="log"></div>
+
+<script type="module">
+import { loadSpriteSet, pickFrame, drawSprite } from '../src/engine/sprites.js';
+import { ATTACKS } from '../src/config.js';
+
+const log = (s) => { document.getElementById('log').textContent += s + '\n'; };
+const set = loadSpriteSet('founder', '../assets/sprites/founder');
+await new Promise(r => { const i = setInterval(() => { if (set.ready || set.failed) { clearInterval(i); r(); } }, 50); });
+if (set.failed) log('FAILED to load sprite set');
+else log(`loaded ${Object.keys(set.manifest.states).length} states · frame ${set.manifest.frameWidth}x${set.manifest.frameHeight} · anchor ${set.manifest.anchor.x},${set.manifest.anchor.y}`);
+
+const stub = (over = {}) => ({
+  def: {}, side: 0, x: 0, y: 0, facing: 1, state: 'idle', stateT: 0, stunT: 0.3,
+  walkPhase: 0, airborne: false, crouching: false, movingBack: false,
+  unicornT: 0, flashT: 0, vy: 0, attack: null, ...over,
+});
+
+// every state the fighter machine can be in, plus each attack kind
+const CASES = [
+  ['idle',      stub()],
+  ['walk',      stub({ state: 'walk', walkPhase: 2.0 })],
+  ['crouch',    stub({ state: 'crouch', crouching: true })],
+  ['block',     stub({ state: 'block', stateT: 0.2 })],
+  ['jump up',   stub({ state: 'jump', airborne: true, vy: -600 })],
+  ['jump down', stub({ state: 'jump', airborne: true, vy: 500 })],
+  ['dash',      stub({ state: 'dash', stateT: 0.05 })],
+  ['hitstun',   stub({ state: 'hitstun', stateT: 0.12, stunT: 0.32 })],
+  ['hit light', stub({ state: 'hitstun', stateT: 0.08, stunT: 0.20 })],
+  ['launched',  stub({ state: 'hitstun', stateT: 0.2, stunT: 0.4, airborne: true })],
+  ['ko',        stub({ state: 'ko', stateT: 0.6 })],
+  ['victory',   stub({ state: 'victory', stateT: 0.5 })],
+  ...['slap', 'punch', 'kick', 'launch'].map(k => [
+    k, stub({ state: 'attack', stateT: ATTACKS[k].startup + ATTACKS[k].active * 0.5,
+              attack: { ...ATTACKS[k], kind: k } }),
+  ]),
+  ['special aoe',  stub({ state: 'attack', stateT: 0.2, attack: { kind: 'aoe', startup: 0.3, active: 0.16, recovery: 0.42 } })],
+  ['special grab', stub({ state: 'attack', stateT: 0.2, attack: { kind: 'grab', startup: 0.2, active: 0.1, recovery: 0.55 } })],
+  ['bomb',         stub({ state: 'attack', stateT: 0.2, attack: { kind: 'bomb', startup: 0.16, active: 0.05, recovery: 0.3 } })],
+];
+
+const cx = document.getElementById('stage').getContext('2d');
+let missing = 0;
+CASES.forEach(([name, f]) => {
+  const p = pickFrame(set, f, 0.5);
+  if (!p) { log(`  MISSING  ${name}`); missing++; }
+});
+log(missing ? `${missing} states have no frame` : `all ${CASES.length} states resolve to a frame`);
+
+// coverage table: which atlas state each case maps to
+log('\nstate map:');
+CASES.forEach(([name, f]) => {
+  const p = pickFrame(set, f, 0.5);
+  log(`  ${name.padEnd(13)} -> ${p ? p.state + ' f' + p.frame : '(none)'}`);
+});
+
+let idx = 0, playing = true;
+const btns = document.getElementById('btns');
+CASES.forEach(([name], i) => {
+  const b = document.createElement('button');
+  b.textContent = name;
+  b.onclick = () => { idx = i; };
+  btns.appendChild(b);
+});
+const pause = document.createElement('button');
+pause.textContent = 'pause/play';
+pause.onclick = () => { playing = !playing; };
+btns.appendChild(pause);
+
+let t0 = performance.now();
+function frame() {
+  const t = (performance.now() - t0) / 1000;
+  cx.clearRect(0, 0, 960, 300);
+  // draw the whole case list as a row of live sprites
+  CASES.forEach(([name, f], i) => {
+    const col = i % 9, row = (i / 9) | 0;
+    cx.save();
+    cx.translate(60 + col * 104, 140 + row * 150);
+    // animate stateT for one-shots so the frames actually move
+    const g = { ...f };
+    if (playing && g.state === 'attack' && g.attack) {
+      const tot = g.attack.startup + g.attack.active + g.attack.recovery;
+      g.stateT = (t % tot);
+    } else if (playing && g.state === 'walk') {
+      g.walkPhase = t * 6;
+    } else if (playing && (g.state === 'hitstun' || g.state === 'ko')) {
+      g.stateT = (t % 1.2);
+    }
+    cx.save();
+    cx.scale(g.facing, 1);
+    drawSprite(cx, set, g, t, { height: 120 });
+    cx.restore();
+    cx.fillStyle = i === idx ? '#ffd23f' : '#6b7590';
+    cx.font = '10px ui-monospace,monospace';
+    cx.textAlign = 'center';
+    cx.fillText(name, 0, 14);
+    cx.restore();
+  });
+  requestAnimationFrame(frame);
+}
+frame();
+</script>

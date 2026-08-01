@@ -5,6 +5,7 @@ import { FIGHTERS, BASE_CHARACTERS, DEFAULT_BASE_ID, SPECIALS, UNICORN_META, LOO
 import { ARENAS, getArena, randomArena } from '../data/arenas.js';
 import { Save, buildChallengeLink } from '../state.js';
 import { STYLES, rankFor, AI_LEVELS } from '../config.js';
+import { SLOT_GLYPH } from '../data/schema.js';
 import { drawPortrait, setPhotoReadyCallback, ensurePhoto } from '../engine/drawFighter.js';
 import { audio } from '../engine/audio.js';
 import { KEY_LABELS } from '../engine/input.js';
@@ -190,6 +191,30 @@ function renderSide(prefix, def, fallbackLabel) {
   $(`${prefix}-rap`).textContent = def?.rap || (def?.id === 'custom' ? 'Unindicted · so far' : '');
   const sp = def ? SPECIALS[def.special] : null;
   $(`${prefix}-sp`).textContent = sp ? `${sp.icon} ${sp.name}` : '🎲 MYSTERY';
+
+  renderMoveCard($(`${prefix}-cmds`), def);
+}
+
+// The 2–3 inputs that belong to this character and nobody else. Everyone
+// shares the same buttons, so this is the only place the difference is legible
+// outside of actually throwing the move.
+export function renderMoveCard(el, def) {
+  if (!el) return 0;
+  el.textContent = '';
+  const cmds = def?.commandNormals || [];
+  for (const cn of cmds) {
+    const row = document.createElement('div');
+    row.className = 'pv-cmd';
+    const key = document.createElement('span');
+    key.className = 'pv-cmd-key';
+    key.textContent = SLOT_GLYPH[cn.slot] || cn.slot;
+    const name = document.createElement('span');
+    name.className = 'pv-cmd-name';
+    name.textContent = cn.displayName;
+    row.append(key, name);
+    el.appendChild(row);
+  }
+  return cmds.length;
 }
 
 function renderPreview() {

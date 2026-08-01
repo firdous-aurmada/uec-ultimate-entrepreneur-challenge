@@ -4,7 +4,8 @@
 // Roster stats vary on purpose, but ONLY ever as AI opponents. Human players
 // always get PLAYER_STATS, so nobody gains an edge from a cosmetic pick.
 
-import { PLAYER_STATS } from '../config.js';
+import { PLAYER_STATS, STYLES } from '../config.js';
+import { SCHEMA_VERSION, DEFAULT_BODY } from './schema.js';
 
 export const SPECIALS = {
   pitchdeck: {
@@ -71,6 +72,10 @@ export const FIGHTERS = [
     tagline: 'One drop of blood, $9B of lies, 11 years inside.',
     rap: 'Convicted · investor fraud',
     special: 'pivot', style: 'phantom',
+    // An ordinary frame is the point. Slight AND untouchable is the
+    // compounding pattern the budget exists to catch — giving her a real body
+    // to hit is what pays for the speed, and it drops her out of the blocked band.
+    body: { height: 1.04, build: 1.06, reach: 0.96, stride: 1.14, shoulders: 0.88, head: 1.02 },
     stats: { speed: 1.0, power: 1.0, hp: 100 },
     ai: { aggr: 0.55, jump: 0.3, prefRange: 'far' },
     c: { skin: '#e8b48c', suit: '#5865f2', suit2: '#3d47c9', accent: '#29d9ff', hair: '#cfd6f6', pants: '#23294f', shoe: '#eef1ff' },
@@ -81,6 +86,8 @@ export const FIGHTERS = [
     tagline: 'Torched $47B, kept the jet, blamed the vibes.',
     rap: 'Ousted · $47B evaporated',
     special: 'burnrate', style: 'brawler',
+    // Wide as a doorway and built low. Reads as the biggest thing on stage.
+    body: { height: 1.16, build: 1.00, reach: 1.02, stride: 1.02, shoulders: 1.25, head: 0.92 },
     stats: { speed: 0.95, power: 1.2, hp: 95 },
     ai: { aggr: 0.85, jump: 0.35, prefRange: 'close' },
     c: { skin: '#c68a5a', suit: '#ff7a1a', suit2: '#d15505', accent: '#ffd23f', hair: '#2b2b33', pants: '#33241d', shoe: '#f5f5f5' },
@@ -91,18 +98,43 @@ export const FIGHTERS = [
     tagline: 'Demoed a product that never existed. Twice.',
     rap: 'Sued · shipped nothing',
     special: 'pitchdeck', style: 'showman',
+    // All leg and no shoulder — the keynote posture, tall and unthreatening
+    // right up until it isn't.
+    body: { height: 1.06, build: 0.98, reach: 1.00, stride: 1.16, shoulders: 0.92, head: 0.96 },
     stats: { speed: 1.15, power: 0.9, hp: 95 },
     ai: { aggr: 0.6, jump: 0.55, prefRange: 'mid' },
     c: { skin: '#f0c896', suit: '#1fb9a5', suit2: '#128372', accent: '#eef1ff', hair: '#191a22', pants: '#20263f', shoe: '#dfe4ff' },
-    hairStyle: 'neat', outfit: 'turtleneck', accessory: 'glasses',
+    hairStyle: 'quiff', outfit: 'turtleneck', accessory: 'glasses',
   },
   {
     id: 'zara', name: 'KIM KOINDASHIAN', title: 'THE RUG-PULLER', company: 'SKIMZCOIN',
     tagline: 'Shilled the coin, dumped the bag, deleted the post.',
     rap: 'Fined · undisclosed promo',
     special: 'growthhack', style: 'rushdown',
+    // Small and light with an oversized head — reads young and quick, and
+    // the smaller hurtbox is what her budget pays for.
+    body: { height: 0.90, build: 0.92, reach: 0.96, stride: 1.00, shoulders: 0.90, head: 1.11 },
     stats: { speed: 1.1, power: 0.95, hp: 95 },
     ai: { aggr: 0.75, jump: 0.5, prefRange: 'mid' },
+    // Pump it, then pull the floor out. PUMP launches so she can juggle;
+    // RUG PULL denies the ground she just knocked you onto. Both pay for
+    // themselves with slower startup than her neutral buttons.
+    commandNormals: [
+      {
+        slot: 'fwd+punch', archetype: 'strike', displayName: 'PUMP',
+        tags: ['launcher'],
+        frameData: {
+          startup: 0.0625, active: 0.06, recovery: 0.1265,
+          dmg: 8, reach: 78, hitY: -120, kb: 90, kbUp: -400, stun: 0.3,
+        },
+      },
+      {
+        slot: 'fwd+kick', archetype: 'trap', displayName: 'RUG PULL',
+        tags: ['trap'],
+        frameData: { startup: 0.115, active: 0.09, recovery: 0.187, dmg: 12, reach: 60 },
+        params: { lifetime: 5.5, radius: 78, armTime: 0.35, dmg: 12, maxActive: 1 },
+      },
+    ],
     c: { skin: '#8a5a3b', suit: '#e332a9', suit2: '#a91277', accent: '#57ff8a', hair: '#1c1424', pants: '#2c1a3d', shoe: '#57ff8a' },
     hairStyle: 'puffs', outfit: 'bomber', accessory: 'earrings',
   },
@@ -111,6 +143,9 @@ export const FIGHTERS = [
     tagline: 'Bought every dip on the way to zero. Still bullish.',
     rap: 'Down 80% · still posting',
     special: 'fundinground', style: 'zoner',
+    // Tall, narrow, and longer in the arm than anyone. The silhouette IS
+    // the zoning — you can see the range before she uses it.
+    body: { height: 1.14, build: 0.94, reach: 1.06, stride: 1.12, shoulders: 0.88, head: 0.94 },
     stats: { speed: 0.9, power: 1.05, hp: 105 },
     ai: { aggr: 0.65, jump: 0.2, prefRange: 'far' },
     c: { skin: '#f2cdb2', suit: '#1c2a5e', suit2: '#111a3d', accent: '#ffd23f', hair: '#efe6d8', pants: '#141d42', shoe: '#1a1a24' },
@@ -121,8 +156,24 @@ export const FIGHTERS = [
     tagline: 'Bought it, gutted it, sold the parts, kept the jet.',
     rap: 'Hostile · 12 companies dismantled',
     special: 'takeover', style: 'grappler',
+    // Squat, enormous across the shoulders, short in the leg. A fireplug —
+    // nothing about him says he can reach you, which is the honest advert.
+    body: { height: 0.94, build: 1.08, reach: 0.98, stride: 0.90, shoulders: 1.25, head: 1.06 },
     stats: { speed: 0.85, power: 1.25, hp: 110 },
     ai: { aggr: 0.8, jump: 0.15, prefRange: 'close' },
+    // A raider takes what he can reach. ASSET SEIZURE is unblockable and hits
+    // hard, and buys that with a short grasp and a slow, punishable wind-up —
+    // walk into him and you lose the asset; keep him out and he has nothing.
+    commandNormals: [
+      {
+        slot: 'fwd+kick', archetype: 'grab', displayName: 'ASSET SEIZURE',
+        tags: ['command-grab'],
+        frameData: {
+          startup: 0.13, active: 0.08, recovery: 0.204,
+          dmg: 16, reach: 70, hitY: -95, kb: 300, kbUp: -180, stun: 0.34,
+        },
+      },
+    ],
     c: { skin: '#d9a06b', suit: '#2c2f3a', suit2: '#191b23', accent: '#ff3d6e', hair: '#101116', pants: '#22242e', shoe: '#101116' },
     hairStyle: 'slick', outfit: 'pinstripe', accessory: 'shades',
   },
@@ -132,16 +183,21 @@ export const FIGHTERS = [
     tagline: 'Bought the platform, torched the value, called it free speech.',
     rap: 'Sued · $44B writedown',
     special: 'burnrate', style: 'glass',
+    // Tall and ordinary through the middle. GLASS CANNON is already the most
+    // over-budget style shipped, so the frame has to be a real target.
+    body: { height: 1.18, build: 0.96, reach: 1.00, stride: 1.18, shoulders: 0.86, head: 0.90 },
     stats: { speed: 1.05, power: 1.15, hp: 100 },
     ai: { aggr: 0.82, jump: 0.4, prefRange: 'close' },
     c: { skin: '#eec9a6', suit: '#1a1c24', suit2: '#0e0f15', accent: '#ff3d2e', hair: '#2a2118', pants: '#1a1c24', shoe: '#c9ced9' },
-    hairStyle: 'short', outfit: 'tee', accessory: null, cameo: true,
+    hairStyle: 'buzz', outfit: 'tee', accessory: null, cameo: true,
   },
   {
     id: 'bozo', name: 'JEFF BOZO', title: 'THE EVERYTHING GUY', company: 'PRIMEZON',
     tagline: 'Your margin is his opportunity. Your warehouse is his gym.',
     rap: 'Antitrust · under investigation',
     special: 'takeover', style: 'technical',
+    // Compact and barrel-chested with short arms — the warehouse build.
+    body: { height: 0.92, build: 1.14, reach: 0.90, stride: 0.96, shoulders: 1.20, head: 1.12 },
     stats: { speed: 0.9, power: 1.2, hp: 108 },
     ai: { aggr: 0.75, jump: 0.2, prefRange: 'close' },
     c: { skin: '#e2ab84', suit: '#243447', suit2: '#141f2c', accent: '#ff9d1a', hair: '#101116', pants: '#2c3644', shoe: '#3d4a5c' },
@@ -152,6 +208,10 @@ export const FIGHTERS = [
     tagline: 'Fired by the board on Friday, back by Wednesday.',
     rap: 'Ousted · reinstated · unbothered',
     special: 'pivot', style: 'trickster',
+    // Soft and unbothered — the man who was fired on Friday and back by
+    // Wednesday does not look worried. TRICKSTER is expensive, so the comfort
+    // is also what pays for it.
+    body: { height: 0.98, build: 1.14, reach: 0.96, stride: 0.92, shoulders: 1.08, head: 1.08 },
     stats: { speed: 1.1, power: 0.9, hp: 96 },
     ai: { aggr: 0.6, jump: 0.5, prefRange: 'mid' },
     c: { skin: '#ecc39e', suit: '#6d7382', suit2: '#4a4f5c', accent: '#29d9ff', hair: '#4a3527', pants: '#2c3040', shoe: '#f0f0f0' },
@@ -244,6 +304,7 @@ export const LOOKS = {
   hairStyle: [
     { id: 'short', name: 'SHORT' }, { id: 'buzz', name: 'BUZZ' },
     { id: 'neat', name: 'NEAT' }, { id: 'slick', name: 'SLICK' },
+    { id: 'quiff', name: 'QUIFF' },
     { id: 'curly', name: 'CURLY' }, { id: 'afro', name: 'AFRO' },
     { id: 'bob', name: 'BOB' }, { id: 'long', name: 'LONG' },
     { id: 'ponytail', name: 'PONYTAIL' }, { id: 'topknot', name: 'TOP KNOT' },
@@ -330,6 +391,12 @@ export function buildGhostFighter(ch) {
     special: ch.sp && SPECIALS[ch.sp] ? ch.sp : base.special,
     photo: ch.photo || null,
     stats: { ...PLAYER_STATS },   // a ghost is another human — same footing
+    // Their fighting identity, already validated by the link decoder — a ghost
+    // that threw a different moveset from the player who made it would not be
+    // the fight the link promised. v1 links carry neither, so they fall back.
+    style: ch.style || base.style,
+    body: ch.body || base.body,
+    commandNormals: ch.commandNormals || [],
 
     c: {
       ...base.c,
@@ -348,4 +415,47 @@ export function shade(hex, amt) {
   const g = Math.max(0, Math.min(255, ((n >> 8) & 0xff) + amt));
   const b = Math.max(0, Math.min(255, (n & 0xff) + amt));
   return '#' + ((r << 16) | (g << 8) | b).toString(16).padStart(6, '0');
+}
+
+// Adapts a legacy roster entry to a schema v1 character. Roster entries stay
+// in their current shape so the rest of the game keeps working unchanged;
+// this is the seam the validator and the authoring tool read through.
+export function toCharacter(def) {
+  const st = STYLES[def.style] || STYLES.balanced;
+  const sp = SPECIALS[def.special] || SPECIALS.pitchdeck;
+  return {
+    schema: SCHEMA_VERSION,
+    id: def.id,
+    identity: {
+      name: def.name,
+      title: def.title || 'CHALLENGER',
+      company: def.company || 'STEALTH STARTUP',
+      tagline: def.tagline || 'Player-founded. Player-funded.',
+      rap: def.rap || 'No convictions — yet',
+    },
+    body: { ...DEFAULT_BODY, ...(def.body || {}) },
+    look: {
+      ...def.c,
+      hairStyle: def.hairStyle, outfit: def.outfit,
+      headwear: def.headwear, eyewear: def.eyewear, facialHair: def.facialHair,
+      stance: st.stance,
+    },
+    fighting: {
+      preset: def.style || 'balanced',
+      startup: st.startup, dmg: st.dmg, reach: st.reach,
+      recovery: st.recovery, speed: st.speed, hp: st.hp,
+      moves: {
+        special: { archetype: sp.type, ...sp },
+        signature: null,
+      },
+    },
+    // A character's own vocabulary. Absent means "universal grammar only",
+    // which is a complete character — most of the base bodies are exactly that.
+    commandNormals: def.commandNormals || [],
+    ai: {
+      aggr: def.ai?.aggr ?? 0.6,
+      jump: def.ai?.jump ?? 0.35,
+      prefRange: def.ai?.prefRange ?? 'mid',
+    },
+  };
 }

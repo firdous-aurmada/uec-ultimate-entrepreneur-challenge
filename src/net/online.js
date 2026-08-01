@@ -14,6 +14,8 @@
 
 // Dedicated "uec-game" Supabase project (isolated from aurmada-main-site).
 // Publishable key — safe to ship in client code; row-level security guards data.
+import { validateCharacter, SCHEMA_VERSION } from '../data/schema.js';
+
 const SUPABASE_URL = 'https://oqzxkzkyiiahxmppgrkn.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_hA-O1-vWIa40YOlyy3d0mA_Mf0zCrkO';
 
@@ -49,6 +51,38 @@ export function maskToPad(m) {
 export class MaskController {
   constructor() { this.mask = 0; this.isHuman = false; }
   update(fighter) { fighter.pad = maskToPad(this.mask); }
+}
+
+// ---------------------------------------------------------------------------
+// CHARACTER HANDSHAKE
+//
+// Both peers run the same deterministic simulation, so they must agree on every
+// number that decides a fight. A `pick` therefore carries the sender's whole
+// character, and the receiver validates it before agreeing to start.
+//
+// This is a trust boundary, not a formality: the peer's client is not ours, so
+// its character is exactly as attacker-controlled as a challenge link. Refusing
+// here is much better than the alternative, which is two clients quietly
+// disagreeing until the desync detector voids the match several seconds in.
+//
+// Bump when the shape of the carried character changes. Peers on different
+// versions refuse rather than guess.
+export const CHARACTER_WIRE_VERSION = 1;
+
+// Returns { ok, reason }. Never throws — a malformed payload is a refusal.
+export function validatePeerCharacter(spec) {
+  if (!spec || typeof spec !== 'object') return { ok: false, reason: 'no character sent' };
+  if (spec.wv !== CHARACTER_WIRE_VERSION) {
+    return { ok: false, reason: 'your rival is on a different version of the game' };
+  }
+  if (spec.sv !== SCHEMA_VERSION) {
+    return { ok: false, reason: 'your rival is on a different version of the game' };
+  }
+  const ch = spec.ch;
+  if (!ch) return { ok: false, reason: 'no character sent' };
+  const r = validateCharacter(ch);
+  if (!r.ok) return { ok: false, reason: `your rival's fighter was rejected (${r.errors[0]})` };
+  return { ok: true, reason: null };
 }
 
 // Cheap deterministic state fingerprint for desync detection.

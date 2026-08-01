@@ -63,9 +63,25 @@ Win **2 of 3 rounds** (60 s each): empty your rival's health bar or lead when th
 
 Touch pads appear automatically on phones/tablets (or force them with `?touch=1`).
 
-**Combos — one rule.** When an attack **lands**, cancel it into the *same move or a stronger one* — never a weaker one. The ladder is 🖐 slap → 👊 punch → 👟 kick → ⚡ finisher, with caps of 2 slaps / 3 punches / 2 kicks per string, so `🖐🖐 → 👊👊👊 → 👟👟 → ⚡` is a legal 8-hit route. Kick can't drop back to punch. Later hits deal scaled damage, and 3 / 5 / 7 / 10 hits pop **COMBO! / SYNERGY! / DISRUPTED! / ACQUIRED!**
+**Combos — one rule.** When an attack **lands**, cancel it into **any other basic**. No ladder, no order to memorise: 🖐 slap, 👊 punch, 👟 kick and 🚀 launch all chain into each other, up to 5 basics per string, then a finisher (⚡ special / ⚖️ Cease & Desist / 💸 Acqui-Hire / 🦄 Unicorn). Later hits deal scaled damage, and 3 / 5 / 7 / 10 hits pop **COMBO! / SYNERGY! / DISRUPTED! / ACQUIRED!**
+
+**Command normals — hold ➡ toward your rival as you press a basic** and you get that character's own version of the move. Carl Icahnt turns 👟 into an unblockable **ASSET SEIZURE**; Kim Koindashian turns 👊 into **PUMP** (launches, so she can juggle) and 👟 into **RUG PULL** (a trap on the floor). Every character's moves are listed on the select screen and on the pause menu.
 
 **Parry:** tap block at the instant a hit lands (0.12 s window) — the attacker staggers and you gain energy. Grabs beat parries; parries beat everything else.
+
+## What's new in v2.4 — the character update
+
+Every fighter now **moves** differently, **hits** differently, and is **recognisable by shape alone**.
+
+- 🥊 **Command normals.** Hold forward as you press a basic and you get that character's own move. Everyone still shares identical controls — same movement, same block, same four basics, same universal moves — so uniqueness lives in 2–3 moves per character rather than in a wall of special cases. Two new fight patterns join the vocabulary: **counter** (a stance that turns an incoming strike back on its owner — grabs still beat it) and **trap** (a floor hazard that arms on its own clock and denies ground).
+- 🎞 **Authored keyframe animation.** Attacks are hand-keyed in *phase space* — wind-up, hitbox out, recovery — so one track reads correctly on a 4-frame slap and a 12-frame kick alike. Nearly all the travel happens on the impact frame, and the pose is then **held** through the active window. Smooth easing from wind-up to strike is what made the old poses read as shoves.
+- 🦾 **Arcade proportions.** Limbs have elbows and knees, taper from a thin upper arm into a heavy forearm into a glove, and boots point where the leg points. Two long-standing bugs surfaced once limbs were thick enough to see them: limbs were socketed to the *upright* torso while the torso itself leans, and a horizontal kicking leg ended in a flat plate seen edge-on.
+- 🕴 **A roster you can tell apart in silhouette.** Every fighter has their own proportions and their own head outline. Cathie is the tallest and longest in the arm; Carl is a fireplug with the shortest legs and widest shoulders; Kim is small with an oversized head. Hair now changes the *shape* of a head rather than just its colour.
+- ⚖️ **Nobody is over budget.** The power budget flagged PHANTOM as over-tuned back in v2.3.1 and it stayed that way. It is fixed — and no stat changed to fix it. *Slight and untouchable* is the compounding pattern the budget exists to catch, so giving Lizbeth an ordinary frame to hit is what pays for her speed.
+- 🔒 **Challenge links and live matches now validate what they receive.** A hand-edited link with inflated frame data decodes to nothing, and a live match refuses to start rather than desyncing four seconds in and blaming the wifi.
+- 🎉 **Victory beat** — confetti, a callout, and a pose that lands.
+
+Under the hood: a character schema with a real validator, 139 tests, and a golden-image harness that pins every fighter in every state.
 
 ## What's new in v2.0 — the art pass
 

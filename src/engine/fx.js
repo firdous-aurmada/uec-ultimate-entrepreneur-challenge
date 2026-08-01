@@ -92,6 +92,25 @@ export class FXSystem {
     }
   }
 
+  // Victory confetti: falls from above the stage rather than bursting from the
+  // fighter, so it reads as the room celebrating rather than as another hit.
+  confetti(x, n = 26) {
+    const cols = ['#ffd23f', '#ff3d6e', '#29d9ff', '#57ff8a', '#e332a9', '#eef1ff'];
+    for (let i = 0; i < n; i++) {
+      this.particles.push({
+        x: x + (Math.random() - 0.5) * 520,
+        y: -30 - Math.random() * 160,
+        vx: (Math.random() - 0.5) * 90,
+        vy: 90 + Math.random() * 150,
+        g: 70,                                  // light: it flutters, it does not drop
+        life: 1.6 + Math.random() * 1.4,
+        size: 5 + Math.random() * 5,
+        color: cols[(Math.random() * cols.length) | 0],
+        shape: 'paper', rot: Math.random() * 6, spin: 5 + Math.random() * 6,
+      });
+    }
+  }
+
   sparkles(x, y, n = 3) {
     for (let i = 0; i < n; i++) {
       this.particles.push({

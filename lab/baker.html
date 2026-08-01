@@ -1,0 +1,160 @@
+<meta charset="utf-8">
+<title>Sprite baker — GLB to atlas</title>
+<style>
+  body { background:#0b0e1a; color:#eef1ff; font:13px ui-monospace,monospace; padding:16px; margin:0; }
+  h1 { font:700 17px system-ui; margin:0 0 4px; }
+  p.sub { color:#8b93ad; font:12px/1.6 system-ui; margin:0 0 12px; max-width:900px; }
+  button { font:inherit; padding:6px 14px; margin:0 8px 10px 0; background:#232a3d; color:#eef1ff;
+           border:1px solid #3a4257; border-radius:6px; cursor:pointer; }
+  button:hover { background:#2c3550; }
+  label { color:#8b93ad; font:12px system-ui; margin-right:14px; }
+  input[type=number] { width:56px; background:#141824; color:#eef1ff; border:1px solid #232a3d;
+                       border-radius:4px; padding:3px 5px; font:inherit; }
+  #log { color:#8b93ad; white-space:pre; font-size:12px; margin-top:10px; line-height:1.5; }
+  .strip { display:flex; gap:4px; flex-wrap:wrap; margin:10px 0; align-items:flex-end; }
+  .strip canvas { background:linear-gradient(#1a1f30,#11141f); border-radius:3px; outline:1px solid #232a3d; }
+  h2 { font:700 12px system-ui; letter-spacing:.09em; text-transform:uppercase; color:#ffd23f; margin:16px 0 4px; }
+</style>
+<h1>Sprite baker — GLB → PNG atlas</h1>
+<p class="sub">Bakes a rigged GLB's animation into a sprite strip using the rig-classified renderer.
+Root motion is stripped and the Hips yaw is locked, so the fighter stays side-on and the game keeps
+ownership of position. All frames share one projection, so nothing jitters between poses.</p>
+
+<div>
+  <label>frames <input type="number" id="frames" value="10" min="2" max="24"></label>
+  <label>height px <input type="number" id="fh" value="300" min="64" max="512"></label>
+  <label>yaw° <input type="number" id="yaw" value="30" min="0" max="180"></label>
+  <label><input type="checkbox" id="lock" checked> lock yaw</label>
+  <label><input type="checkbox" id="strip" checked> strip root</label>
+</div>
+<button id="bake">BAKE</button>
+<button id="cmp">compare: yaw locked vs raw</button>
+<button id="save">EXPORT atlas + json</button>
+
+<div id="out"></div>
+<div id="log">loading model…</div>
+
+<script type="module">
+import { loadModel, skinAt, renderPose, motionTimes } from './glb.js';
+
+const log = (s) => { document.getElementById('log').textContent += s + '\n'; };
+document.getElementById('log').textContent = '';
+const out = document.getElementById('out');
+const num = (id) => +document.getElementById(id).value;
+const on = (id) => document.getElementById(id).checked;
+
+// The mesh always comes from the full-detail base model. `?clip=` names an
+// animation source whose motion is retargeted onto it — the cheap rigging
+// call returns a decimated mesh, so we take only its rotations.
+const qs = new URLSearchParams(location.search);
+const CLIP = qs.get('clip');
+const model = loadModel(await (await fetch('./assets/base-boxing.glb')).arrayBuffer());
+let animSrc = null;
+log(`mesh: base-boxing.glb — ${model.POS.length / 3} verts · ${model.IDX.length / 3} tris`);
+if (CLIP) {
+  animSrc = loadModel(await (await fetch(`./assets/${CLIP}.glb`)).arrayBuffer());
+  log(`anim: ${CLIP}.glb — ${animSrc.animName} · ${animSrc.duration.toFixed(2)}s` +
+      ` (source mesh ${animSrc.IDX.length / 3} tris, discarded)`);
+} else {
+  log(`anim: built-in — ${model.animName} · ${model.duration.toFixed(2)}s`);
+}
+const clipDur = () => (animSrc || model).duration;
+log(`model: ${model.POS.length / 3} verts · ${model.IDX.length / 3} tris · ${model.jointNames.length} joints`);
+
+let lastBake = null;
+
+// Render every frame into a big canvas, find the union ink box, crop all
+// frames to it. One shared box keeps the character anchored across poses.
+function bake({ frames, fh, yaw, lockYaw, stripRoot, trim = true, loop = false }) {
+  const PAD = 40;
+  const W = Math.round(fh * 1.3), H = fh + PAD;
+  const scale = fh * 0.55;                     // model is ~1.7 units tall
+  const baselineY = H - PAD * 0.5;
+  const raw = [];
+  let uni = null;
+  // Space frames by equal motion, not equal time, so frames land where the
+  // action is instead of piling up in the rest pose.
+  const times = trim
+    ? motionTimes(model, { anim: animSrc, frames, loop })
+    : Array.from({ length: frames }, (_, i) => (i / (loop ? frames : Math.max(1, frames - 1))) * clipDur());
+  for (let i = 0; i < frames; i++) {
+    const { P, N } = skinAt(model, times[i], { lockYaw, stripRoot, anim: animSrc });
+    const r = renderPose(W, H, model, P, N, { yaw, scale, originX: W / 2, baselineY });
+    raw.push(r);
+    if (r.bounds) {
+      uni = uni ? {
+        minX: Math.min(uni.minX, r.bounds.minX), minY: Math.min(uni.minY, r.bounds.minY),
+        maxX: Math.max(uni.maxX, r.bounds.maxX), maxY: Math.max(uni.maxY, r.bounds.maxY),
+      } : { ...r.bounds };
+    }
+  }
+  if (!uni) throw new Error('nothing rendered');
+  const M = 2;                                  // margin so the ink outline is not clipped
+  const bx = Math.max(0, uni.minX - M), by = Math.max(0, uni.minY - M);
+  const bw = Math.min(W, uni.maxX + M) - bx + 1, bh = Math.min(H, uni.maxY + M) - by + 1;
+
+  const frameCvs = raw.map(r => {
+    const src = new OffscreenCanvas(W, H);
+    src.getContext('2d').putImageData(r.img, 0, 0);
+    const dst = document.createElement('canvas');
+    dst.width = bw; dst.height = bh;
+    dst.getContext('2d').drawImage(src, bx, by, bw, bh, 0, 0, bw, bh);
+    return dst;
+  });
+  // anchor = where the rig origin (the feet) sits inside the cropped frame
+  const anchor = { x: Math.round(W / 2 - bx), y: Math.round(baselineY - by) };
+  return { frameCvs, bw, bh, anchor, frames, scale, times };
+}
+
+function showStrip(title, b, scaleCss = 1) {
+  const h = document.createElement('h2'); h.textContent = title; out.appendChild(h);
+  const s = document.createElement('div'); s.className = 'strip'; out.appendChild(s);
+  b.frameCvs.forEach(c => {
+    c.style.width = Math.round(b.bw * scaleCss) + 'px';
+    s.appendChild(c);
+  });
+}
+
+document.getElementById('bake').onclick = () => {
+  out.innerHTML = '';
+  const t0 = performance.now();
+  const b = bake({ frames: num('frames'), fh: num('fh'), yaw: num('yaw'), lockYaw: on('lock'), stripRoot: on('strip') });
+  lastBake = b;
+  showStrip(`baked ${b.frames} frames — ${b.bw}x${b.bh} each`, b);
+  const small = bake({ frames: num('frames'), fh: 180, yaw: num('yaw'), lockYaw: on('lock'), stripRoot: on('strip') });
+  showStrip(`at game size — ${small.bw}x${small.bh}`, small);
+  log(`baked in ${Math.round(performance.now() - t0)}ms · frame ${b.bw}x${b.bh} · anchor ${b.anchor.x},${b.anchor.y} · times ${b.times.map(t => t.toFixed(2)).join(' ')}`);
+};
+
+document.getElementById('cmp').onclick = () => {
+  out.innerHTML = '';
+  const a = bake({ frames: 8, fh: 220, yaw: num('yaw'), lockYaw: true, stripRoot: true });
+  showStrip('yaw LOCKED + root stripped (what ships)', a);
+  const c = bake({ frames: 8, fh: 220, yaw: num('yaw'), lockYaw: false, stripRoot: false });
+  showStrip('raw clip (body pivots, character drifts)', c);
+  log('comparison rendered — the raw strip is why the baker locks yaw');
+};
+
+document.getElementById('save').onclick = async () => {
+  if (!lastBake) return log('bake first');
+  const b = lastBake;
+  const atlas = document.createElement('canvas');
+  atlas.width = b.bw * b.frames; atlas.height = b.bh;
+  const cx = atlas.getContext('2d');
+  b.frameCvs.forEach((c, i) => cx.drawImage(c, i * b.bw, 0));
+  const blob = await new Promise(r => atlas.toBlob(r, 'image/png'));
+  const meta = {
+    clip: (animSrc || model).animName, frames: b.frames,
+    frameWidth: b.bw, frameHeight: b.bh,
+    anchor: b.anchor, duration: clipDur(),
+    note: 'anchor is the rig origin (feet) within each frame; draw so anchor lands on the fighter position',
+  };
+  const name = CLIP || 'idle';
+  const r1 = await fetch(`/lab/atlas/${name}.png`, { method: 'PUT', body: blob });
+  const r2 = await fetch(`/lab/atlas/${name}.json`, { method: 'PUT', body: JSON.stringify(meta, null, 2) });
+  log(`exported atlas ${atlas.width}x${atlas.height} (PUT ${r1.status}) + meta (PUT ${r2.status})`);
+};
+
+Object.assign(window, { model, animSrc, bake, clipDur, CLIP });
+log('ready — press BAKE');
+</script>

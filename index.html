@@ -133,6 +133,7 @@
             <div class="pv-style" id="you-style"></div>
             <div class="pv-rap" id="you-rap"></div>
             <div class="pv-sp-name" id="you-sp"></div>
+            <div class="pv-cmds" id="you-cmds"></div>
           </button>
           <div class="vs-mid">VS</div>
           <button class="vs-side" id="side-rival">
@@ -144,6 +145,7 @@
             <div class="pv-style" id="rival-style"></div>
             <div class="pv-rap" id="rival-rap"></div>
             <div class="pv-sp-name" id="rival-sp"></div>
+            <div class="pv-cmds" id="rival-cmds"></div>
           </button>
         </div>
         <div class="hint center" id="style-blurb"></div>
@@ -495,6 +497,12 @@
 
     <div class="modal hidden" id="modal-pause">
       <div class="modal-title">PAUSED</div>
+      <!-- Your own moves, checkable mid-match — nobody memorises a move list
+           from the select screen thirty seconds before the fight. -->
+      <div class="pause-moves hidden" id="pause-moves">
+        <div class="pause-moves-label">YOUR MOVES</div>
+        <div class="pv-cmds" id="pause-cmds"></div>
+      </div>
       <button id="btn-resume" class="btn btn-primary">▶ RESUME</button>
       <button id="btn-restart" class="btn">🔄 RESTART MATCH</button>
       <div class="sound-inline">

@@ -229,6 +229,28 @@ function drawProjectile(ctx, p, t) {
   ctx.restore();
 }
 
+// A placed trap. While arming it is faint and still; once armed it pulses, so
+// the threat is legible from across the stage without cluttering the floor.
+function drawTrap(ctx, tr, t) {
+  const armed = tr.armT <= 0;
+  const pulse = armed ? 0.55 + 0.45 * Math.sin(t * 7) : 0.25;
+  const fade = Math.min(1, tr.life / 1.2);          // dims out as it expires
+  const y = tr.y - 6;
+  ctx.save();
+  ctx.globalAlpha = pulse * fade;
+  ctx.strokeStyle = armed ? '#ffd23f' : '#8b93ad';
+  ctx.lineWidth = armed ? 3 : 2;
+  ctx.beginPath();
+  ctx.ellipse(tr.x, y, tr.radius, tr.radius * 0.26, 0, 0, Math.PI * 2);
+  ctx.stroke();
+  if (armed) {
+    ctx.globalAlpha = 0.16 * pulse * fade;
+    ctx.fillStyle = '#ffd23f';
+    ctx.fill();
+  }
+  ctx.restore();
+}
+
 function drawDrop(ctx, d, t) {
   // blink during the last 2 seconds
   if (d.landed && d.lifeT < 2 && Math.floor(t * 8) % 2 === 0) return;
@@ -283,6 +305,9 @@ export function renderGame(ctx, game) {
   drawStageGrade(ctx, t);           // push the backdrop back + haze
   drawPerspectiveFloor(ctx, t);     // receding grid — the main depth cue
 
+  // Traps sit on the floor, under everything, so they read as ground you must
+  // avoid rather than an object in the fight.
+  for (const tr of game.traps || []) drawTrap(ctx, tr, t);
   for (const d of game.drops) drawDrop(ctx, d, t);
   for (const f of game.fighters) { drawShadow(ctx, f); drawFloorSheen(ctx, f); }
   for (const g of game.afterimages) drawAfterimage(ctx, g);

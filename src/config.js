@@ -1,7 +1,7 @@
 // Central tuning for the whole game. All gameplay numbers live here.
 
 // Bump this on every release — it's rendered on the title screen.
-export const VERSION = 'v2.3.1';
+export const VERSION = 'v2.4';
 
 // Every player fights on identical footing. Your base character is pure
 // cosmetics: it decides how you LOOK, never how hard you hit. Ranked points
@@ -214,4 +214,96 @@ export function rankFor(points) {
 
 export const SAVE_KEY = 'uec-save-v1';
 
-export const DEBUG = new URLSearchParams(location.search).has('debug');
+export const DEBUG = typeof location !== 'undefined'
+  && new URLSearchParams(location.search).has('debug');
+
+// ---------------------------------------------------------------------------
+// BODY PROPORTIONS
+//
+// Bounded knobs, all defaulting to 1.0. Clamped rather than free so hurtbox
+// and camera maths stay predictable and balance stays reasonable. Widening a
+// range later is safe; the clamp is the only thing enforcing it.
+// ---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// ARCADE PROPORTIONS
+//
+// An anatomically sane figure reads as a puppet at 196px. Arcade fighters read
+// because the parts that DO things are oversized: gloves, boots, forearms.
+// Everything here is exaggeration applied at draw time — hitboxes come from
+// ATTACKS and the hurtbox comes from PHYS, so none of it touches balance.
+//
+// Limbs also taper. A single-width capsule from shoulder to hand is a stick;
+// a thin upper arm running into a thick forearm running into a glove is a
+// limb, and it costs one extra segment to draw.
+// ---------------------------------------------------------------------------
+export const STYLIZE = {
+  HAND_F: 12.5,        // front glove — the thing that hits you
+  HAND_B: 10.5,
+  FOOT_W: 30, FOOT_H: 12,
+  UPPER_ARM: 11,       // narrow at the shoulder…
+  FOREARM: 15,         // …heavy at the glove
+  THIGH: 21, SHIN: 16,   // legs must out-weigh arms or the figure reads top-heavy
+  HEAD_R: 24,
+  // How far a folded limb bows at the joint. Scales to zero as it straightens,
+  // so a fully extended punch has a straight arm and a guard has a bent one.
+  ELBOW: 14, KNEE: 12,
+  ARM_SPAN: 118,       // limb length treated as fully extended
+  LEG_SPAN: 112,
+};
+
+export const BODY = {
+  height:    [0.82, 1.22],   // overall scale
+  build:     [0.85, 1.25],   // torso + limb thickness
+  reach:     [0.88, 1.20],   // arm length; feeds effective move reach
+  stride:    [0.88, 1.18],   // leg length
+  shoulders: [0.85, 1.25],
+  head:      [0.90, 1.12],
+};
+
+// ---------------------------------------------------------------------------
+// POWER BUDGET
+//
+// v2.3 shipped Carl Icahnt at +58% damage AND +10% HP because nothing stopped
+// style multipliers from compounding. This makes that class of error
+// structurally impossible instead of something review has to catch.
+//
+// speed is weighted above 1.0 because movement advantage compounds with
+// everything else. startup/recovery sit below 1.0 to avoid double-counting
+// frame advantage. hurtbox is a REFUND — a bigger body is easier to hit, so
+// size is partly self-balancing.
+// ---------------------------------------------------------------------------
+export const BUDGET = {
+  W: {
+    dmg: 1.0, hp: 1.0, speed: 1.2, reach: 1.0,
+    startup: 0.7, recovery: 0.5,
+    bodyReach: 0.8, hurtbox: -0.6,
+  },
+  WARN: 8,     // |cost| above this warns
+  BLOCK: 15,   // |cost| above this blocks export
+
+  // ---- command normals ----
+  // A command normal is priced against the neutral basic on its own button, so
+  // "free" means "that basic, on a direction". Two things are charged: what the
+  // archetype can do at all, and how much better its frame data is.
+  CMD: {
+    MAX_SLOTS: 3,
+    // Situational: a command normal only comes out with a direction held, so an
+    // equal frame-data edge is worth far less here than on a global multiplier.
+    // Pricing it at full weight would make every command normal unaffordable.
+    SCALE: 0.25,
+    // Turning a grounded basic into a launcher opens combo routes the base move
+    // has no access to, which the frame-data deltas alone do not capture.
+    LAUNCHER: 3,
+    ARCHETYPE: {
+      strike: 0,
+      aoe: 2.5, counter: 3, trap: 3.5, rush: 3.5,
+      projectile: 4, teleport: 4, rain: 4.5, grab: 5,
+    },
+    // Ratio bounds against the base move. Frame data crosses the wire in a
+    // challenge link, so these are a hard reject, not merely an expensive price.
+    CLAMP: {
+      startup: [0.5, 2.0], active: [0.5, 2.5], recovery: [0.5, 2.0],
+      dmg: [0.4, 2.0], reach: [0.5, 1.8],
+    },
+  },
+};

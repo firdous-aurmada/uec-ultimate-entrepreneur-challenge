@@ -3,7 +3,11 @@
 // Also renders the portrait busts used across the UI.
 
 import { shade } from '../data/fighters.js';
-import { STYLES } from '../config.js';
+import { STYLES, STYLIZE } from '../config.js';
+import { clampBody, applyProportions, bufferMetrics } from './proportions.js';
+import { loadSpriteSet, drawSprite } from './sprites.js';
+import { samplePose, attackPhaseT, trackFor, REST } from './anim.js';
+import { BASE_TRACKS, ATTACK_TRACK, NOMINAL_REACH } from '../data/tracks.js';
 
 const OUTLINE = '#0a0c16';
 const FILTER_OK = typeof CanvasRenderingContext2D !== 'undefined' && 'filter' in CanvasRenderingContext2D.prototype;
@@ -57,6 +61,41 @@ function capsule(ctx, x1, y1, x2, y2, w, color, outline = true) {
   ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
 }
 
+// A limb with a joint in it. Two tapered segments meeting at an elbow/knee
+// that bows perpendicular to the limb and straightens as the limb extends —
+// so a guard has a bent arm and a landed punch has a straight one, for free,
+// off the same two endpoints the poses already provide.
+//
+// `bend` is signed: arms bow one way, legs the other, which is what stops a
+// kick from reading as a backwards knee.
+function jointed(ctx, x1, y1, x2, y2, wNear, wFar, color, bend, span) {
+  const dx = x2 - x1, dy = y2 - y1;
+  const len = Math.hypot(dx, dy);
+  if (len < 1) { capsule(ctx, x1, y1, x2, y2, wFar, color); return; }
+  const slack = Math.max(0, 1 - len / span);        // 0 when fully extended
+  const px = -dy / len, py = dx / len;              // perpendicular
+  const ex = x1 + dx * 0.5 + px * bend * slack;
+  const ey = y1 + dy * 0.5 + py * bend * slack;
+  capsule(ctx, x1, y1, ex, ey, wNear, color);
+  capsule(ctx, ex, ey, x2, y2, wFar, color);
+}
+
+// A boot that points where the leg points. Left axis-aligned, a horizontal
+// kicking leg ends in a flat plate seen edge-on, and the whole limb reads as a
+// plank; rotating it turns the sole toward the opponent, which is the single
+// clearest signal that the thing coming at you is a foot.
+//
+// A standing leg points almost straight down, so the rotation there is a couple
+// of degrees and the boot still sits flat on the floor.
+function boot(ctx, hipX, hipY, footX, footY, w, h, color, anchor) {
+  const rot = Math.atan2(footY - hipY, footX - hipX) - Math.PI / 2;
+  ctx.save();
+  ctx.translate(footX, footY);
+  ctx.rotate(rot);
+  blob(ctx, () => { ctx.roundRect(-w * anchor, -9, w, h, 5); }, color);
+  ctx.restore();
+}
+
 function blob(ctx, drawPath, fill) {
   ctx.beginPath();
   drawPath();
@@ -75,6 +114,33 @@ const ease = {
 };
 
 // ---------------------------------------------------------------- pose
+
+// Samples the authored track for an attack, or null when there is none to use.
+//
+// Tracks are authored against a NOMINAL reach, so the strike is re-scaled to
+// the move's real reach — a zoner visibly out-ranges a grappler off the same
+// keyframes, and a command normal with its own reach extends to match. Only
+// the forward limbs scale; the back arm and planted foot are posture, not range.
+function trackedAttackPose(f, atk) {
+  const name = ATTACK_TRACK[atk.kind];
+  if (!name) return null;
+  const track = trackFor(f.def, name, BASE_TRACKS);
+  if (!track) return null;
+  const t = attackPhaseT(f.stateT, atk.startup, atk.active, atk.recovery);
+  const pose = samplePose(track, t);
+  if (!pose) return null;
+
+  const nominal = NOMINAL_REACH[name];
+  const k = nominal && atk.reach ? atk.reach / nominal : 1;
+  if (Math.abs(k - 1) > 0.01) {
+    for (const limb of ['armF', 'legF']) {
+      pose[limb].x = REST[limb].x + (pose[limb].x - REST[limb].x) * k;
+    }
+  }
+  // An airborne attack tucks the planted leg — there is no floor to push off.
+  if (f.airborne) { pose.legF.y -= 18; pose.legB.y -= 12; }
+  return pose;
+}
 
 // Returns limb targets in local space (+x = facing direction, y up = negative, origin at feet).
 function computePose(f, t) {
@@ -137,6 +203,15 @@ function computePose(f, t) {
     P.sy = 1 + 0.10 * rise; P.sx = 1 - 0.08 * rise;
   } else if (st === 'attack') {
     const atk = f.attack;
+    // Authored keyframes take over where a track exists. Phase-space timing
+    // means the same track reads correctly on a 4-frame slap and a 12-frame
+    // kick; the computed chain below stays as the fallback, so an archetype
+    // with no track — or a character with a broken override — still animates.
+    const posed = trackedAttackPose(f, atk);
+    if (posed) {
+      posed.face = 'angry';
+      return posed;
+    }
     const total = atk.startup + atk.active + atk.recovery;
     const k = Math.min(1, f.stateT / total);
     const inStartup = f.stateT < atk.startup;
@@ -330,6 +405,11 @@ function drawFace(ctx, cx, cy, r, face, c) {
   }
 }
 
+// Hair is the roster's cheapest silhouette lever, and for most of this set it
+// was doing nothing: nearly every style was an arc of radius ~1.0r hugging the
+// skull, so it changed the colour of the head and not its shape. At 196px the
+// head outline is a big share of what tells two fighters apart, so the styles
+// that are SUPPOSED to have volume now actually leave it.
 function drawHair(ctx, cx, cy, r, def, t) {
   const c = def.c;
   const style = def.hairStyle;
@@ -338,22 +418,35 @@ function drawHair(ctx, cx, cy, r, def, t) {
     blob(ctx, () => {
       ctx.arc(cx, cy - r * 0.24, r * 1.02, Math.PI * 0.95, Math.PI * 2.05);
     }, c.hair);
-    const sway = Math.sin(t * 5) * 4;
+    // a longer, heavier tail — the whole point of the style is the outline
+    const sway = Math.sin(t * 5) * 5;
     blob(ctx, () => {
-      ctx.moveTo(cx - r * 0.8, cy - r * 0.55);
-      ctx.quadraticCurveTo(cx - r * 2.1, cy - r * 0.2 + sway, cx - r * 1.55, cy + r * 0.9 + sway);
-      ctx.quadraticCurveTo(cx - r * 1.15, cy + r * 0.55, cx - r * 0.92, cy + r * 0.05);
+      ctx.moveTo(cx - r * 0.8, cy - r * 0.62);
+      ctx.quadraticCurveTo(cx - r * 2.5, cy - r * 0.15 + sway, cx - r * 1.9, cy + r * 1.35 + sway);
+      ctx.quadraticCurveTo(cx - r * 1.25, cy + r * 0.8, cx - r * 0.92, cy + r * 0.05);
+    }, c.hair);
+  } else if (style === 'quiff') {
+    // swept up and forward — reads as height on a head that is otherwise round,
+    // which is the one outline this set had no example of
+    blob(ctx, () => { ctx.arc(cx, cy - r * 0.22, r * 1.02, Math.PI * 0.96, Math.PI * 2.04); }, c.hair);
+    blob(ctx, () => {
+      ctx.moveTo(cx - r * 0.72, cy - r * 0.72);
+      ctx.quadraticCurveTo(cx - r * 0.5, cy - r * 2.15, cx + r * 0.62, cy - r * 1.95);
+      ctx.quadraticCurveTo(cx + r * 1.16, cy - r * 1.72, cx + r * 0.92, cy - r * 0.66);
+      ctx.quadraticCurveTo(cx + r * 0.2, cy - r * 1.12, cx - r * 0.72, cy - r * 0.72);
+      ctx.closePath();
     }, c.hair);
   } else if (style === 'cap') {
-    blob(ctx, () => { ctx.arc(cx, cy - r * 0.3, r * 1.0, Math.PI, 0); }, c.suit2);
+    blob(ctx, () => { ctx.arc(cx, cy - r * 0.34, r * 1.06, Math.PI, 0); }, c.suit2);
+    // a brim long enough to break the round outline
     blob(ctx, () => {
-      ctx.moveTo(cx - r * 0.95, cy - r * 0.28);
-      ctx.lineTo(cx - r * 1.7, cy - r * 0.1);
-      ctx.lineTo(cx - r * 1.66, cy + r * 0.12);
-      ctx.lineTo(cx - r * 0.95, cy - r * 0.02);
+      ctx.moveTo(cx - r * 1.0, cy - r * 0.32);
+      ctx.lineTo(cx - r * 2.25, cy - r * 0.12);
+      ctx.lineTo(cx - r * 2.2, cy + r * 0.16);
+      ctx.lineTo(cx - r * 1.0, cy - r * 0.02);
     }, c.suit2);
     ctx.fillStyle = c.accent;
-    ctx.beginPath(); ctx.arc(cx, cy - r * 0.62, r * 0.2, 0, 7); ctx.fill();
+    ctx.beginPath(); ctx.arc(cx, cy - r * 0.68, r * 0.2, 0, 7); ctx.fill();
   } else if (style === 'neat') {
     blob(ctx, () => {
       ctx.arc(cx, cy - r * 0.3, r * 1.0, Math.PI * 0.92, Math.PI * 2.02);
@@ -365,14 +458,15 @@ function drawHair(ctx, cx, cy, r, def, t) {
     blob(ctx, () => { ctx.arc(cx, cy - r * 0.35, r * 0.98, Math.PI, 0); }, c.hair);
   } else if (style === 'bob') {
     // crown sweep — stays above the brow line
-    blob(ctx, () => { ctx.arc(cx, cy - r * 0.28, r * 1.02, Math.PI * 0.96, Math.PI * 2.04); }, c.hair);
-    // outer curtains framing the face (eyes/mouth stay clear)
+    blob(ctx, () => { ctx.arc(cx, cy - r * 0.3, r * 1.08, Math.PI * 0.94, Math.PI * 2.06); }, c.hair);
+    // Curtains pushed well outboard: a bob is a WIDE outline or it is nothing.
+    // Eyes and mouth still stay clear — the volume goes sideways, not down.
     for (const sgn of [-1, 1]) {
       blob(ctx, () => {
-        ctx.moveTo(cx + sgn * r * 0.66, cy - r * 0.72);
-        ctx.quadraticCurveTo(cx + sgn * r * 1.22, cy - r * 0.25, cx + sgn * r * 0.98, cy + r * 0.6);
-        ctx.lineTo(cx + sgn * r * 0.72, cy + r * 0.42);
-        ctx.quadraticCurveTo(cx + sgn * r * 0.92, cy - r * 0.15, cx + sgn * r * 0.55, cy - r * 0.55);
+        ctx.moveTo(cx + sgn * r * 0.68, cy - r * 0.78);
+        ctx.quadraticCurveTo(cx + sgn * r * 1.72, cy - r * 0.3, cx + sgn * r * 1.38, cy + r * 0.72);
+        ctx.lineTo(cx + sgn * r * 0.86, cy + r * 0.48);
+        ctx.quadraticCurveTo(cx + sgn * r * 1.06, cy - r * 0.18, cx + sgn * r * 0.56, cy - r * 0.58);
         ctx.closePath();
       }, c.hair);
     }
@@ -417,7 +511,9 @@ function drawHair(ctx, cx, cy, r, def, t) {
     }, c.hair);
   } else if (style === 'topknot') {
     blob(ctx, () => { ctx.arc(cx, cy - r * 0.24, r * 1.0, Math.PI * 0.98, Math.PI * 2.02); }, c.hair);
-    blob(ctx, () => { ctx.arc(cx + r * 0.05, cy - r * 1.16, r * 0.34, 0, 7); }, c.hair);
+    // knot raised clear of the crown, on a visible stalk, so it reads at size
+    blob(ctx, () => { ctx.roundRect(cx - r * 0.16, cy - r * 1.34, r * 0.32, r * 0.42, r * 0.1); }, c.hair);
+    blob(ctx, () => { ctx.arc(cx + r * 0.04, cy - r * 1.5, r * 0.46, 0, 7); }, c.hair);
   } else if (style === 'bald') {
     // proudly bald: just a shine
     ctx.strokeStyle = 'rgba(255,255,255,0.5)';
@@ -617,7 +713,9 @@ function drawHead(ctx, def, cx, cy, r, face, t, unicorn) {
 
 function drawTorso(ctx, def, P) {
   const c = def.c;
-  const w = 24;
+  // Shoulders drive the torso's width, so a heavy build actually reads heavy
+  // rather than being a normal torso with thicker arms bolted on.
+  const w = 24 * (P.shoulderW ?? 1) * (0.5 + 0.5 * (P.build ?? 1));
   const topY = P.shoulderY, botY = P.hipY;
   blob(ctx, () => {
     ctx.moveTo(-w + 3, botY + 8);
@@ -714,20 +812,49 @@ function drawBriefcase(ctx, x, y, accent) {
 // it as a post-pass (not per-shape) means it's pose-independent: every current
 // and future animation frame gets the same lit-from-above, warm-key/cool-fill
 // look for free. Toggle with STYLE.shaded so we can A/B the old flat look.
-export const STYLE = { shaded: true };
-const SS = 2, BUF_OX = 130, BUF_OY = 250, BUF_W = 280, BUF_H = 300;
-let _buf = null, _tmp = null;
-function fighterBuffer() {
-  if (!_buf && typeof document !== 'undefined') {
-    _buf = document.createElement('canvas');
-    _buf.width = BUF_W * SS; _buf.height = BUF_H * SS;
-    _tmp = document.createElement('canvas');
-    _tmp.width = BUF_W * SS; _tmp.height = BUF_H * SS;
-  }
-  return _buf;
+export const STYLE = { shaded: true, sprites: false };
+
+// Baked sprite atlases. Opt-in: the procedural renderer stays the default and
+// the fallback, because a player's own founder is drawn from their photo and
+// look choices, which no pre-baked sheet can represent.
+// Frame height in px. Tuned so an idle sprite measures the same 160px tall as
+// the procedural fighter it replaces, keeping stage scale and reach readable.
+export const SPRITE_HEIGHT = 202;
+let _spriteSet = null;
+export function enableSprites(on = true, base = 'assets/sprites/founder') {
+  STYLE.sprites = !!on;
+  if (on && !_spriteSet) _spriteSet = loadSpriteSet('founder', base);
+  return _spriteSet;
 }
-function shadeBuffer(b) {
-  const W = _buf.width, H = _buf.height, oy = BUF_OY * SS, ox = BUF_OX * SS;
+export function spritesReady() { return !!(_spriteSet && _spriteSet.ready); }
+const SS = 2;
+// One buffer per distinct body size, cached by size.
+//
+// A single grow-only buffer was wrong. shadeBuffer fills its gradients over
+// the whole buffer rect, so enlarging the buffer for one big character shifts
+// every OTHER character's shading very slightly (~0.01% — invisible to the
+// eye, but real). That made a fighter's appearance depend on who else happened
+// to be on screen, and made no render reproducible. Keying by size keeps each
+// body deterministic, and a neutral body always lands on the historical
+// 280×300 at (130, 250). At most two are live in a match.
+const _buffers = new Map();
+function fighterBuffer(m) {
+  if (typeof document === 'undefined') return null;
+  const key = `${m.w}x${m.h}@${m.ox},${m.oy}`;
+  let rec = _buffers.get(key);
+  if (!rec) {
+    const buf = document.createElement('canvas');
+    const tmp = document.createElement('canvas');
+    buf.width = tmp.width = m.w * SS;
+    buf.height = tmp.height = m.h * SS;
+    rec = { buf, tmp, ox: m.ox, oy: m.oy, w: m.w, h: m.h };
+    _buffers.set(key, rec);
+  }
+  return rec;
+}
+function shadeBuffer(b, B) {
+  const _buf = B.buf, _tmp = B.tmp;
+  const W = _buf.width, H = _buf.height, oy = B.oy * SS, ox = B.ox * SS;
 
   // ---- rim light: a warm crescent on the upper-key edge of the silhouette ----
   // built as (white silhouette) minus (white silhouette shifted toward shadow),
@@ -768,7 +895,8 @@ function shadeBuffer(b) {
 // Main world-space fighter draw. f: Fighter instance.
 export function drawFighter(ctx, f, t) {
   const def = f.def;
-  const P = computePose(f, t);
+  const body = f.body || clampBody(def.body);
+  const P = applyProportions(computePose(f, t), body);
   const c = def.c;
   ctx.save();
   ctx.translate(f.x, f.y);
@@ -786,17 +914,40 @@ export function drawFighter(ctx, f, t) {
   ctx.scale(f.facing, 1);
   if (P.rot) ctx.rotate(P.rot);
 
-  const buf = STYLE.shaded ? fighterBuffer() : null;
+  // Baked sprite path. Body proportions scale the sheet rather than re-posing
+  // a rig, so the P1 knobs still give a lanky zoner and a squat grappler.
+  if (STYLE.sprites && _spriteSet) {
+    const drew = drawSprite(ctx, _spriteSet, f, t, {
+      height: SPRITE_HEIGHT * body.height,
+      scaleX: body.build,
+      scaleY: 1,
+    });
+    if (drew) {
+      if (f.flashT > 0 && FILTER_OK) {
+        ctx.save();
+        ctx.globalCompositeOperation = 'source-atop';
+        ctx.fillStyle = 'rgba(255,255,255,0.55)';
+        ctx.fillRect(-200, -260, 400, 300);
+        ctx.restore();
+      }
+      ctx.filter = 'none';
+      ctx.restore();
+      return;
+    }
+    // not loaded yet (or no frame for this state) — fall through to procedural
+  }
+
+  const B = STYLE.shaded ? fighterBuffer(bufferMetrics(body)) : null;
   // Render the body either into the shading buffer (local, upright, facing +x)
   // or straight to the world ctx when shading is off.
   let g = ctx;
-  if (buf) {
-    g = buf.getContext('2d');
+  if (B) {
+    g = B.buf.getContext('2d');
     g.setTransform(1, 0, 0, 1, 0, 0);
-    g.clearRect(0, 0, buf.width, buf.height);
+    g.clearRect(0, 0, B.buf.width, B.buf.height);
     g.save();
     g.scale(SS, SS);
-    g.translate(BUF_OX, BUF_OY);
+    g.translate(B.ox, B.oy);
     INK = 1.32;                 // bolder ink for the buffer render only
   } else if (f.flashT > 0 && FILTER_OK) {
     ctx.filter = 'brightness(2.2) saturate(0.4)';
@@ -807,11 +958,35 @@ export function drawFighter(ctx, f, t) {
   // squash & stretch, anchored at the feet so the fighter never floats
   if (P.sx !== 1 || P.sy !== 1) g.scale(P.sx, P.sy);
 
-  // back arm, back leg
-  capsule(g, -10, P.shoulderY + 8, P.armB.x, P.armB.y, 13, c.suit2);
-  blob(g, () => { g.arc(P.armB.x, P.armB.y, 8.5, 0, 7); }, c.skin);
-  capsule(g, -8, P.hipY, P.legB.x, P.legB.y - 6, 15, c.pants);
-  blob(g, () => { g.roundRect(P.legB.x - 9, P.legB.y - 9, 26, 10, 5); }, c.shoe);
+  // Limb gauges. Body build scales them; STYLIZE sets the arcade baseline.
+  const bw = (P.build ?? 1);
+  const upperArm = STYLIZE.UPPER_ARM * bw, foreArm = STYLIZE.FOREARM * bw;
+  const thigh = STYLIZE.THIGH * bw, shin = STYLIZE.SHIN * bw;
+  const handF = STYLIZE.HAND_F * bw, handB = STYLIZE.HAND_B * bw;
+  const footW = STYLIZE.FOOT_W * bw, footH = STYLIZE.FOOT_H * bw;
+
+  // Limbs socket into the LEANED torso, not the upright one. The torso rotates
+  // about the hip, so a strong lean swings the shoulders several pixels — thin
+  // limbs hid the gap, thick ones do not, and a kicking leg that starts in
+  // mid-air is the first thing the eye catches.
+  const lean = (P.bodyLean || 0) * 0.6;
+  const cosL = Math.cos(lean), sinL = Math.sin(lean);
+  const socket = (x, y) => {
+    const dy = y - P.hipY;
+    return [x * cosL - dy * sinL, P.hipY + x * sinL + dy * cosL];
+  };
+  const [shFx, shFy] = socket(10, P.shoulderY + 8);
+  const [shBx, shBy] = socket(-10, P.shoulderY + 8);
+  const [hipFx, hipFy] = socket(8, P.hipY);
+  const [hipBx, hipBy] = socket(-8, P.hipY);
+
+  // back arm, back leg — one shade back so the near side reads in front
+  jointed(g, shBx, shBy, P.armB.x, P.armB.y, upperArm * 0.9, foreArm * 0.9,
+          c.suit2, STYLIZE.ELBOW, STYLIZE.ARM_SPAN);
+  blob(g, () => { g.arc(P.armB.x, P.armB.y, handB, 0, 7); }, c.skin);
+  jointed(g, hipBx, hipBy, P.legB.x, P.legB.y - 6, thigh * 0.92, shin * 0.92,
+          c.pants, -STYLIZE.KNEE, STYLIZE.LEG_SPAN);
+  boot(g, hipBx, hipBy, P.legB.x, P.legB.y, footW, footH, c.shoe, 0.34);
 
   // torso (with lean)
   g.save();
@@ -821,47 +996,53 @@ export function drawFighter(ctx, f, t) {
     g.translate(0, -P.hipY);
   }
   drawTorso(g, def, P);
-  drawHead(g, def, P.headX + (P.bodyLean * 26), P.headY, 22, P.face, t, f.unicornT > 0);
+  drawHead(g, def, P.headX + (P.bodyLean * 26), P.headY, P.headR ?? STYLIZE.HEAD_R, P.face, t, f.unicornT > 0);
   g.restore();
 
-  // motion smear behind the striking limb (sells the speed)
-  if (f.state === 'attack' && f.attack && (f.attack.kind === 'punch' || f.attack.kind === 'kick')) {
-    const a2 = f.attack;
-    if (f.stateT >= a2.startup && f.stateT <= a2.startup + a2.active + 0.03) {
-      const isKick = a2.kind === 'kick';
-      const ox = isKick ? 8 : 10;
-      const oy = isKick ? P.hipY : P.shoulderY + 8;
-      const tx = isKick ? P.legF.x : P.armF.x;
-      const ty = isKick ? P.legF.y - 6 : P.armF.y;
-      const rad = Math.hypot(tx - ox, ty - oy);
-      const ang = Math.atan2(ty - oy, tx - ox);
-      g.save();
-      g.globalAlpha = 0.3;
+  // Motion smear behind the striking limb — the arc it swept through, drawn as
+  // a wedge. Which frames smear is now ANIMATION DATA (`smear` on a keyframe)
+  // rather than a hardcoded list of attack kinds, so an authored track decides
+  // it, and a command normal or a signature special can smear without the
+  // renderer knowing anything about them.
+  if (P.smear && f.state === 'attack' && f.attack) {
+    const isLeg = (f.attack.button || f.attack.kind) === 'kick';
+    const ox = isLeg ? hipFx : shFx;
+    const oy = isLeg ? hipFy : shFy;
+    const tx = isLeg ? P.legF.x : P.armF.x;
+    const ty = isLeg ? P.legF.y - 6 : P.armF.y;
+    const rad = Math.hypot(tx - ox, ty - oy);
+    const ang = Math.atan2(ty - oy, tx - ox);
+    g.save();
+    // two wedges: a wide faint one for the sweep, a tight bright one at the tip
+    for (const [span, alpha, inner] of [[1.15, 0.20, 0.34], [0.5, 0.34, 0.62]]) {
+      g.globalAlpha = alpha;
       g.fillStyle = c.accent;
       g.beginPath();
-      g.arc(ox, oy, rad, ang - 0.85, ang + 0.06);
-      g.arc(ox, oy, rad * 0.45, ang + 0.06, ang - 0.85, true);
+      g.arc(ox, oy, rad, ang - span, ang + 0.06);
+      g.arc(ox, oy, rad * inner, ang + 0.06, ang - span, true);
       g.closePath();
       g.fill();
-      g.restore();
     }
+    g.restore();
   }
 
-  // front leg, front arm
-  capsule(g, 8, P.hipY, P.legF.x, P.legF.y - 6, 15, c.pants);
-  blob(g, () => { g.roundRect(P.legF.x - 7, P.legF.y - 9, 26, 10, 5); }, c.shoe);
-  capsule(g, 10, P.shoulderY + 8, P.armF.x, P.armF.y, 13, c.suit);
-  blob(g, () => { g.arc(P.armF.x, P.armF.y, 9, 0, 7); }, c.skin);
+  // front leg, front arm — the striking limbs, so the heaviest gauge
+  jointed(g, hipFx, hipFy, P.legF.x, P.legF.y - 6, thigh, shin,
+          c.pants, -STYLIZE.KNEE, STYLIZE.LEG_SPAN);
+  boot(g, hipFx, hipFy, P.legF.x, P.legF.y, footW, footH, c.shoe, 0.26);
+  jointed(g, shFx, shFy, P.armF.x, P.armF.y, upperArm, foreArm,
+          c.suit, STYLIZE.ELBOW, STYLIZE.ARM_SPAN);
+  blob(g, () => { g.arc(P.armF.x, P.armF.y, handF, 0, 7); }, c.skin);
 
   if (P.briefcase) drawBriefcase(g, 34, -92, c.accent);
 
-  if (buf) {
+  if (B) {
     INK = 1;                   // reset before shading/blit
     g.restore();               // undo scale/translate
-    shadeBuffer(g);            // cel-shade the whole silhouette at once
+    shadeBuffer(g, B);         // cel-shade the whole silhouette at once
     ctx.save();
     if (f.flashT > 0 && FILTER_OK) ctx.filter = 'brightness(2.2) saturate(0.4)';
-    ctx.drawImage(buf, 0, 0, buf.width, buf.height, -BUF_OX, -BUF_OY, BUF_W, BUF_H);
+    ctx.drawImage(B.buf, 0, 0, B.buf.width, B.buf.height, -B.ox, -B.oy, B.w, B.h);
     ctx.restore();
   }
 

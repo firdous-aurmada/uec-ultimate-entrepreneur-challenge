@@ -1,0 +1,44 @@
+{
+  "_comment": "Animation clip → UEC fighter state. Every entry visually verified weapon-free against the library's preview GIFs. `inplace` ids have root motion pre-stripped; where only a root-motion clip exists the baker zeroes the Hips translation itself, so the choice is not a constraint.",
+  "_verified": "2026-07-30",
+  "_traps": {
+    "Combat_Stance": "id 89 — LOOKS ideal by name, but the character holds a SWORD. Unusable.",
+    "Chest_Pound_Taunt": "id 88 — holds sword AND shield. Unusable.",
+    "note": "The Fighting group is mixed with armed-combat clips. Never pick by name alone; check the preview."
+  },
+
+  "states": {
+    "idle":    { "id": 609, "clip": "Boxing_Practice_inplace", "loop": true,  "note": "shadowbox loop; body pivots, so baker must lock Hips yaw" },
+    "walk":    { "id": 613, "clip": "Casual_Walk_inplace",     "loop": true },
+    "crouch":  { "id": 616, "clip": "Cautious_Crouch_Walk_Forward_inplace", "loop": true },
+    "jump":    { "id": 466, "clip": "Regular_Jump",            "loop": false, "note": "no inplace variant; strip root translation at bake" },
+    "block":   { "id": 138, "clip": "Block1",                  "loop": false, "hold": true },
+
+    "slap":    { "id": 191, "clip": "Left_Jab_from_Guard",     "loop": false },
+    "punch":   { "id": 192, "clip": "Right_Jab_from_Guard",    "loop": false },
+    "kick":    { "id": 209, "clip": "Boxing_Guard_Right_Straight_Kick", "loop": false },
+    "launch":  { "id": 194, "clip": "Right_Uppercut_from_Guard", "loop": false, "note": "reads as a genuine anti-air uppercut" },
+
+    "hitstun":  { "id": 174, "clip": "Face_Punch_Reaction", "loop": false },
+    "hitlight": { "id": 173, "clip": "Slap_Reaction",       "loop": false },
+    "launched": { "id": 7,   "clip": "BeHit_FlyUp",         "loop": false, "note": "airborne, pairs with the uppercut" },
+    "ko":       { "id": 187, "clip": "Knock_Down",          "loop": false },
+
+    "victory": { "id": null, "clip": null, "note": "UNRESOLVED — the obvious pick (Chest_Pound_Taunt) is armed. Candidates to check: Angry_Ground_Stomp 255, or a Dancing-group clip." }
+  },
+
+  "alternates": {
+    "_why": "Per-character variety without new meshes: give characters different clips for the same state.",
+    "punch": [193, 197, 210, 212],
+    "kick":  [207, 215, 213, 206],
+    "block": [139, 140, 141, 142, 143],
+    "ko":    [190, 8, 189],
+    "walk":  [621, 652]
+  },
+
+  "baker_requirements": [
+    "Zero Hips translation X/Z so the game owns position, not the animation.",
+    "Lock Hips yaw so the fighter stays side-on to the opponent.",
+    "Fixed scale across all frames of all clips, or the character changes size between states."
+  ]
+}

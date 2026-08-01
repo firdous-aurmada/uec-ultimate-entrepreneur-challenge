@@ -42,6 +42,9 @@ export const DROP_EFFECTS = [
   } },
 ];
 
+// Drawn from the seeded RNG, so both peers in a live match see the same one.
+const VICTORY_CRIES = ['ACQUIRED!', 'EXIT!', 'LIQUIDATED!', 'UNICORN!', 'IPO!', 'DUE DILIGENCE!'];
+
 export class Game {
   constructor({ p1, p2, arena, mode, difficulty, isChallenge, onEnd, hud, seed }) {
     this.arena = arena;
@@ -54,6 +57,7 @@ export class Game {
     this.fx = new FXSystem();
     this.fighters = [new Fighter(p1.def, 0, p1.controller), new Fighter(p2.def, 1, p2.controller)];
     this.projectiles = [];
+    this.traps = [];
     this.afterimages = [];
     this.roundWins = [0, 0];
     this.koRounds = [0, 0];
@@ -136,6 +140,7 @@ export class Game {
     this.pushApart();
     this.updateProjectiles(dt);
     this.resolveHits();
+    this.updateTraps(dt);
     this.updateDrops(dt);
     this.updateAfterimages(dt);
     this.updateHints();
@@ -235,6 +240,26 @@ export class Game {
       this.fx.shake(4);
       return;
     }
+    // COUNTER: a stance that turns an incoming strike back on its owner. Sits
+    // above block/parry in the same rock-paper-scissors — grabs beat it, it
+    // beats everything else — so it is a read, not a free defensive option.
+    const ctr = def.counterActive();
+    if (ctr && a.kind !== 'grab' && !fromProjectile) {
+      def.attack = null;
+      def.setState('idle');
+      this.giveEnergy(def, PARRY.ENERGY);
+      this.audio.sfx('parry');
+      this.fx.ring(cx, cy, '#ff9df3', 720, 7, 0.34);
+      this.fx.popup(cx, cy - 44, 'COUNTERED!', '#ff9df3');
+      this.fx.hitstop(0.13);
+      this.fx.shake(6);
+      att.applyHit({
+        dmg: Math.max(1, Math.round(ctr.dmg * def.dmgMult)),
+        kb: ctr.kb, kbUp: 0, stun: 0.42, dir: -dir,
+      });
+      return;
+    }
+
     const blocked = def.state === 'block' && def.grounded;
 
     // PARRY: block started within the parry window → attack turned away
@@ -401,7 +426,11 @@ export class Game {
 
   spawnSlide(owner, i) {
     this.audio.sfx('projectile');
-    const sp = owner.special;
+    // Read the params of the move that FIRED, not the character's signature
+    // special — otherwise a projectile command normal quietly borrows the
+    // signature's numbers. During a signature special the two are the same
+    // object, so shipped behaviour is unchanged.
+    const sp = owner.attack?.special || owner.special;
     this.projectiles.push({
       type: 'slide', owner, delay: 0,
       x: owner.x + owner.facing * 48, y: owner.y - 112 + (i - 1) * 10,
@@ -415,7 +444,7 @@ export class Game {
   spawnRain(owner) {
     this.audio.sfx('special');
     const opp = this.other(owner);
-    const sp = owner.special;
+    const sp = owner.attack?.special || owner.special;
     for (let i = 0; i < sp.count; i++) {
       this.projectiles.push({
         type: 'coin', owner, delay: i * 0.16,
@@ -458,6 +487,67 @@ export class Game {
         words: p.words, sfx: p.sfx, shake: p.shake, hasHit: false,
       }, true);
     }
+  }
+
+  // The victory beat. No new motion source is needed — the pose is the existing
+  // arm-pump; what was missing was the room reacting to it.
+  celebrate(winner, matchOver) {
+    this.fx.confetti(winner.x, matchOver ? 40 : 20);
+    this.fx.popup(winner.x, winner.y - 200,
+      matchOver ? VICTORY_CRIES[(this.rng() * VICTORY_CRIES.length) | 0] : 'ROUND!',
+      winner.def.c?.accent || '#ffd23f');
+    if (matchOver) {
+      this.fx.ring(winner.x, winner.y - 90, '#ffd23f', 640, 7, 0.5);
+      this.fx.sparkles(winner.x, winner.y - 110, 8);
+    }
+  }
+
+  // ---------------- traps ----------------
+  // A placed hazard that arms on its own clock, then bites the first opponent
+  // who walks over it. Deliberately area-denial rather than damage: it makes
+  // ground the opponent used to own expensive to stand on.
+  spawnTrap(owner, sp) {
+    const max = sp.maxActive ?? 2;
+    const mine = this.traps.filter(t => t.owner === owner);
+    // At the cap the oldest gives way, so placing never silently does nothing.
+    if (mine.length >= max) mine[0].dead = true;
+    this.traps.push({
+      owner,
+      x: owner.x,
+      y: STAGE.FLOOR,
+      radius: sp.radius ?? 70,
+      dmg: sp.dmg ?? 10,
+      armT: sp.armTime ?? 0.35,
+      life: sp.lifetime ?? 6,
+      born: 0,
+      dead: false,
+    });
+    this.audio.sfx('whiff');
+    this.fx.dust(owner.x, owner.y, 4);
+  }
+
+  updateTraps(dt) {
+    if (!this.traps.length) return;
+    for (const t of this.traps) {
+      if (t.dead) continue;
+      t.born += dt;
+      t.life -= dt;
+      t.armT -= dt;
+      if (t.life <= 0) { t.dead = true; continue; }
+      if (t.armT > 0) continue;                       // still arming — harmless
+      const victim = this.other(t.owner);
+      if (victim.state === 'ko' || !victim.grounded) continue;   // jump it
+      if (Math.abs(victim.x - t.x) > t.radius) continue;
+      t.dead = true;
+      this.fx.ring(t.x, STAGE.FLOOR - 10, '#ffd23f', 520, 6, 0.3);
+      // Flagged as indirect: a counter stance turns a *swing* back on its
+      // owner, and there is nobody swinging here — the floor bit you.
+      this.strike(t.owner, victim, {
+        kind: 'trap', dmg: t.dmg, kb: 180, kbUp: -240, stun: 0.32, shake: 7,
+        sfx: 'paperHit', words: ['SNARED!', 'DUE DILIGENCE!', 'CLAWED BACK!'],
+      }, true);
+    }
+    this.traps = this.traps.filter(t => !t.dead);
   }
 
   // ---------------- mystery drops ----------------
@@ -675,7 +765,7 @@ export class Game {
       this.timescale = 1;
       if (this.roundWinner >= 0) {
         const w = this.fighters[this.roundWinner];
-        if (w.state !== 'ko') w.setState('victory');
+        if (w.state !== 'ko') { w.setState('victory'); this.celebrate(w, false); }
         const matchOver = this.roundWins[this.roundWinner] >= ROUND.WINS_NEEDED;
         if (!matchOver) this.hud.announce(`${w.def.name} TAKES IT`, 'small');
       }
@@ -688,6 +778,7 @@ export class Game {
         this.setState('matchEnd');
         const w = this.fighters[this.winnerIdx];
         w.setState('victory');
+        this.celebrate(w, true);
         this.hud.announce(`${w.def.name} WINS!`);
         this.audio.sfx(this.mode === 'solo' && this.winnerIdx !== 0 ? 'defeat' : 'victory');
       } else {
@@ -701,6 +792,7 @@ export class Game {
     this.timer = ROUND.TIME;
     this.lastTickSec = -1;
     this.projectiles = [];
+    this.traps = [];
     this.afterimages = [];
     this.drops = [];
     this.scheduleNextDrop(true);
