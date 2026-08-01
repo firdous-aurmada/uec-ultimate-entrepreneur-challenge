@@ -82,12 +82,61 @@
       <button class="btn wide" id="btnAddCmd">+ ADD MOVE</button>
     </div>
 
+    <div class="panel">
+      <h2>ANIMATION</h2>
+      <p class="hint">Poses are render-only — they never touch the simulation or
+        cross the wire. An override you break falls back to the stock track.</p>
+      <div class="row"><span>STATE</span><select id="animState"></select></div>
+      <button class="btn wide" id="btnAnim">OPEN TIMELINE</button>
+      <div class="hint" id="animSummary" style="margin-top:8px"></div>
+    </div>
+
     <div class="panel" id="reportPanel">
       <h2>VALIDATION</h2>
       <div id="report" class="report">—</div>
     </div>
   </section>
 </main>
+
+<!-- ------------------------------------------------------- animation editor -->
+<div class="modal-back hidden" id="animBack">
+  <div class="modal anim">
+    <div class="modal-head">
+      <strong>TIMELINE</strong>
+      <span class="chip" id="animTitle"></span>
+      <button class="btn tiny" id="animPlay">▶ PLAY</button>
+      <button class="btn tiny" id="animOnion">ONION: ON</button>
+      <button class="btn tiny" id="animReset">RESET TO STOCK</button>
+      <button class="btn" id="animClose">DONE</button>
+    </div>
+
+    <div class="anim-body">
+      <div class="anim-stage">
+        <canvas id="animCanvas" width="420" height="440"></canvas>
+        <div class="hint">Drag the cyan handles to pose the selected key. Grey ghosts are the keys either side.</div>
+      </div>
+
+      <div class="anim-side">
+        <div class="anim-keyhead">
+          <span>KEY</span>
+          <button class="btn tiny" id="keyAdd">+ ADD</button>
+          <button class="btn tiny" id="keyDup">COPY</button>
+          <button class="btn tiny" id="keyMirror">MIRROR</button>
+          <button class="btn tiny danger" id="keyDel">DELETE</button>
+        </div>
+        <div class="row"><span>TIME</span><input id="keyT" type="number" step="0.01"></div>
+        <div class="row"><span>EASE</span><select id="keyEase"></select></div>
+        <label class="chk"><input type="checkbox" id="keyHold"> HOLD — pin this pose until the next key</label>
+        <label class="chk"><input type="checkbox" id="keySmear"> SMEAR — draw the motion arc on these frames</label>
+        <div id="keyJoints"></div>
+      </div>
+    </div>
+
+    <div class="timeline" id="timeline">
+      <canvas id="tlCanvas" width="1100" height="64"></canvas>
+    </div>
+  </div>
+</div>
 
 <div class="modal-back hidden" id="sparBack">
   <div class="modal">

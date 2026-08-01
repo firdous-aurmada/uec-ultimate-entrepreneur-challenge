@@ -22,6 +22,7 @@ import {
   slotButton, SLOT_GLYPH, MOVE_TAGS, DEFAULT_BODY,
 } from '../src/data/schema.js';
 import { drawFighter } from '../src/engine/drawFighter.js';
+import { initAnimEditor, refreshSummary } from './animeditor.js';
 import { Fighter } from '../src/engine/fighter.js';
 
 const $ = (id) => document.getElementById(id);
@@ -76,6 +77,7 @@ function save() {
 // draft, so there is no path where the preview and the numbers disagree.
 function changed() {
   save();
+  try { refreshSummary(); } catch (e) { /* editor not booted yet */ }
   renderBudget();
   renderReport();
   renderPreview();
@@ -490,6 +492,8 @@ function toModule() {
     headwear: draft.headwear, eyewear: draft.eyewear, facialHair: draft.facialHair,
   };
   if (draft.commandNormals.length) clean.commandNormals = draft.commandNormals;
+  // render-only, but it belongs to the character, so it ships in the module
+  if (draft.animOverrides && Object.keys(draft.animOverrides).length) clean.animOverrides = draft.animOverrides;
   const body = JSON.stringify(clean, null, 2).replace(/^/gm, '  ');
   return `// Authored in THE INCUBATOR. Plain data — diff it, review it, commit it.
 // Drop into FIGHTERS in src/data/fighters.js, or import and spread it there.
@@ -612,6 +616,7 @@ buildBodySliders();
 buildStyle();
 buildCommands();
 buildPoseTabs();
+initAnimEditor(draft, changed);
 changed();
 
 // handy for driving the tool from a console or a test

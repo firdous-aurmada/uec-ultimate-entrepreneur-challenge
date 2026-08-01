@@ -233,3 +233,49 @@ test('animation overrides do not move the power budget', () => {
   const without = validateCharacter(charWith(undefined));
   assert.equal(withAnim.cost, without.cost, 'a pose is not a stat');
 });
+
+// ------------------------------------------------- what the editor produces
+//
+// The editor seeds a track by cloning the stock one, then edits keys in place.
+// These pin that the resulting shape is still something the renderer accepts —
+// the failure mode is an author losing an afternoon to a track that silently
+// falls back.
+
+test('a cloned base track samples identically to the original', () => {
+  const copy = JSON.parse(JSON.stringify(BASE_TRACKS.punch));
+  for (const t of [0, 0.5, 0.95, 1.15, 2, 2.6, 3]) {
+    assert.deepEqual(samplePose(copy, t), samplePose(BASE_TRACKS.punch, t), `diverged at t=${t}`);
+  }
+});
+
+test('an edited key still samples, and the edit is what comes out', () => {
+  const track = JSON.parse(JSON.stringify(BASE_TRACKS.punch));
+  const impact = track.find(k => k.t === 1.15);
+  impact.joints.armF = { x: 134, y: -142 };
+  const p = samplePose(track, 1.15);
+  assert.equal(p.armF.x, 134);
+  assert.equal(p.armF.y, -142);
+});
+
+test('a key added mid-track keeps the track ordered and samplable', () => {
+  const track = JSON.parse(JSON.stringify(BASE_TRACKS.punch));
+  track.push({ t: 1.6, joints: { hipY: -80 } });
+  track.sort((a, b) => a.t - b.t);
+  assert.ok(samplePose(track, 1.6));
+  assert.deepEqual(validateTrack('edited', track, { attack: true }), []);
+});
+
+test('mirroring a key swaps the near and far limbs', () => {
+  // side-view mirroring is a limb swap, which is how a left jab comes from a right one
+  const k = { t: 1, joints: { armF: { x: 100, y: -100 }, armB: { x: 10, y: -90 }, bodyLean: 0.3 } };
+  const { armF, armB } = k.joints;
+  k.joints.armF = armB; k.joints.armB = armF; k.joints.bodyLean *= -1;
+  assert.equal(k.joints.armF.x, 10);
+  assert.equal(k.joints.armB.x, 100);
+  assert.ok(Math.abs(k.joints.bodyLean + 0.3) < 1e-9);
+});
+
+test('deleting down to two keys still leaves a usable track', () => {
+  const track = [{ t: 0, joints: { hipY: -66 } }, { t: 3, joints: { hipY: -80 } }];
+  assert.ok(samplePose(track, 1.5), 'two keys are enough to interpolate');
+});
