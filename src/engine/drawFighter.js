@@ -405,6 +405,11 @@ function drawFace(ctx, cx, cy, r, face, c) {
   }
 }
 
+// Hair is the roster's cheapest silhouette lever, and for most of this set it
+// was doing nothing: nearly every style was an arc of radius ~1.0r hugging the
+// skull, so it changed the colour of the head and not its shape. At 196px the
+// head outline is a big share of what tells two fighters apart, so the styles
+// that are SUPPOSED to have volume now actually leave it.
 function drawHair(ctx, cx, cy, r, def, t) {
   const c = def.c;
   const style = def.hairStyle;
@@ -413,22 +418,35 @@ function drawHair(ctx, cx, cy, r, def, t) {
     blob(ctx, () => {
       ctx.arc(cx, cy - r * 0.24, r * 1.02, Math.PI * 0.95, Math.PI * 2.05);
     }, c.hair);
-    const sway = Math.sin(t * 5) * 4;
+    // a longer, heavier tail — the whole point of the style is the outline
+    const sway = Math.sin(t * 5) * 5;
     blob(ctx, () => {
-      ctx.moveTo(cx - r * 0.8, cy - r * 0.55);
-      ctx.quadraticCurveTo(cx - r * 2.1, cy - r * 0.2 + sway, cx - r * 1.55, cy + r * 0.9 + sway);
-      ctx.quadraticCurveTo(cx - r * 1.15, cy + r * 0.55, cx - r * 0.92, cy + r * 0.05);
+      ctx.moveTo(cx - r * 0.8, cy - r * 0.62);
+      ctx.quadraticCurveTo(cx - r * 2.5, cy - r * 0.15 + sway, cx - r * 1.9, cy + r * 1.35 + sway);
+      ctx.quadraticCurveTo(cx - r * 1.25, cy + r * 0.8, cx - r * 0.92, cy + r * 0.05);
+    }, c.hair);
+  } else if (style === 'quiff') {
+    // swept up and forward — reads as height on a head that is otherwise round,
+    // which is the one outline this set had no example of
+    blob(ctx, () => { ctx.arc(cx, cy - r * 0.22, r * 1.02, Math.PI * 0.96, Math.PI * 2.04); }, c.hair);
+    blob(ctx, () => {
+      ctx.moveTo(cx - r * 0.72, cy - r * 0.72);
+      ctx.quadraticCurveTo(cx - r * 0.5, cy - r * 2.15, cx + r * 0.62, cy - r * 1.95);
+      ctx.quadraticCurveTo(cx + r * 1.16, cy - r * 1.72, cx + r * 0.92, cy - r * 0.66);
+      ctx.quadraticCurveTo(cx + r * 0.2, cy - r * 1.12, cx - r * 0.72, cy - r * 0.72);
+      ctx.closePath();
     }, c.hair);
   } else if (style === 'cap') {
-    blob(ctx, () => { ctx.arc(cx, cy - r * 0.3, r * 1.0, Math.PI, 0); }, c.suit2);
+    blob(ctx, () => { ctx.arc(cx, cy - r * 0.34, r * 1.06, Math.PI, 0); }, c.suit2);
+    // a brim long enough to break the round outline
     blob(ctx, () => {
-      ctx.moveTo(cx - r * 0.95, cy - r * 0.28);
-      ctx.lineTo(cx - r * 1.7, cy - r * 0.1);
-      ctx.lineTo(cx - r * 1.66, cy + r * 0.12);
-      ctx.lineTo(cx - r * 0.95, cy - r * 0.02);
+      ctx.moveTo(cx - r * 1.0, cy - r * 0.32);
+      ctx.lineTo(cx - r * 2.25, cy - r * 0.12);
+      ctx.lineTo(cx - r * 2.2, cy + r * 0.16);
+      ctx.lineTo(cx - r * 1.0, cy - r * 0.02);
     }, c.suit2);
     ctx.fillStyle = c.accent;
-    ctx.beginPath(); ctx.arc(cx, cy - r * 0.62, r * 0.2, 0, 7); ctx.fill();
+    ctx.beginPath(); ctx.arc(cx, cy - r * 0.68, r * 0.2, 0, 7); ctx.fill();
   } else if (style === 'neat') {
     blob(ctx, () => {
       ctx.arc(cx, cy - r * 0.3, r * 1.0, Math.PI * 0.92, Math.PI * 2.02);
@@ -440,14 +458,15 @@ function drawHair(ctx, cx, cy, r, def, t) {
     blob(ctx, () => { ctx.arc(cx, cy - r * 0.35, r * 0.98, Math.PI, 0); }, c.hair);
   } else if (style === 'bob') {
     // crown sweep — stays above the brow line
-    blob(ctx, () => { ctx.arc(cx, cy - r * 0.28, r * 1.02, Math.PI * 0.96, Math.PI * 2.04); }, c.hair);
-    // outer curtains framing the face (eyes/mouth stay clear)
+    blob(ctx, () => { ctx.arc(cx, cy - r * 0.3, r * 1.08, Math.PI * 0.94, Math.PI * 2.06); }, c.hair);
+    // Curtains pushed well outboard: a bob is a WIDE outline or it is nothing.
+    // Eyes and mouth still stay clear — the volume goes sideways, not down.
     for (const sgn of [-1, 1]) {
       blob(ctx, () => {
-        ctx.moveTo(cx + sgn * r * 0.66, cy - r * 0.72);
-        ctx.quadraticCurveTo(cx + sgn * r * 1.22, cy - r * 0.25, cx + sgn * r * 0.98, cy + r * 0.6);
-        ctx.lineTo(cx + sgn * r * 0.72, cy + r * 0.42);
-        ctx.quadraticCurveTo(cx + sgn * r * 0.92, cy - r * 0.15, cx + sgn * r * 0.55, cy - r * 0.55);
+        ctx.moveTo(cx + sgn * r * 0.68, cy - r * 0.78);
+        ctx.quadraticCurveTo(cx + sgn * r * 1.72, cy - r * 0.3, cx + sgn * r * 1.38, cy + r * 0.72);
+        ctx.lineTo(cx + sgn * r * 0.86, cy + r * 0.48);
+        ctx.quadraticCurveTo(cx + sgn * r * 1.06, cy - r * 0.18, cx + sgn * r * 0.56, cy - r * 0.58);
         ctx.closePath();
       }, c.hair);
     }
@@ -492,7 +511,9 @@ function drawHair(ctx, cx, cy, r, def, t) {
     }, c.hair);
   } else if (style === 'topknot') {
     blob(ctx, () => { ctx.arc(cx, cy - r * 0.24, r * 1.0, Math.PI * 0.98, Math.PI * 2.02); }, c.hair);
-    blob(ctx, () => { ctx.arc(cx + r * 0.05, cy - r * 1.16, r * 0.34, 0, 7); }, c.hair);
+    // knot raised clear of the crown, on a visible stalk, so it reads at size
+    blob(ctx, () => { ctx.roundRect(cx - r * 0.16, cy - r * 1.34, r * 0.32, r * 0.42, r * 0.1); }, c.hair);
+    blob(ctx, () => { ctx.arc(cx + r * 0.04, cy - r * 1.5, r * 0.46, 0, 7); }, c.hair);
   } else if (style === 'bald') {
     // proudly bald: just a shine
     ctx.strokeStyle = 'rgba(255,255,255,0.5)';

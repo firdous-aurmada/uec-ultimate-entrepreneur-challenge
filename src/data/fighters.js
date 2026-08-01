@@ -104,7 +104,7 @@ export const FIGHTERS = [
     stats: { speed: 1.15, power: 0.9, hp: 95 },
     ai: { aggr: 0.6, jump: 0.55, prefRange: 'mid' },
     c: { skin: '#f0c896', suit: '#1fb9a5', suit2: '#128372', accent: '#eef1ff', hair: '#191a22', pants: '#20263f', shoe: '#dfe4ff' },
-    hairStyle: 'neat', outfit: 'turtleneck', accessory: 'glasses',
+    hairStyle: 'quiff', outfit: 'turtleneck', accessory: 'glasses',
   },
   {
     id: 'zara', name: 'KIM KOINDASHIAN', title: 'THE RUG-PULLER', company: 'SKIMZCOIN',
@@ -189,7 +189,7 @@ export const FIGHTERS = [
     stats: { speed: 1.05, power: 1.15, hp: 100 },
     ai: { aggr: 0.82, jump: 0.4, prefRange: 'close' },
     c: { skin: '#eec9a6', suit: '#1a1c24', suit2: '#0e0f15', accent: '#ff3d2e', hair: '#2a2118', pants: '#1a1c24', shoe: '#c9ced9' },
-    hairStyle: 'short', outfit: 'tee', accessory: null, cameo: true,
+    hairStyle: 'buzz', outfit: 'tee', accessory: null, cameo: true,
   },
   {
     id: 'bozo', name: 'JEFF BOZO', title: 'THE EVERYTHING GUY', company: 'PRIMEZON',
@@ -304,6 +304,7 @@ export const LOOKS = {
   hairStyle: [
     { id: 'short', name: 'SHORT' }, { id: 'buzz', name: 'BUZZ' },
     { id: 'neat', name: 'NEAT' }, { id: 'slick', name: 'SLICK' },
+    { id: 'quiff', name: 'QUIFF' },
     { id: 'curly', name: 'CURLY' }, { id: 'afro', name: 'AFRO' },
     { id: 'bob', name: 'BOB' }, { id: 'long', name: 'LONG' },
     { id: 'ponytail', name: 'PONYTAIL' }, { id: 'topknot', name: 'TOP KNOT' },
