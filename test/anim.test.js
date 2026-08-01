@@ -279,3 +279,54 @@ test('deleting down to two keys still leaves a usable track', () => {
   const track = [{ t: 0, joints: { hipY: -66 } }, { t: 3, joints: { hipY: -80 } }];
   assert.ok(samplePose(track, 1.5), 'two keys are enough to interpolate');
 });
+
+// ------------------------------------------------- per-character idle loops
+
+import { FIGHTERS } from '../src/data/fighters.js';
+import { addDelta } from '../src/engine/anim.js';
+
+// An idle whose first and last key disagree jumps every single cycle. It is the
+// most visible possible animation bug and the easiest one to author by accident.
+test('every authored idle closes its loop', () => {
+  for (const def of FIGHTERS) {
+    const track = def.animOverrides?.idle;
+    if (!track) continue;
+    const a = samplePose(track, 0), b = samplePose(track, 1);
+    for (const key of ['hipY', 'shoulderY', 'headY', 'headX']) {
+      assert.ok(Math.abs(a[key] - b[key]) < 0.001, `${def.id} idle pops on ${key}`);
+    }
+    assert.ok(Math.abs(a.armF.y - b.armF.y) < 0.001, `${def.id} idle pops on armF`);
+  }
+});
+
+test('authored idles actually differ from each other', () => {
+  const sigs = new Set();
+  for (const def of FIGHTERS) {
+    const track = def.animOverrides?.idle;
+    if (!track) continue;
+    // fingerprint the motion, not the rest pose
+    sigs.add([0.15, 0.35, 0.6, 0.85].map(t => samplePose(track, t).hipY.toFixed(2)).join('/'));
+  }
+  assert.ok(sigs.size >= 4, `expected distinct idles, saw ${sigs.size}`);
+});
+
+// The whole reason idle layers as a delta: a track must not flatten the
+// per-stance silhouettes, which are what tell you who someone picked.
+test('layering an idle delta preserves the stance it was added to', () => {
+  const sumo = restPose();
+  sumo.legF = { x: 24, y: 0 }; sumo.legB = { x: -24, y: 0 };   // heavy stance
+  const sprinter = restPose();
+  sprinter.legF = { x: 19, y: 0 }; sprinter.legB = { x: -17, y: 0 };
+  const breath = samplePose(FIGHTERS.find(f => f.id === 'dex').animOverrides.idle, 0.5);
+  addDelta(sumo, breath);
+  addDelta(sprinter, breath);
+  assert.notEqual(sumo.legF.x, sprinter.legF.x, 'the delta flattened two different stances');
+  assert.equal(sumo.legF.x - sprinter.legF.x, 5, 'stance separation must survive untouched');
+});
+
+test('a delta of the rest pose changes nothing', () => {
+  const p = restPose();
+  const before = JSON.stringify(p);
+  addDelta(p, restPose());
+  assert.equal(JSON.stringify(p), before);
+});

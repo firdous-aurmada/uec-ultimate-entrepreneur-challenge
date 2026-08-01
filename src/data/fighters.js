@@ -104,6 +104,15 @@ export const FIGHTERS = [
     body: { height: 1.06, build: 0.98, reach: 1.00, stride: 1.16, shoulders: 0.92, head: 0.96 },
     stats: { speed: 1.15, power: 0.9, hp: 95 },
     ai: { aggr: 0.6, jump: 0.55, prefRange: 'mid' },
+    // The keynote drift: the presenting hand rises like he is about to say
+    // "one more thing", then settles.
+    animOverrides: {
+      idle: [
+        { t: 0,   joints: { hipY: -66, headX: 0, armF: { x: 30, y: -98 } } },
+        { t: 0.4, joints: { hipY: -62, headX: 2, armF: { x: 37, y: -106 } }, ease: 'inOutCubic' },
+        { t: 1,   joints: { hipY: -66, headX: 0, armF: { x: 30, y: -98 } }, ease: 'inOutCubic' },
+      ],
+    },
     c: { skin: '#f0c896', suit: '#1fb9a5', suit2: '#128372', accent: '#eef1ff', hair: '#191a22', pants: '#20263f', shoe: '#dfe4ff' },
     hairStyle: 'quiff', outfit: 'turtleneck', accessory: 'glasses',
   },
@@ -136,6 +145,16 @@ export const FIGHTERS = [
         params: { lifetime: 5.5, radius: 78, armTime: 0.35, dmg: 12, maxActive: 1 },
       },
     ],
+    // Restless: two bounces per breath, never quite still.
+    animOverrides: {
+      idle: [
+        { t: 0,    joints: { hipY: -66, headY: -134, armF: { x: 30, y: -98 }, armB: { x: 18, y: -90 } } },
+        { t: 0.25, joints: { hipY: -71, headY: -140, armF: { x: 31, y: -103 }, armB: { x: 19, y: -95 } }, ease: 'outQuad' },
+        { t: 0.5,  joints: { hipY: -64, headY: -132, armF: { x: 30, y: -96 }, armB: { x: 18, y: -88 } }, ease: 'inQuad' },
+        { t: 0.75, joints: { hipY: -70, headY: -139, armF: { x: 31, y: -102 }, armB: { x: 19, y: -94 } }, ease: 'outQuad' },
+        { t: 1,    joints: { hipY: -66, headY: -134, armF: { x: 30, y: -98 }, armB: { x: 18, y: -90 } }, ease: 'inQuad' },
+      ],
+    },
     c: { skin: '#8a5a3b', suit: '#e332a9', suit2: '#a91277', accent: '#57ff8a', hair: '#1c1424', pants: '#2c1a3d', shoe: '#57ff8a' },
     hairStyle: 'puffs', outfit: 'bomber', accessory: 'earrings',
   },
@@ -149,6 +168,15 @@ export const FIGHTERS = [
     body: { height: 1.14, build: 0.94, reach: 1.06, stride: 1.12, shoulders: 0.88, head: 0.94 },
     stats: { speed: 0.9, power: 1.05, hp: 105 },
     ai: { aggr: 0.65, jump: 0.2, prefRange: 'far' },
+    // Almost motionless. The stillness is the threat — she is waiting for you
+    // to walk into the range she already has.
+    animOverrides: {
+      idle: [
+        { t: 0,   joints: { hipY: -66, armF: { x: 30, y: -98 } } },
+        { t: 0.5, joints: { hipY: -65, armF: { x: 31, y: -96 } }, ease: 'inOutCubic' },
+        { t: 1,   joints: { hipY: -66, armF: { x: 30, y: -98 } }, ease: 'inOutCubic' },
+      ],
+    },
     c: { skin: '#f2cdb2', suit: '#1c2a5e', suit2: '#111a3d', accent: '#ffd23f', hair: '#efe6d8', pants: '#141d42', shoe: '#1a1a24' },
     hairStyle: 'bob', outfit: 'suit', accessory: 'brooch',
   },
@@ -175,6 +203,14 @@ export const FIGHTERS = [
         },
       },
     ],
+    // A slow, heavy shift of weight. He does not fidget — he waits.
+    animOverrides: {
+      idle: [
+        { t: 0,   joints: { hipY: -66, armF: { x: 30, y: -98 }, armB: { x: 18, y: -90 } } },
+        { t: 0.5, joints: { hipY: -60, armF: { x: 33, y: -92 }, armB: { x: 21, y: -84 } }, ease: 'inOutCubic' },
+        { t: 1,   joints: { hipY: -66, armF: { x: 30, y: -98 }, armB: { x: 18, y: -90 } }, ease: 'inOutCubic' },
+      ],
+    },
     c: { skin: '#d9a06b', suit: '#2c2f3a', suit2: '#191b23', accent: '#ff3d6e', hair: '#101116', pants: '#22242e', shoe: '#101116' },
     hairStyle: 'slick', outfit: 'pinstripe', accessory: 'shades',
   },

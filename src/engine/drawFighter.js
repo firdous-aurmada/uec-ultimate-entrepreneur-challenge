@@ -6,8 +6,11 @@ import { shade } from '../data/fighters.js';
 import { STYLES, STYLIZE } from '../config.js';
 import { clampBody, applyProportions, bufferMetrics } from './proportions.js';
 import { loadSpriteSet, drawSprite } from './sprites.js';
-import { samplePose, attackPhaseT, trackFor, REST } from './anim.js';
+import { samplePose, attackPhaseT, trackFor, addDelta, REST } from './anim.js';
 import { BASE_TRACKS, ATTACK_TRACK, NOMINAL_REACH } from '../data/tracks.js';
+
+// How many idle loops per second. The stock track is one breath.
+const IDLE_RATE = 0.62;
 
 const OUTLINE = '#0a0c16';
 const FILTER_OK = typeof CanvasRenderingContext2D !== 'undefined' && 'filter' in CanvasRenderingContext2D.prototype;
@@ -152,7 +155,7 @@ function computePose(f, t) {
     legF: { x: 15, y: 0 }, legB: { x: -14, y: 0 },
     face: 'idle', briefcase: false, bodyLean: 0, sx: 1, sy: 1,
   };
-  const bob = Math.sin(t * 4 + (f.side === 0 ? 0 : 1.7)) * 2.2;
+  const bob = Math.sin(t * 4 + (f.side === 0 ? 0 : 1.7)) * 2.2;   // walk head bounce
   const st = f.state;
 
   // Each fighting style has its own silhouette at rest and in a crouch — you
@@ -160,31 +163,42 @@ function computePose(f, t) {
   const stance = (STYLES[f.def?.style] || STYLES.balanced).stance;
 
   if (st === 'idle') {
-    P.hipY += bob * 0.5; P.headY += bob; P.armF.y += bob; P.armB.y += bob;
+    // Stance first — this is the per-character silhouette, and it is the whole
+    // reason you can tell who someone picked before they throw a button.
     if (stance === 'coiled') {                 // rushdown: low, hands up, leaning in
       P.hipY += 8; P.shoulderY += 5; P.headY += 6; P.bodyLean = 0.14;
-      P.armF = { x: 26, y: -112 + bob }; P.armB = { x: 12, y: -104 + bob };
+      P.armF = { x: 26, y: -112 }; P.armB = { x: 12, y: -104 };
       P.legF = { x: 19, y: 0 }; P.legB = { x: -17, y: 0 };
     } else if (stance === 'heavy') {           // brawler: wide, arms hanging, chin down
       P.hipY += 4; P.bodyLean = 0.05;
-      P.armF = { x: 34, y: -84 + bob }; P.armB = { x: 24, y: -78 + bob };
+      P.armF = { x: 34, y: -84 }; P.armB = { x: 24, y: -78 };
       P.legF = { x: 24, y: 0 }; P.legB = { x: -24, y: 0 };
       P.sx = 1.05; P.sy = 0.98;
     } else if (stance === 'poised') {          // zoner: tall, upright, arm extended out
       P.hipY -= 3; P.headY -= 3; P.bodyLean = -0.05;
-      P.armF = { x: 40, y: -104 + bob }; P.armB = { x: 8, y: -92 + bob };
+      P.armF = { x: 40, y: -104 }; P.armB = { x: 8, y: -92 };
       P.legF = { x: 12, y: 0 }; P.legB = { x: -11, y: 0 };
       P.sy = 1.03;
     } else if (stance === 'loose') {           // trickster: off-balance, hands low, swaying
       const sway = Math.sin(t * 2.6) * 4;
       P.bodyLean = 0.10 + Math.sin(t * 2.2) * 0.05;
       P.headX = sway * 0.5;
-      P.armF = { x: 30 + sway, y: -80 + bob }; P.armB = { x: -22 - sway, y: -86 + bob };
+      P.armF = { x: 30 + sway, y: -80 }; P.armB = { x: -22 - sway, y: -86 };
       P.legF = { x: 17, y: 0 }; P.legB = { x: -13, y: 0 };
     } else if (stance === 'flair') {           // showman: one arm out presenting, chest up
       P.bodyLean = -0.08;
-      P.armF = { x: 38, y: -128 + bob * 1.4 }; P.armB = { x: -16, y: -88 + bob };
+      P.armF = { x: 38, y: -128 }; P.armB = { x: -16, y: -88 };
       P.headY -= 2; P.legF = { x: 16, y: 0 }; P.legB = { x: -15, y: 0 };
+    }
+    // Breathing comes from an authored loop, layered as a DELTA so it adds to
+    // whatever the stance produced instead of overwriting it. This replaces the
+    // old hardcoded `bob`, and it is what makes a per-character idle possible
+    // without giving up the stance silhouettes.
+    const idle = trackFor(f.def, 'idle', BASE_TRACKS);
+    if (idle) {
+      // side offset so two fighters facing off never breathe in lockstep
+      const phase = (t * IDLE_RATE + (f.side === 0 ? 0 : 0.42)) % 1;
+      addDelta(P, samplePose(idle, (phase + 1) % 1));
     }
   } else if (st === 'walk') {
     const ph = f.walkPhase;

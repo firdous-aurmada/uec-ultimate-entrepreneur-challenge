@@ -117,6 +117,27 @@ export function samplePose(track, t, base) {
   return pose;
 }
 
+// Adds a sampled pose into `P` as a DELTA FROM REST, rather than replacing it.
+//
+// This is what lets an authored loop coexist with a hand-tuned stance. Idle
+// poses carry per-character silhouettes — a rushdown crouches like a sprinter,
+// a brawler like a sumo — and a track that overwrote the pose would flatten all
+// of that into one shape. Layering the delta means the track supplies the
+// BREATHING and the stance keeps the identity.
+export function addDelta(P, pose) {
+  if (!P || !pose) return P;
+  for (const key of NUM_KEYS) {
+    if (typeof pose[key] === 'number') P[key] += pose[key] - REST[key];
+  }
+  for (const key of VEC_KEYS) {
+    const v = pose[key];
+    if (!v) continue;
+    P[key].x += v.x - REST[key].x;
+    P[key].y += v.y - REST[key].y;
+  }
+  return P;
+}
+
 // Maps an attack's real elapsed time into phase space (see the header).
 export function attackPhaseT(stateT, startup, active, recovery) {
   if (stateT < startup) return startup > 0 ? clamp01(stateT / startup) : 1;
