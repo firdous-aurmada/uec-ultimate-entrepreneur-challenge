@@ -60,3 +60,31 @@ test('every fighter differs from neutral — nobody ships as the default body', 
     assert.ok(off, `${def.id} still has the stock proportions`);
   }
 });
+
+// Characters authored in the Incubator. The tool refuses to export a blocked
+// character, so anything in here must still validate — this catches a hand-edit
+// after the fact, or a schema change that invalidates work already done.
+test('every authored character still validates', async () => {
+  let mod;
+  try {
+    mod = await import('../src/data/authored.js');
+  } catch (e) {
+    return;                       // nobody has exported yet; nothing to check
+  }
+  const list = mod.AUTHORED || [];
+  assert.ok(Array.isArray(list), 'AUTHORED must be an array');
+  for (const def of list) {
+    const r = validateCharacter(toCharacter(def));
+    assert.equal(r.ok, true, `${def.id}: ${r.errors.join('; ')}`);
+    assert.notEqual(r.band, 'block', `${def.id} is over budget at ${r.cost.toFixed(1)}`);
+  }
+});
+
+test('authored characters do not collide with the shipped roster', async () => {
+  let mod;
+  try { mod = await import('../src/data/authored.js'); } catch (e) { return; }
+  const shipped = new Set(FIGHTERS.map(f => f.id));
+  for (const def of (mod.AUTHORED || [])) {
+    assert.equal(shipped.has(def.id), false, `${def.id} already exists in the roster`);
+  }
+});

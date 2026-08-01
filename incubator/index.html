@@ -1,0 +1,121 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>THE INCUBATOR — UEC character forge</title>
+<link rel="stylesheet" href="incubator.css">
+
+<header class="top">
+  <div class="brand">THE&nbsp;INCUBATOR<span class="sub">UEC character forge</span></div>
+  <div class="budget" id="budget">
+    <div class="budget-label">POWER BUDGET</div>
+    <div class="budget-bar">
+      <div class="budget-zone clean"></div>
+      <div class="budget-zone warn left"></div>
+      <div class="budget-zone warn right"></div>
+      <div class="budget-needle" id="needle"></div>
+      <div class="budget-mid"></div>
+    </div>
+    <div class="budget-read"><span id="budgetCost">0.0</span><span class="band" id="budgetBand">clean</span></div>
+  </div>
+  <div class="top-actions">
+    <button class="btn" id="btnRandom">🎲 SURPRISE</button>
+    <button class="btn" id="btnSpar">🥊 SPAR</button>
+    <button class="btn primary" id="btnExport">EXPORT</button>
+  </div>
+</header>
+
+<main class="wrap">
+  <!-- ------------------------------------------------------------ left -->
+  <section class="col">
+    <div class="panel">
+      <h2>IDENTITY</h2>
+      <label class="row"><span>NAME</span><input id="fName" maxlength="22"></label>
+      <label class="row"><span>TITLE</span><input id="fTitle" maxlength="24"></label>
+      <label class="row"><span>COMPANY</span><input id="fCompany" maxlength="20"></label>
+      <label class="row"><span>TAGLINE</span><input id="fTagline" maxlength="64"></label>
+      <label class="row"><span>RAP SHEET</span><input id="fRap" maxlength="40"></label>
+      <label class="row"><span>ID</span><input id="fId" maxlength="24" spellcheck="false"></label>
+    </div>
+
+    <div class="panel">
+      <h2>LOOK</h2>
+      <div id="lookPickers"></div>
+      <div class="swatches" id="swatches"></div>
+    </div>
+
+    <div class="panel">
+      <h2>PROPORTIONS</h2>
+      <p class="hint">Shoulders, stride and head are unpriced — they change the
+        silhouette for free. Height, build and reach cost budget.</p>
+      <div id="bodySliders"></div>
+    </div>
+  </section>
+
+  <!-- ---------------------------------------------------------- centre -->
+  <section class="col centre">
+    <div class="panel stage">
+      <h2>PREVIEW <span class="hint inline">— the shipping renderer, not a mock-up</span></h2>
+      <div class="poses" id="poses"></div>
+      <div class="pose-tabs" id="poseTabs"></div>
+    </div>
+    <div class="panel">
+      <h2>SILHOUETTE</h2>
+      <p class="hint">Colour and face stripped. If it does not read here, it does
+        not read at 196px in a fight.</p>
+      <canvas id="silhouette" width="300" height="300"></canvas>
+    </div>
+  </section>
+
+  <!-- ----------------------------------------------------------- right -->
+  <section class="col">
+    <div class="panel">
+      <h2>FIGHTING STYLE</h2>
+      <label class="row"><span>PRESET</span><select id="fStyle"></select></label>
+      <p class="hint" id="styleBlurb"></p>
+    </div>
+
+    <div class="panel">
+      <h2>COMMAND NORMALS <span class="hint inline">— hold forward + button</span></h2>
+      <p class="hint">Two or three moves that belong to this character and nobody
+        else. Everything else in the game is shared.</p>
+      <div id="cmdList"></div>
+      <button class="btn wide" id="btnAddCmd">+ ADD MOVE</button>
+    </div>
+
+    <div class="panel" id="reportPanel">
+      <h2>VALIDATION</h2>
+      <div id="report" class="report">—</div>
+    </div>
+  </section>
+</main>
+
+<div class="modal-back hidden" id="sparBack">
+  <div class="modal">
+    <div class="modal-head">
+      <strong>SPAR</strong>
+      <select id="sparRival"></select>
+      <select id="sparLevel">
+        <option value="intern">ROOKIE</option>
+        <option value="founder" selected>CONTENDER</option>
+        <option value="mogul">CHAMPION</option>
+      </select>
+      <button class="btn" id="sparClose">CLOSE</button>
+    </div>
+    <canvas id="sparCanvas" width="960" height="540"></canvas>
+    <div class="hint" id="sparHint">Real physics, real AI, real frame data. Controls: A/D move · Q block · X slap · C punch · V kick · B special · Z launch</div>
+  </div>
+</div>
+
+<div class="modal-back hidden" id="exportBack">
+  <div class="modal narrow">
+    <div class="modal-head"><strong>EXPORT</strong><button class="btn" id="exportClose">CLOSE</button></div>
+    <div id="exportMsg" class="report"></div>
+    <textarea id="exportOut" spellcheck="false"></textarea>
+    <div class="modal-foot">
+      <button class="btn" id="btnCopy">COPY</button>
+      <button class="btn primary" id="btnWrite">WRITE TO src/data/authored.js</button>
+    </div>
+  </div>
+</div>
+
+<script type="module" src="main.js"></script>
