@@ -194,3 +194,42 @@ test('every attack archetype maps onto a real track', () => {
 test('every nominal reach names a real basic', () => {
   for (const k of Object.keys(NOMINAL_REACH)) assert.ok(BASE_TRACKS[k], `${k} has no track`);
 });
+
+// ---------------------------------------------------------------- authoring gate
+
+import { validateCharacter, SCHEMA_VERSION, DEFAULT_BODY } from '../src/data/schema.js';
+
+const charWith = (animOverrides) => ({
+  schema: SCHEMA_VERSION, id: 'anim-test',
+  identity: { name: 'T', title: 'T', company: 'T', tagline: 'x', rap: 'y' },
+  body: { ...DEFAULT_BODY }, look: { stance: 'ready' },
+  fighting: {
+    preset: 'balanced', startup: 1, dmg: 1, reach: 1, recovery: 1, speed: 1, hp: 1,
+    moves: { special: { archetype: 'strike' }, signature: null },
+  },
+  ai: { aggr: 0.5, jump: 0.3, prefRange: 'mid' },
+  animOverrides,
+});
+
+test('a good animation override validates without complaint', () => {
+  const r = validateCharacter(charWith({ punch: [{ t: 0, joints: {} }, { t: 1, joints: {} }] }));
+  assert.equal(r.ok, true);
+  assert.deepEqual(r.warnings, []);
+});
+
+// A broken pose must not cost a character its playability. The renderer already
+// falls back to the base track, so refusing to load over an animation typo
+// would be a worse failure than the typo.
+test('a broken animation override warns but never blocks the character', () => {
+  for (const bad of [{ punch: [] }, { punch: 'nope' }, { punch: [{ t: 1 }, { t: 0 }] }, { punch: [{ joints: {} }] }]) {
+    const r = validateCharacter(charWith(bad));
+    assert.equal(r.ok, true, `${JSON.stringify(bad)} must still load`);
+    assert.ok(r.warnings.length > 0, `${JSON.stringify(bad)} should warn`);
+  }
+});
+
+test('animation overrides do not move the power budget', () => {
+  const withAnim = validateCharacter(charWith({ punch: [{ t: 0, joints: { hipY: -999 } }, { t: 1, joints: {} }] }));
+  const without = validateCharacter(charWith(undefined));
+  assert.equal(withAnim.cost, without.cost, 'a pose is not a stat');
+});

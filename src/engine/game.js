@@ -42,6 +42,9 @@ export const DROP_EFFECTS = [
   } },
 ];
 
+// Drawn from the seeded RNG, so both peers in a live match see the same one.
+const VICTORY_CRIES = ['ACQUIRED!', 'EXIT!', 'LIQUIDATED!', 'UNICORN!', 'IPO!', 'DUE DILIGENCE!'];
+
 export class Game {
   constructor({ p1, p2, arena, mode, difficulty, isChallenge, onEnd, hud, seed }) {
     this.arena = arena;
@@ -486,6 +489,19 @@ export class Game {
     }
   }
 
+  // The victory beat. No new motion source is needed — the pose is the existing
+  // arm-pump; what was missing was the room reacting to it.
+  celebrate(winner, matchOver) {
+    this.fx.confetti(winner.x, matchOver ? 40 : 20);
+    this.fx.popup(winner.x, winner.y - 200,
+      matchOver ? VICTORY_CRIES[(this.rng() * VICTORY_CRIES.length) | 0] : 'ROUND!',
+      winner.def.c?.accent || '#ffd23f');
+    if (matchOver) {
+      this.fx.ring(winner.x, winner.y - 90, '#ffd23f', 640, 7, 0.5);
+      this.fx.sparkles(winner.x, winner.y - 110, 8);
+    }
+  }
+
   // ---------------- traps ----------------
   // A placed hazard that arms on its own clock, then bites the first opponent
   // who walks over it. Deliberately area-denial rather than damage: it makes
@@ -749,7 +765,7 @@ export class Game {
       this.timescale = 1;
       if (this.roundWinner >= 0) {
         const w = this.fighters[this.roundWinner];
-        if (w.state !== 'ko') w.setState('victory');
+        if (w.state !== 'ko') { w.setState('victory'); this.celebrate(w, false); }
         const matchOver = this.roundWins[this.roundWinner] >= ROUND.WINS_NEEDED;
         if (!matchOver) this.hud.announce(`${w.def.name} TAKES IT`, 'small');
       }
@@ -762,6 +778,7 @@ export class Game {
         this.setState('matchEnd');
         const w = this.fighters[this.winnerIdx];
         w.setState('victory');
+        this.celebrate(w, true);
         this.hud.announce(`${w.def.name} WINS!`);
         this.audio.sfx(this.mode === 'solo' && this.winnerIdx !== 0 ? 'defeat' : 'victory');
       } else {

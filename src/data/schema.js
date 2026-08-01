@@ -251,6 +251,38 @@ export function validateCharacter(ch) {
     }
   }
 
+  // ---- animation overrides ----
+  //
+  // Render-only, and NOT carried by the codec or the netcode handshake — a pose
+  // cannot change a fight, and shipping keyframes over a URL would dwarf it.
+  // They are still validated here so the authoring tool catches a broken track
+  // at export rather than at the moment a character T-poses in a match.
+  //
+  // Anything malformed is a WARNING, not an error: the renderer falls back to
+  // the base track, so a bad override costs a character its flourish, not its
+  // playability. Refusing to load a character over an animation typo would be
+  // a worse failure than the typo.
+  if (ch.animOverrides !== undefined && ch.animOverrides !== null) {
+    if (typeof ch.animOverrides !== 'object' || Array.isArray(ch.animOverrides)) {
+      warnings.push('animOverrides must be an object keyed by state; ignoring it');
+    } else {
+      for (const [state, track] of Object.entries(ch.animOverrides)) {
+        const keys = Array.isArray(track) ? track : (track && track.keys);
+        if (!Array.isArray(keys) || !keys.length) {
+          warnings.push(`animOverrides.${state} has no keys; the base track will be used`);
+          continue;
+        }
+        let last = -Infinity, bad = false;
+        for (const k of keys) {
+          if (!k || typeof k.t !== 'number' || !Number.isFinite(k.t)) { bad = true; break; }
+          if (k.t < last) { bad = true; break; }
+          last = k.t;
+        }
+        if (bad) warnings.push(`animOverrides.${state} keys must be finite and ordered by t; the base track will be used`);
+      }
+    }
+  }
+
   const ai = ch.ai || {};
   if (!PREF_RANGES.includes(ai.prefRange)) errors.push('ai.prefRange must be close, mid or far');
   for (const key of ['aggr', 'jump']) {

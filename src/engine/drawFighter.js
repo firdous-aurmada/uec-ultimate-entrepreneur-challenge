@@ -999,27 +999,31 @@ export function drawFighter(ctx, f, t) {
   drawHead(g, def, P.headX + (P.bodyLean * 26), P.headY, P.headR ?? STYLIZE.HEAD_R, P.face, t, f.unicornT > 0);
   g.restore();
 
-  // motion smear behind the striking limb (sells the speed)
-  if (f.state === 'attack' && f.attack && (f.attack.kind === 'punch' || f.attack.kind === 'kick')) {
-    const a2 = f.attack;
-    if (f.stateT >= a2.startup && f.stateT <= a2.startup + a2.active + 0.03) {
-      const isKick = a2.kind === 'kick';
-      const ox = isKick ? 8 : 10;
-      const oy = isKick ? P.hipY : P.shoulderY + 8;
-      const tx = isKick ? P.legF.x : P.armF.x;
-      const ty = isKick ? P.legF.y - 6 : P.armF.y;
-      const rad = Math.hypot(tx - ox, ty - oy);
-      const ang = Math.atan2(ty - oy, tx - ox);
-      g.save();
-      g.globalAlpha = 0.3;
+  // Motion smear behind the striking limb — the arc it swept through, drawn as
+  // a wedge. Which frames smear is now ANIMATION DATA (`smear` on a keyframe)
+  // rather than a hardcoded list of attack kinds, so an authored track decides
+  // it, and a command normal or a signature special can smear without the
+  // renderer knowing anything about them.
+  if (P.smear && f.state === 'attack' && f.attack) {
+    const isLeg = (f.attack.button || f.attack.kind) === 'kick';
+    const ox = isLeg ? hipFx : shFx;
+    const oy = isLeg ? hipFy : shFy;
+    const tx = isLeg ? P.legF.x : P.armF.x;
+    const ty = isLeg ? P.legF.y - 6 : P.armF.y;
+    const rad = Math.hypot(tx - ox, ty - oy);
+    const ang = Math.atan2(ty - oy, tx - ox);
+    g.save();
+    // two wedges: a wide faint one for the sweep, a tight bright one at the tip
+    for (const [span, alpha, inner] of [[1.15, 0.20, 0.34], [0.5, 0.34, 0.62]]) {
+      g.globalAlpha = alpha;
       g.fillStyle = c.accent;
       g.beginPath();
-      g.arc(ox, oy, rad, ang - 0.85, ang + 0.06);
-      g.arc(ox, oy, rad * 0.45, ang + 0.06, ang - 0.85, true);
+      g.arc(ox, oy, rad, ang - span, ang + 0.06);
+      g.arc(ox, oy, rad * inner, ang + 0.06, ang - span, true);
       g.closePath();
       g.fill();
-      g.restore();
     }
+    g.restore();
   }
 
   // front leg, front arm — the striking limbs, so the heaviest gauge
