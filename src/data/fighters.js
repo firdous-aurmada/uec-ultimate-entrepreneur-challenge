@@ -4,8 +4,9 @@
 // Roster stats vary on purpose, but ONLY ever as AI opponents. Human players
 // always get PLAYER_STATS, so nobody gains an edge from a cosmetic pick.
 
-import { PLAYER_STATS, STYLES } from '../config.js';
-import { SCHEMA_VERSION, DEFAULT_BODY } from './schema.js';
+import { PLAYER_STATS, STYLES, BODY } from '../config.js';
+import { SCHEMA_VERSION, DEFAULT_BODY, budgetCost } from './schema.js';
+import { getPlayerMove, toCommandNormal } from './playerMoves.js';
 
 export const SPECIALS = {
   pitchdeck: {
@@ -349,6 +350,50 @@ export function pickLook(src) {
 export const DEFAULT_BASE_ID = 'b-neo';
 
 // Builds a fighter definition for a user profile (custom colors/special/photo).
+// ---------------------------------------------------------------- player build
+//
+// A player's fighter is assembled from three things a profile can hold: a body,
+// a set of move ids chosen off a curated menu, and everything cosmetic. Stats
+// are never among them.
+
+export function clampPlayerBody(body) {
+  const out = { ...DEFAULT_BODY };
+  if (!body) return out;
+  for (const key of Object.keys(DEFAULT_BODY)) {
+    const v = Number(body[key]);
+    if (!Number.isFinite(v)) continue;
+    const [lo, hi] = BODY[key];
+    out[key] = Math.min(hi, Math.max(lo, v));
+  }
+  return out;
+}
+
+// Move ids -> command normals. Unknown ids are dropped rather than throwing:
+// a profile saved against an older menu should lose a move, not fail to load.
+// Two moves on the same input cannot both exist, so the first one wins.
+export function playerCommandNormals(ids) {
+  if (!Array.isArray(ids)) return [];
+  const out = [], used = new Set();
+  for (const id of ids.slice(0, 3)) {
+    const cn = toCommandNormal(getPlayerMove(id));
+    if (!cn || used.has(cn.slot)) continue;
+    used.add(cn.slot);
+    out.push(cn);
+  }
+  return out;
+}
+
+// What a player's current build costs. Zero is the target; the profile screen
+// shows this live and refuses to save outside ±PLAYER_BUDGET.
+export function playerBuildCost(profile) {
+  const st = STYLES.balanced;
+  return budgetCost(
+    { startup: st.startup, dmg: st.dmg, reach: st.reach, recovery: st.recovery, speed: st.speed, hp: st.hp },
+    clampPlayerBody(profile?.body),
+    playerCommandNormals(profile?.moves),
+  );
+}
+
 export function buildCustomFighter(profile) {
   const base = getFighter(profile.baseId || DEFAULT_BASE_ID);
   return {
@@ -362,6 +407,13 @@ export function buildCustomFighter(profile) {
     special: profile.special || base.special,
     photo: profile.photo || null,
     stats: { ...PLAYER_STATS },   // look is cosmetic; every player hits the same
+    // PINNED, not inherited. Fighter derives speed and HP from `style`, so
+    // letting a player's base pick carry a style through would quietly make a
+    // cosmetic click a stat choice — the exact bug v1.7 was written to kill.
+    // Player variety lives in silhouette and moves, both budget-balanced.
+    style: 'balanced',
+    body: clampPlayerBody(profile.body),
+    commandNormals: playerCommandNormals(profile.moves),
 
     // skin/hair come from the uploaded photo when available, so hands + head
     // coloring match the person instead of the generic base founder

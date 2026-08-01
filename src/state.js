@@ -3,7 +3,8 @@
 
 import { SAVE_KEY, POINTS, AI_LEVELS, STYLES, rankFor } from './config.js';
 import { SEED_PLAYERS } from './data/seed.js';
-import { DEFAULT_BASE_ID, SPECIALS } from './data/fighters.js';
+import { DEFAULT_BASE_ID, SPECIALS, playerCommandNormals } from './data/fighters.js';
+import { PLAYER_MOVES, getPlayerMove, toCommandNormal } from './data/playerMoves.js';
 import {
   validateCharacter, SCHEMA_VERSION, COMMAND_SLOTS, ARCHETYPES,
 } from './data/schema.js';
@@ -158,16 +159,35 @@ function b64urlDecode(str) {
 }
 
 function packCommand(cn) {
-  return {
+  const out = {
     s: COMMAND_SLOTS.indexOf(cn.slot),
     a: ARCHETYPES.indexOf(cn.archetype),
     d: String(cn.displayName || '').slice(0, 24),
     f: FRAME_KEYS.map(k => r4(cn.frameData?.[k])),
   };
+  // Menu moves travel as an ID. A counter's window and a trap's radius live in
+  // `params`, and carrying those raw would both bloat the link and hand an
+  // attacker a second set of numbers to forge. An id means the params come
+  // from OUR code on the far side — smaller and strictly safer.
+  const menu = matchPlayerMove(cn);
+  if (menu) out.m = menu.id;
+  return out;
+}
+
+// Is this command normal one of the curated player moves? Matched on slot and
+// display name, which together are unique across the menu.
+function matchPlayerMove(cn) {
+  return PLAYER_MOVES.find(m => m.slot === cn.slot && m.displayName === cn.displayName) || null;
 }
 
 function unpackCommand(p) {
-  if (!p || typeof p !== 'object' || !Array.isArray(p.f)) return null;
+  if (!p || typeof p !== 'object') return null;
+  // A known menu move is rebuilt from code, params and all.
+  if (typeof p.m === 'string') {
+    const cn = toCommandNormal(getPlayerMove(p.m));
+    if (cn) return cn;
+  }
+  if (!Array.isArray(p.f)) return null;
   const frameData = {};
   FRAME_KEYS.forEach((k, i) => { if (typeof p.f[i] === 'number') frameData[k] = p.f[i]; });
   return {
@@ -183,6 +203,11 @@ function unpackCommand(p) {
 export function challengePayload({ profile, points = 0, userId = null }) {
   const p = profile || {};
   const body = p.body || {};
+  // A player's profile stores move IDS off the curated menu; an authored
+  // character carries full command normals. Resolve the former so a founder
+  // built in the profile screen fights with their own moves as a ghost —
+  // otherwise the link promises a fighter it does not deliver.
+  const cmds = p.commandNormals || playerCommandNormals(p.moves);
   return {
     v: CODEC_VERSION,
     n: p.name || 'A mystery founder',
@@ -191,7 +216,7 @@ export function challengePayload({ profile, points = 0, userId = null }) {
     sp: p.special || null,
     st: p.style || 'balanced',
     bd: BODY_KEYS.map(k => r4(body[k]) ?? 1),
-    cn: (p.commandNormals || []).map(packCommand),
+    cn: cmds.map(packCommand),
     pts: points,
     u: userId || undefined,             // lets the recipient fetch the real photo/colors
   };

@@ -336,6 +336,35 @@
         <div class="hint" id="special-desc"></div>
         <div class="soon-teaser">🔮 <b>Coming soon:</b> describe a fighter or an arena in words and generate your own — custom characters, custom battlegrounds.</div>
       </div>
+
+      <!-- Build: silhouette + signature moves, balanced against a budget of
+           zero so nobody can buy an advantage. Every player hits the same. -->
+      <div class="panel" id="build-panel">
+        <div class="panel-title">YOUR BUILD</div>
+        <div class="hint">
+          Everyone in UEC hits equally hard — you can't buy an edge. What you
+          <em>can</em> do is trade. A stronger move has to be paid for: with a
+          weaker one, or with a bigger body that's easier to hit.
+        </div>
+
+        <div class="build-meter">
+          <div class="bm-bar">
+            <div class="bm-ok"></div>
+            <div class="bm-mid"></div>
+            <div class="bm-needle" id="bmNeedle"></div>
+          </div>
+          <div class="bm-read"><span id="bmCost">BALANCED</span></div>
+        </div>
+
+        <div class="build-sub">SHAPE <span>— free, change as much as you like</span></div>
+        <div id="buildFree"></div>
+        <div class="build-sub">FRAME <span>— these cost, or pay you back</span></div>
+        <div id="buildPriced"></div>
+
+        <div class="build-sub">SIGNATURE MOVES <span>— hold ➡ toward your rival + the button</span></div>
+        <div id="moveMenu" class="move-menu"></div>
+        <button id="btn-build-suggest" class="btn btn-sm btn-ghost">✨ SUGGEST A BUILD</button>
+      </div>
       <div class="panel" id="profile-stats-panel">
         <div class="panel-title">CAREER</div>
         <div id="profile-stats" class="career-grid"></div>

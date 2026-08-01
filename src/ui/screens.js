@@ -1,11 +1,12 @@
 // All menu screens + modals: fighter select, profile (photo upload → avatar),
 // challenges & invite links, leaderboard, help, settings/pause, share card.
 
-import { FIGHTERS, BASE_CHARACTERS, DEFAULT_BASE_ID, SPECIALS, UNICORN_META, LOOKS, LOOK_FIELDS, pickLook, getFighter, buildCustomFighter } from '../data/fighters.js';
+import { FIGHTERS, BASE_CHARACTERS, DEFAULT_BASE_ID, SPECIALS, UNICORN_META, LOOKS, LOOK_FIELDS, pickLook, getFighter, buildCustomFighter, playerBuildCost } from '../data/fighters.js';
 import { ARENAS, getArena, randomArena } from '../data/arenas.js';
 import { Save, buildChallengeLink } from '../state.js';
-import { STYLES, rankFor, AI_LEVELS } from '../config.js';
-import { SLOT_GLYPH } from '../data/schema.js';
+import { STYLES, rankFor, AI_LEVELS, BODY } from '../config.js';
+import { SLOT_GLYPH, commandCost } from '../data/schema.js';
+import { PLAYER_MOVES, PLAYER_BUDGET, toCommandNormal } from '../data/playerMoves.js';
 import { drawPortrait, setPhotoReadyCallback, ensurePhoto } from '../engine/drawFighter.js';
 import { audio } from '../engine/audio.js';
 import { KEY_LABELS } from '../engine/input.js';
@@ -265,6 +266,7 @@ function newDraft() {
     name: '', company: '', photo: null, baseId: DEFAULT_BASE_ID,
     c1: '#5865f2', c2: '#ffd23f', special: 'pitchdeck',
     skin: null, hair: null,
+    body: null, moves: [],
     // look layers stay unset until touched, so they inherit the base character
   };
 }
@@ -338,6 +340,7 @@ export function renderProfile() {
 
   renderStyleGrid();
   renderLookRows();
+  renderBuild();
   renderAvatarPreview();
   renderCareer();
 
@@ -439,6 +442,143 @@ function renderLookRows() {
 function renderAvatarPreview() {
   drawPortrait($('avatarPreview'), buildCustomFighter(draft));
   $('dock-name').textContent = (draft.name || '').trim().toUpperCase() || 'YOUR FOUNDER';
+}
+
+// ---------------------------------------------------------------- your build
+//
+// Everyone hits the same — a player cannot buy an advantage, and that rule is
+// enforced in buildCustomFighter, not here. What this panel offers is a TRADE:
+// silhouette is free, and anything that changes how you fight has to balance
+// back to roughly zero. The meter is deliberately a balance, not a score, so
+// both sides of centre read as equally unfinished.
+
+const FREE_KNOBS = [['shoulders', 'SHOULDERS'], ['stride', 'LEG LENGTH'], ['head', 'HEAD SIZE']];
+const PRICED_KNOBS = [['height', 'HEIGHT'], ['build', 'BUILD'], ['reach', 'ARM REACH']];
+
+function buildSliders(hostId, knobs) {
+  const host = $(hostId);
+  host.innerHTML = '';
+  for (const [key, label] of knobs) {
+    const [lo, hi] = BODY[key];
+    const row = document.createElement('div');
+    row.className = 'build-slider';
+    const lab = document.createElement('label');
+    lab.textContent = label;
+    const rng = document.createElement('input');
+    rng.type = 'range'; rng.min = String(lo); rng.max = String(hi); rng.step = '0.01';
+    rng.value = String((draft.body && draft.body[key]) ?? 1);
+    rng.oninput = () => {
+      draft.body = { ...(draft.body || {}), [key]: Number(rng.value) };
+      renderAvatarPreview();
+      renderBuildMeter();
+    };
+    row.append(lab, rng);
+    host.appendChild(row);
+  }
+}
+
+function renderMoveMenu() {
+  const host = $('moveMenu');
+  host.innerHTML = '';
+  const chosen = new Set(draft.moves || []);
+  for (const m of PLAYER_MOVES) {
+    const cost = commandCost(toCommandNormal(m));
+    const card = document.createElement('button');
+    card.type = 'button';
+    card.className = 'move-card' + (chosen.has(m.id) ? ' on' : '');
+    const top = document.createElement('div');
+    top.className = 'mc-top';
+    const key = document.createElement('span');
+    key.className = 'mc-key';
+    key.textContent = SLOT_GLYPH[m.slot] || m.slot;
+    const name = document.createElement('span');
+    name.className = 'mc-name';
+    name.textContent = m.displayName;
+    const c = document.createElement('span');
+    c.className = 'mc-cost ' + (cost >= 0 ? 'plus' : 'minus');
+    // Shown in plain language: a refunding move BUYS you something else.
+    c.textContent = cost >= 0 ? `costs ${cost.toFixed(1)}` : `frees ${Math.abs(cost).toFixed(1)}`;
+    top.append(key, name, c);
+    const blurb = document.createElement('div');
+    blurb.className = 'mc-blurb';
+    blurb.textContent = m.blurb;
+    card.append(top, blurb);
+    card.onclick = () => {
+      const list = new Set(draft.moves || []);
+      if (list.has(m.id)) list.delete(m.id);
+      else {
+        // one move per input — taking a second on the same button replaces it
+        for (const other of PLAYER_MOVES) {
+          if (other.slot === m.slot && list.has(other.id)) list.delete(other.id);
+        }
+        list.add(m.id);
+      }
+      draft.moves = [...list].slice(0, 3);
+      audio.sfx('click');
+      renderMoveMenu();
+      renderBuildMeter();
+    };
+    host.appendChild(card);
+  }
+}
+
+function renderBuildMeter() {
+  const cost = playerBuildCost(draft);
+  const ok = Math.abs(cost) <= PLAYER_BUDGET;
+  // ±15 spans the bar, so an unbalanced build is visibly off-centre
+  const pct = Math.max(2, Math.min(98, 50 + (cost / 15) * 50));
+  $('bmNeedle').style.left = `calc(${pct}% - 1.5px)`;
+  const read = $('bmRead') || $('bmCost').parentElement;
+  $('bmCost').textContent = ok
+    ? 'BALANCED'
+    : cost > 0 ? `OVER BY ${cost.toFixed(1)}` : `UNDER BY ${Math.abs(cost).toFixed(1)}`;
+  read.className = 'bm-read ' + (ok ? 'ok' : 'over');
+  $('btn-save-profile').disabled = !ok;
+  $('btn-save-profile').title = ok ? '' : 'Balance your build before saving';
+}
+
+// A build seeded from the profile itself, so two people who type different
+// names get different suggestions and nobody starts on the same fighter.
+function suggestBuild() {
+  let h = 2166136261;
+  for (const ch of ((draft.name || '') + (draft.company || '') + 'uec')) {
+    h ^= ch.charCodeAt(0); h = Math.imul(h, 16777619) >>> 0;
+  }
+  const pick = (n) => { h = Math.imul(h ^ (h >>> 15), 2246822507) >>> 0; return h % n; };
+
+  // Take one move that costs, then settle the bill with shape and a refund.
+  const costly = PLAYER_MOVES.filter(m => commandCost(toCommandNormal(m)) > 1);
+  const refund = PLAYER_MOVES.filter(m => commandCost(toCommandNormal(m)) < -1);
+  const want = costly[pick(costly.length)];
+  const pay = refund.filter(m => m.slot !== want.slot);
+  draft.moves = [want.id, pay[pick(pay.length)].id];
+
+  // Free silhouette is rolled wide — this is where a founder gets to look odd.
+  draft.body = {
+    shoulders: +(0.88 + (pick(100) / 100) * 0.36).toFixed(2),
+    stride:    +(0.90 + (pick(100) / 100) * 0.26).toFixed(2),
+    head:      +(0.92 + (pick(100) / 100) * 0.19).toFixed(2),
+    height: 1, build: 1, reach: 1,
+  };
+  // then nudge the priced frame until the bill is settled
+  for (let i = 0; i < 40 && Math.abs(playerBuildCost(draft)) > PLAYER_BUDGET * 0.6; i++) {
+    const over = playerBuildCost(draft) > 0;
+    draft.body.build = Math.min(BODY.build[1], Math.max(BODY.build[0], draft.body.build + (over ? 0.01 : -0.01)));
+    draft.body.height = Math.min(BODY.height[1], Math.max(BODY.height[0], draft.body.height + (over ? 0.01 : -0.01)));
+  }
+  buildSliders('buildFree', FREE_KNOBS);
+  buildSliders('buildPriced', PRICED_KNOBS);
+  renderMoveMenu();
+  renderBuildMeter();
+  renderAvatarPreview();
+  audio.sfx('select');
+}
+
+function renderBuild() {
+  buildSliders('buildFree', FREE_KNOBS);
+  buildSliders('buildPriced', PRICED_KNOBS);
+  renderMoveMenu();
+  renderBuildMeter();
 }
 
 
@@ -642,6 +782,7 @@ function wireProfile() {
     // First founder: the gate was holding them here, so let them out.
     if (wasFirst) A.onFirstProfile?.();
   };
+  $('btn-build-suggest').onclick = () => suggestBuild();
   $('btn-invite').onclick = () => openInvite();
   $('btn-reset').onclick = () => {
     openConfirm('RESET EVERYTHING?', 'Profile, record, points — all gone. This cannot be undone.', () => {
