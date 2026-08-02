@@ -28,6 +28,7 @@ export class AIController {
     this.decideT = 0.4;
     this.dir = 0;
     this.blockT = 0;
+    this.counterCD = 0;
     this.pulse = {};           // one-frame button presses
     this.isHuman = false;
     this.cmds = (def.commandNormals || []).filter(cn => cn && cn.slot);
@@ -80,6 +81,28 @@ export class AIController {
           this.pulse.special = true;
         } else if (f.energy >= METER.SUPER_COST) {
           this.pulse.super = true;
+        }
+      }
+    }
+
+    // Counter reflex — checked EVERY FRAME, not on the decision timer.
+    //
+    // decide() only runs every `react` seconds, and a counter has to be up
+    // during the opponent's STARTUP, which is 0.05s on a punch. On a ~0.25s
+    // cadence the stance essentially never lined up with an incoming swing, so
+    // the archetype read as broken even once it had an AI path at all.
+    // Blocking gets away with the timer because blockT persists once set; a
+    // counter has no such window. This is the same reflex as the chain check
+    // above: reactive, per-frame, and cheap.
+    if (this.counterCD > 0) this.counterCD -= game.dt;
+    if (this.counterCD <= 0 && f.actionable && this.cmds.length) {
+      const oa = opp.state === 'attack' && opp.attack && !opp.attack.hasHit;
+      if (oa && opp.attack.kind !== 'grab' && Math.abs(opp.x - f.x) < 200) {
+        const cn = this.cmds.find(c => (c.tags || []).includes('counter'));
+        if (cn && Math.random() < this.level.blockProb * 0.5) {
+          pad[slotButton(cn.slot)] = true;
+          this.dir = Math.sign(opp.x - f.x) || 1;   // forward MUST be held to select it
+          this.counterCD = 0.9;                     // don't spam the read
         }
       }
     }

@@ -83,3 +83,34 @@ test('a trap fires once and asks the game to place it', () => {
   ARCHETYPE_TICKS.trap({}, a, sp, 1 / 60, game, 0.1);
   assert.equal(placed, 1, 'placing must not repeat every frame');
 });
+
+// The price is the contract. A counter and a trap are PRICED off `params` —
+// commandCost reads params.dmg for them — but the engine builds the attack's
+// `special` by spreading both objects, and whichever lands last wins. With
+// frameData last its `dmg` shadowed the params value the budget had already
+// charged for: LAWYERED was sold at 13 damage and hit for 10.
+test('a counter deals the damage it was charged for', async () => {
+  const { Fighter } = await import('../src/engine/fighter.js');
+  const { getFighter } = await import('../src/data/fighters.js');
+  const cn = {
+    slot: 'fwd+launch', archetype: 'counter', displayName: 'TEST COUNTER',
+    frameData: { startup: 0.07, active: 0.1, recovery: 0.32, dmg: 10, reach: 74 },
+    params: { window: 0.18, dmg: 13, kb: 300 },
+  };
+  const f = new Fighter({ ...getFighter('ava'), commandNormals: [cn] }, 0,
+                        { update() {} });
+  f.startAttack(cn, { audio: { sfx() {} }, fx: { spark() {}, dust() {} } });
+  assert.equal(f.attack.special.dmg, 13, 'params must win for a counter');
+  f.stateT = f.attack.startup + 0.01;
+  assert.equal(f.counterActive()?.dmg, 13, 'the stance must pay out what it cost');
+});
+
+test('a swing archetype is still priced and resolved off frameData', () => {
+  // The other half of the rule: rush/rain/teleport/projectile are priced off
+  // frameData, so frameData must keep winning for them or the same mismatch
+  // opens up in the opposite direction.
+  const sp = { type: 'rush', dmg: 5, hits: 3 };
+  const shaped = shapeAttack({ kind: 'rush', special: { ...sp, dmg: 9 }, active: 0.1 },
+                             { ...sp, dmg: 9 });
+  assert.equal(shaped.special.dmg, 9, 'frameData damage drives a swing archetype');
+});

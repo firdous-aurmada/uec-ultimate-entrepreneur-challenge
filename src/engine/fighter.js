@@ -5,7 +5,7 @@ import { STAGE, PHYS, ATTACKS, METER, UNICORN, BOMB, DASH, DROPS, COMBO, STEAL, 
 import { SPECIALS } from '../data/fighters.js';
 import { clampBody } from './proportions.js';
 import { shapeAttack, ARCHETYPE_TICKS } from './moves.js';
-import { slotButton } from '../data/schema.js';
+import { slotButton, NO_SWING } from '../data/schema.js';
 
 function blankPad() {
   return { left: false, right: false, up: false, block: false, punch: false, kick: false, special: false, super: false };
@@ -410,7 +410,16 @@ export class Fighter {
     if (cn) {
       // Archetype params travel as the attack's own `special`, so every
       // existing per-frame implementation works on a command normal untouched.
-      const sp = { ...(cn.params || {}), ...cn.frameData, type: cn.archetype };
+      // Spread order decides which value the engine actually uses, and the
+      // budget has already charged for one of them. For a counter or a trap
+      // the params ARE the move and frameData is only the stance's timing, so
+      // params must win — spreading frameData last let its `dmg` shadow them,
+      // and LAWYERED was priced at 13 damage while hitting for 10. The price
+      // is the contract; the move honours it. Every other archetype is priced
+      // off frameData, so frameData stays last for those.
+      const sp = NO_SWING.has(cn.archetype)
+        ? { ...cn.frameData, ...(cn.params || {}), type: cn.archetype }
+        : { ...(cn.params || {}), ...cn.frameData, type: cn.archetype };
       this.attack.special = sp;
       shapeAttack(this.attack, sp);
       // The move announces itself on impact. That popup is most of what makes

@@ -81,6 +81,17 @@ export const FIGHTERS = [
     ai: { aggr: 0.55, jump: 0.3, prefRange: 'far' },
     c: { skin: '#e8b48c', suit: '#5865f2', suit2: '#3d47c9', accent: '#29d9ff', hair: '#cfd6f6', pants: '#23294f', shoe: '#eef1ff' },
     hairStyle: 'ponytail', outfit: 'blazer', accessory: 'visor',
+    // The demo that was never real. She presents; swing at her during it and
+    // it turns out the machine was doing nothing all along, and it goes back
+    // at you. A stance rather than a swing, which is why it is priced as one.
+    commandNormals: [
+      {
+        slot: 'fwd+slap', archetype: 'counter', displayName: 'THE DEMO',
+        tags: ['counter'],
+        frameData: { startup: 0.044, active: 0.06, recovery: 0.21, dmg: 4, reach: 78 },
+        params: { window: 0.16, dmg: 6, kb: 240 },
+      },
+    ],
   },
   {
     id: 'max', name: 'ADAM WEUMANN', title: 'THE BURNER', company: 'WEWERK',
@@ -93,6 +104,21 @@ export const FIGHTERS = [
     ai: { aggr: 0.85, jump: 0.35, prefRange: 'close' },
     c: { skin: '#c68a5a', suit: '#ff7a1a', suit2: '#d15505', accent: '#ffd23f', hair: '#2b2b33', pants: '#33241d', shoe: '#f5f5f5' },
     hairStyle: 'cap', outfit: 'hoodie', accessory: 'stubble',
+    // Growth at any cost, in one direction, until the money runs out. A
+    // brawler's rush: slow to start and fully committed once it goes, so
+    // whiffing it is genuinely punishing.
+    commandNormals: [
+      {
+        slot: 'fwd+punch', archetype: 'rush', displayName: 'BLITZSCALE',
+        // `punish`, not `gapCloser`: he is a close-range brawler who sits at
+        // ~100px, and a gapCloser only fits beyond 150 — so the tag alone
+        // decided the move could never come out. Tags are AI range policy,
+        // not flavour.
+        tags: ['punish'],
+        frameData: { startup: 0.075, active: 0.06, recovery: 0.13, dmg: 9, reach: 84 },
+        params: { hits: 3, hitInterval: 0.10, speed: 560, duration: 0.42, kb: 130 },
+      },
+    ],
   },
   {
     id: 'kai', name: 'STEVE NOJOBS', title: 'THE VAPORWARE PROPHET', company: 'PEAR',
@@ -115,6 +141,16 @@ export const FIGHTERS = [
     },
     c: { skin: '#f0c896', suit: '#1fb9a5', suit2: '#128372', accent: '#eef1ff', hair: '#191a22', pants: '#20263f', shoe: '#dfe4ff' },
     hairStyle: 'quiff', outfit: 'turtleneck', accessory: 'glasses',
+    // "One more thing" — he leaves the stage mid-sentence and is behind you.
+    // On the anti-air slot, because the keynote always ends above your head.
+    commandNormals: [
+      {
+        slot: 'fwd+launch', archetype: 'teleport', displayName: 'ONE MORE THING',
+        tags: ['gapCloser'],
+        frameData: { startup: 0.07, active: 0.10, recovery: 0.33, dmg: 11, reach: 74, kbUp: -300 },
+        params: { dmg: 11, kb: 300, kbUp: -200 },
+      },
+    ],
   },
   {
     id: 'zara', name: 'KIM KOINDASHIAN', title: 'THE RUG-PULLER', company: 'SKIMZCOIN',
@@ -179,6 +215,16 @@ export const FIGHTERS = [
     },
     c: { skin: '#f2cdb2', suit: '#1c2a5e', suit2: '#111a3d', accent: '#ffd23f', hair: '#efe6d8', pants: '#141d42', shoe: '#1a1a24' },
     hairStyle: 'bob', outfit: 'suit', accessory: 'brooch',
+    // Buying the dip, forever, on the way down. Two rounds of conviction
+    // landing on your head — and like her special, it pays her back a little.
+    commandNormals: [
+      {
+        slot: 'fwd+launch', archetype: 'rain', displayName: 'CONVICTION BUY',
+        tags: ['ranged'],
+        frameData: { startup: 0.095, active: 0.10, recovery: 0.35, dmg: 6, reach: 74 },
+        params: { dmg: 5, count: 2, energyRefund: 4 },
+      },
+    ],
   },
   {
     id: 'dex', name: 'CARL ICAHNT', title: 'THE ASSET STRIPPER', company: 'ICAHNT HOLDINGS',

@@ -45,7 +45,12 @@ const CMD_FRAME_KEYS = ['startup', 'active', 'recovery', 'dmg', 'reach'];
 
 // Archetypes whose animation is not the threat: a counter absorbs, a trap
 // places. Their reach describes a wind-up, not a swing.
-const NO_SWING = new Set(['counter', 'trap']);
+// Archetypes whose MOVE is not the swing. For these, `params` carries the
+// actual behaviour (a counter's window and payback, a trap's radius and
+// lifetime) and `frameData` only describes the stance that sets it up — which
+// is why they are priced off params rather than off the swing's numbers.
+// fighter.js has to resolve them the same way round or the price is a lie.
+export const NO_SWING = new Set(['counter', 'trap']);
 
 // What one command normal costs, priced against the neutral basic it replaces.
 // Zero means "this is that basic, on a direction" — which is exactly free.
