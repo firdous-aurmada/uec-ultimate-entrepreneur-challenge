@@ -266,6 +266,20 @@ export const STYLIZE = {
   KEYLINE_PX: 1.5,
   KEYLINE_COL: '#dce6ff',
   KEYLINE_A: 0.35,
+  // Vertical form shading: warm key at the head, crushing to near-black at the
+  // feet. The crush looks like it must be the problem — the biggest single
+  // source of near-invisible pixels is the lower body, 57% of all loss — so I
+  // softened it and added a bounce light off the floor, which is what a real
+  // lit stage does. Measured: loss got monotonically WORSE, 29.6% -> 33.2%.
+  //
+  // The legs are not competing with the dark backdrop. They are standing on
+  // the LIT perspective floor, and being crushed dark is exactly what makes
+  // them read against it. Softening the crush walked them toward the floor's
+  // own luminance. Kept at 0.30; these live here now so the next person can
+  // re-run the sweep instead of re-deriving the trap.
+  SHADE_KEY: 0.46,      // warm key at the head
+  SHADE_MID: 0.10,      // neutral through the torso
+  SHADE_FLOOR: 0.30,    // crush at the feet — do not soften, see above
 };
 
 export const BODY = {

@@ -339,7 +339,13 @@ export const ARENAS = [
   { id: 'garage', name: 'THE STARTUP GARAGE', tag: 'Where it all begins.', draw: drawGarage, tempo: 104, root: 5, mood: 'lofi' },
   { id: 'exchange', name: 'THE STOCK EXCHANGE', tag: 'Buy the dip. Throw the punch.', draw: drawExchange, tempo: 124, root: 7, mood: 'tense' },
   { id: 'unicorn', name: 'THE UNICORN CLUB', tag: 'Members only. Valuations $1B+.', draw: drawUnicornClub, tempo: 122, root: 8, mood: 'party' },
-  { id: 'summit', name: 'THE VC SUMMIT', tag: 'The air is thin up here.', draw: drawSummit, tempo: 100, root: 2, mood: 'epic' },
+  // scrim: the mountains sit directly behind the fighters at close to their own
+  // mid-tones, which made this the worst stage on the roster to read a
+  // character against — 41.8% of a fighter's pixels within 1.5 contrast of what
+  // they covered, vs 34% on the best. 0.50 takes that to 34.9%. Past ~0.55 the
+  // gold sun and the bunting go grey and the stage stops looking like a summit,
+  // so this is as far as it goes; see lab/contrast.js.
+  { id: 'summit', name: 'THE VC SUMMIT', tag: 'The air is thin up here.', draw: drawSummit, tempo: 100, root: 2, mood: 'epic', scrim: 0.50 },
 ];
 
 export function getArena(id) {

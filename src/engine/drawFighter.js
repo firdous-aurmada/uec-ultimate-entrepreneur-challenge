@@ -923,9 +923,9 @@ function shadeBuffer(b, B) {
   // lab/contrast.js now locates the fighter by diffing a with- and a
   // without-fighters render, and is the only thing worth trusting here.
   const g = b.createLinearGradient(0, oy - 178 * SS, 0, oy + 8 * SS);
-  g.addColorStop(0, 'rgba(255,246,224,0.46)');
-  g.addColorStop(0.44, 'rgba(255,255,255,0.10)');
-  g.addColorStop(1, 'rgba(5,5,16,0.30)');
+  g.addColorStop(0, `rgba(255,246,224,${STYLIZE.SHADE_KEY})`);
+  g.addColorStop(0.44, `rgba(255,255,255,${STYLIZE.SHADE_MID})`);
+  g.addColorStop(1, `rgba(5,5,16,${STYLIZE.SHADE_FLOOR})`);
   b.fillStyle = g; b.fillRect(0, 0, W, H);
   const g2 = b.createLinearGradient(ox - 84 * SS, 0, ox + 84 * SS, 0);
   g2.addColorStop(0, 'rgba(26,42,104,0.30)');

@@ -66,7 +66,7 @@ function drawFloorSheen(ctx, f) {
   ctx.restore();
 }
 
-function drawStageGrade(ctx, t) {
+function drawStageGrade(ctx, t, arena) {
   // atmospheric haze rising off the floor + a top spotlight cone
   ctx.save();
   const key = ctx.createRadialGradient(W / 2, -60, 60, W / 2, 120, 640);
@@ -81,9 +81,11 @@ function drawStageGrade(ctx, t) {
   ctx.fillStyle = haze;
   ctx.fillRect(0, FLOOR - 140, W, 200);
   // Backdrop scrim across the whole play field. The arena is scenery; the
-  // fighters are the subject. One fillRect, so it costs nothing.
-  if (STAGE.SCRIM > 0) {
-    ctx.fillStyle = `rgba(6,9,22,${STAGE.SCRIM})`;
+  // fighters are the subject. One fillRect, so it costs nothing. An arena that
+  // is unusually bright behind the fighters can ask for more of it.
+  const scrim = arena?.scrim ?? STAGE.SCRIM;
+  if (scrim > 0) {
+    ctx.fillStyle = `rgba(6,9,22,${scrim})`;
     ctx.fillRect(0, 0, W, H);
   }
   ctx.restore();
@@ -387,7 +389,7 @@ export function renderGame(ctx, game) {
 
 function renderWorld(ctx, game, t) {
   game.arena.draw(ctx, t);
-  drawStageGrade(ctx, t);           // push the backdrop back + haze
+  drawStageGrade(ctx, t, game.arena);   // push the backdrop back + haze
   drawPerspectiveFloor(ctx, t);     // receding grid — the main depth cue
 
   // Traps sit on the floor, under everything, so they read as ground you must
