@@ -69,6 +69,16 @@ Touch pads appear automatically on phones/tablets (or force them with `?touch=1`
 
 **Parry:** tap block at the instant a hit lands (0.12 s window) — the attacker staggers and you gain energy. Grabs beat parries; parries beat everything else.
 
+## What's new in v2.6 — you can see who you're fighting
+
+A readability pass. Nothing about the fight changed; it just got easier to read.
+
+- ✏️ **Fighters have an edge now.** A pale key line rides the outside of every silhouette, so a dark suit against a dark stage stops dissolving into it. It's there to make the shape legible, not to be noticed.
+- 🌒 **Every stage sits back a little further.** The arena is scenery, the fighters are the subject, and four stages were competing with their own cast for attention. The Summit, the Garage and the Boardroom now push their backdrops down by different amounts, each tuned to the point just before the room stops looking like itself.
+- 📐 **Built on a measurement, not an opinion.** `lab/contrast.js` finds the fighter by rendering the scene twice — once with the cast, once without — and scores every body pixel against the exact backdrop pixel it covers. Across six arenas the share of a fighter sitting near-invisible against its own stage went from 31.5% to 29.4%, and the gap between the best and worst stage narrowed from 7.0 points to 5.4.
+
+Still 166 tests, and the whole render costs under 1 ms a frame.
+
 ## What's new in v2.5 — build your own founder
 
 v2.4 gave the cast their own moves. v2.5 gives you yours.
