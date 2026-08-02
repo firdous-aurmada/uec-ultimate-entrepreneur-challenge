@@ -86,14 +86,20 @@ export const PLAYER_MOVES = [
       // launch. Slap, the fastest button, still goes through: reading a jab
       // with a counter should not be free.
       //
-      // It is not cheap — the price roughly doubles, to 13 — but that is the
-      // honest cost of a defensive tool that actually works, and it is priced
-      // against launch's slow 0.06s base. A counter is affordable on fwd+slap
+      // Speed is not cheap here: the budget prices startup as a ratio of the
+      // slot's base, and fwd+launch starts from a slow 0.06s, so buying those
+      // four frames roughly doubles the price. A counter is cheap on fwd+slap
       // and expensive here; that is the slot's character, not a bug.
       startup: launch.startup * 0.75, active: launch.active, recovery: launch.recovery * 1.15,
       dmg: launch.dmg, reach: launch.reach, kbUp: launch.kbUp,
     },
-    params: { window: 0.18, dmg: 13, kb: 300 },
+    // The counter pays for its new speed out of its own damage: 13 -> 11. At 13
+    // the move cost 13 and NOTHING on the menu could be paired with it — one
+    // legal build in the whole creator. Damage is the only lever the pricer
+    // actually responds to (it does not price `window` at all), and 11 still
+    // lands harder than any other counter in the game. Speed is what makes a
+    // counter a counter; the last two points of damage are not.
+    params: { window: 0.18, dmg: 11, kb: 300 },
   },
   {
     id: 'bananaskin',

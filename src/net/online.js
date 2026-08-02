@@ -86,8 +86,9 @@ export const CHARACTER_WIRE_VERSION = 1;
 // Fixing it means a v2 client throws a harmless whiff where a v3 client throws
 // two projectiles for 11 damage. Exactly the silent divergence this guards.
 //
-// v4: LAWYERED's startup, 0.066s -> 0.045s. Worth noting WHY a menu move's frame
-// data is a wire concern at all: packCommand sends curated moves as a bare id and
+// v4: LAWYERED's startup 0.066s -> 0.045s, and its counter damage 13 -> 11 to
+// pay for it. Worth noting WHY a menu move's numbers are a wire concern at all:
+// packCommand sends curated moves as a bare id and
 // unpackCommand rebuilds them from OUR table, deliberately, so the numbers can
 // never be forged. The flip side is that each peer supplies its own — so a v3 and
 // a v4 client would each run their own LAWYERED and diverge on the first read.

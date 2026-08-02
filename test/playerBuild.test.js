@@ -65,20 +65,25 @@ test('an expensive move can be paid for by a cheap one', () => {
   assert.ok(Math.abs(paired) <= PLAYER_BUDGET, `pairing should balance, got ${paired.toFixed(1)}`);
 });
 
-// LAWYERED used to be the example above, back when it cost 6.9 and one cheap
-// move covered it. Making it fast enough to actually counter anything doubled
-// the price to 13, and the whole menu now holds exactly one build that affords
-// it. That is a deliberately steep corner of the budget, not an accident — but
-// it is one assertion away from being a corner nobody can reach, so it is
-// pinned rather than left to drift.
-test('the priciest move is reachable, but only by committing the whole build', () => {
+// LAWYERED is the priciest thing on the menu, and the one whose price is most
+// easily pushed out of reach: it has to be fast enough to actually counter, and
+// fwd+launch charges dearly for speed. At counter damage 13 it cost 13 and NO
+// pairing on the menu could afford it — the creator collapsed to a single legal
+// build, which is a worse failure than the move being weak. Pinned here so the
+// most expensive corner of the budget always has more than one way in.
+test('the priciest move costs a real trade but never strands the build', () => {
   const solo = playerBuildCost({ moves: ['stonewall'] });
-  const paired = playerBuildCost({ moves: ['stonewall', 'sweep'] });
-  const full = playerBuildCost({ moves: ['stonewall', 'sweep', 'shoulder'] });
   assert.ok(solo > PLAYER_BUDGET, 'a counter that beats three basics should not be free');
-  assert.ok(Math.abs(paired) > PLAYER_BUDGET, 'one cheap move should no longer cover it');
-  assert.ok(Math.abs(full) <= PLAYER_BUDGET,
-    `all three slots must still afford it, got ${full.toFixed(1)}`);
+
+  const affordable = PLAYER_MOVES
+    .filter(m => m.id !== 'stonewall')
+    .filter(m => Math.abs(playerBuildCost({ moves: ['stonewall', m.id] })) <= PLAYER_BUDGET);
+  assert.ok(affordable.length >= 2,
+    `at least two moves must pay for it, got ${affordable.length}: ${affordable.map(m => m.id)}`);
+
+  const costs = PLAYER_MOVES.map(m => commandCost(toCommandNormal(m)));
+  assert.equal(Math.max(...costs), commandCost(toCommandNormal(getPlayerMove('stonewall'))),
+    'if something overtakes it as the priciest move, this test is guarding the wrong one');
 });
 
 test('an expensive move can also be paid for with a bigger body', () => {
