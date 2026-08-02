@@ -472,7 +472,9 @@ export class Fighter {
       recovery: sp.recovery || 0.3,
       dmg: sp.dmg, reach: sp.reach, kb: sp.kb || 260, kbUp: sp.kbUp || 0,
       stun: 0.34, shake: 9, words: ['ZAP!'],
-      fired: 0, fireT: 0, rushT: 0, lastRushHit: -1, teleported: false,
+      // projectile's fired/fireT are seeded by shapeAttack below — one owner,
+      // so the command-normal path can't drift out of sync with this one again.
+      rushT: 0, lastRushHit: -1, teleported: false,
     };
     this.attack = shapeAttack(a, sp);
     this.setState('attack');

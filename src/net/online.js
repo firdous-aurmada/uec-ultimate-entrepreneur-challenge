@@ -81,7 +81,11 @@ export const CHARACTER_WIRE_VERSION = 1;
 // happily and then diverged the instant either of them threw a counter — the
 // state hash voiding the match about two seconds later, wearing the costume of
 // a network fault. Refusing up front with an honest reason is the whole point.
-export const SIM_VERSION = 2;
+// v3: projectile command normals fired nothing at all — the tick's counters were
+// only seeded on the special path, so `undefined < count` was false every frame.
+// Fixing it means a v2 client throws a harmless whiff where a v3 client throws
+// two projectiles for 11 damage. Exactly the silent divergence this guards.
+export const SIM_VERSION = 3;
 
 // Returns { ok, reason }. Never throws — a malformed payload is a refusal.
 export function validatePeerCharacter(spec) {

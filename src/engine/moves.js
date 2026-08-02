@@ -12,6 +12,15 @@ export const ARCHETYPE_SHAPES = {
   projectile: (a, sp) => {
     a.active = 0.05 + sp.count * sp.interval;
     a.words = ['SLIDE!', 'DECK!'];
+    // The tick counts these, so they must exist as NUMBERS before the first
+    // frame: `undefined < sp.count` is false, and the move then fires nothing
+    // for its whole active window. Seeded here rather than at the call site
+    // because a projectile can start as a special OR as a command normal, and
+    // only the special path used to set them — which left every projectile
+    // command normal silently inert. Shaping is the one step both paths share,
+    // so per-frame archetype state belongs here.
+    a.fired = 0;
+    a.fireT = 0;
   },
   aoe: (a) => { a.words = ['BURN!', 'TORCHED!']; a.hitY = -80; },
   teleport: (a) => { a.words = ['PIVOT!']; a.reach = 92; a.hitY = -95; },
