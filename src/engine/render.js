@@ -80,6 +80,12 @@ function drawStageGrade(ctx, t) {
   haze.addColorStop(1, 'rgba(10,14,34,0.42)');
   ctx.fillStyle = haze;
   ctx.fillRect(0, FLOOR - 140, W, 200);
+  // Backdrop scrim across the whole play field. The arena is scenery; the
+  // fighters are the subject. One fillRect, so it costs nothing.
+  if (STAGE.SCRIM > 0) {
+    ctx.fillStyle = `rgba(6,9,22,${STAGE.SCRIM})`;
+    ctx.fillRect(0, 0, W, H);
+  }
   ctx.restore();
 }
 

@@ -1,0 +1,139 @@
+// Contrast probe: how well does a fighter separate from the stage behind it?
+//
+// The naive version of this — sample a fixed column and call it "the fighter" —
+// lied to me for an entire session. It reported the fighter's own brightness
+// changing per arena, which is impossible: the fighter is lit by its own cel
+// shader, not by the stage. The column was landing on backdrop.
+//
+// So the fighter is located, not assumed. Render the scene twice with an
+// identical camera, once with fighters and once without, and every pixel that
+// differs is fighter. That mask is ground truth, and it also gives us the
+// backdrop AS IT IS BEHIND THE FIGHTER — the pixels the fighter is actually
+// competing with, which is the comparison the eye makes.
+//
+//   import { measure } from '/lab/contrast.js';
+//   await measure();                       // all arenas, current scene
+
+const LUM = (r, g, b) => 0.2126 * r + 0.7152 * g + 0.0722 * b;
+const SRGB = (v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); };
+
+// WCAG contrast ratio, 1.0 (invisible) .. 21.0 (black on white)
+export function ratio(l1, l2) {
+  const hi = SRGB(Math.max(l1, l2)), lo = SRGB(Math.min(l1, l2));
+  return +((hi + 0.05) / (lo + 0.05)).toFixed(2);
+}
+
+// Separable max-filter. Run on a quarter-res mask: a ~36px halo only needs
+// radius 9 there, which turns a 280M-op dilation into a 5M-op one.
+function dilate(src, w, h, r) {
+  const tmp = new Uint8Array(w * h), dst = new Uint8Array(w * h);
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    let m = 0;
+    for (let k = -r; k <= r; k++) { const xx = x + k; if (xx >= 0 && xx < w && src[y * w + xx]) { m = 1; break; } }
+    tmp[y * w + x] = m;
+  }
+  for (let x = 0; x < w; x++) for (let y = 0; y < h; y++) {
+    let m = 0;
+    for (let k = -r; k <= r; k++) { const yy = y + k; if (yy >= 0 && yy < h && tmp[yy * w + x]) { m = 1; break; } }
+    dst[y * w + x] = m;
+  }
+  return dst;
+}
+
+export async function measure({ arenas = null, converge = 60, halo = 9, diff = 4 } = {}) {
+  const R = await import('/src/engine/render.js');
+  const { ARENAS } = await import('/src/data/arenas.js');
+  const { STAGE } = await import('/src/config.js');
+  const { FLOOR, H: SH } = STAGE;
+  const g = UEC.game;
+  const cv = document.getElementById('gameCanvas');
+  const ctx = cv.getContext('2d', { willReadFrequently: true });
+  const [a, b] = g.fighters;
+
+  // A still, neutral scene: any particle or shake would land in the diff mask
+  // and be counted as fighter.
+  g.state = 'fight'; g.paused = false;
+  a.state = b.state = 'idle'; a.attack = b.attack = null;
+  a.x = 400; b.x = 560; a.y = b.y = 480; a.vy = b.vy = 0;
+  g.fx.particles.length = 0; g.fx.popups.length = 0; g.fx.shakeMag = 0;
+  g.drops.length = 0; g.projectiles.length = 0;
+
+  // renderGame reads game.fighters once for the camera, then again for each
+  // draw loop. Feed the camera the real pair and the draw loops nothing, so
+  // both passes are framed identically and the diff is purely the fighters.
+  const real = g.fighters;
+  let hide = false, n = 0;
+  Object.defineProperty(g, 'fighters', {
+    configurable: true,
+    get() { return (hide && n++ > 0) ? [] : real; },
+  });
+
+  const W = cv.width, H = cv.height, DW = W >> 2, DH = H >> 2;
+  const snap = () => ctx.getImageData(0, 0, W, H).data;
+  const list = (arenas ? ARENAS.filter(x => arenas.includes(x.id)) : ARENAS);
+  const out = {};
+
+  try {
+    for (const arena of list) {
+      g.arena = arena;
+      for (let i = 0; i < converge; i++) { hide = false; R.renderGame(ctx, g); }
+      hide = false; R.renderGame(ctx, g); const A = snap();
+      hide = true; n = 0; R.renderGame(ctx, g); const B = snap();
+      hide = false;
+
+      // The contact shadow lives below the feet and is SUPPOSED to be a faint
+      // darkening — scoring it as character made 100% of it read as "lost" and
+      // put a permanent ~9% tax on every number here. The body is what has to
+      // separate, so the character metrics stop at the floor line.
+      const floorY = Math.round((FLOOR / SH) * H);
+      const mask = new Uint8Array(DW * DH);
+      let fS = 0, fN = 0, gS = 0, gN = 0, ppS = 0, lost = 0;
+      for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+        const i = (y * W + x) * 4;
+        const la = LUM(A[i], A[i + 1], A[i + 2]), lb = LUM(B[i], B[i + 1], B[i + 2]);
+        if (Math.abs(la - lb) > diff) {
+          mask[(y >> 2) * DW + (x >> 2)] = 1;
+          if (y >= floorY) continue;       // contact shadow, not the character
+          fS += la; fN++;
+          // The truest separation measure: every fighter pixel against the
+          // exact backdrop pixel it covers. No halo, no guessing.
+          const r = ratio(la, lb);
+          ppS += r;
+          if (r < 1.5) lost++;             // this pixel is nearly camouflaged
+        } else { gS += lb; gN++; }
+      }
+
+      const ring = dilate(mask, DW, DH, halo);
+      let rS = 0, rN = 0;
+      for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+        const d = (y >> 2) * DW + (x >> 2);
+        if (!ring[d] || mask[d]) continue;
+        const i = (y * W + x) * 4;
+        rS += LUM(B[i], B[i + 1], B[i + 2]); rN++;
+      }
+
+      const F = fS / Math.max(1, fN), L = rS / Math.max(1, rN), G = gS / Math.max(1, gN);
+      out[arena.id] = {
+        perPixel: +(ppS / Math.max(1, fN)).toFixed(2),   // headline: mean fighter-vs-what-it-covers
+        lostPct: +(100 * lost / Math.max(1, fN)).toFixed(1), // share of the character that vanishes
+        fighter: +F.toFixed(1),
+        localBg: +L.toFixed(1),
+        local: ratio(F, L),        // fighter vs the halo just outside the silhouette
+        stageBg: +G.toFixed(1),
+        stage: ratio(F, G),
+        coverage: +(100 * fN / (fN + gN)).toFixed(1),
+      };
+    }
+  } finally {
+    delete g.fighters;
+    g.fighters = real;
+  }
+
+  const vals = Object.values(out);
+  const avg = (k) => +(vals.reduce((s, v) => s + v[k], 0) / vals.length).toFixed(2);
+  out._perPixel = avg('perPixel');
+  out._lostPct = avg('lostPct');
+  out._localMin = Math.min(...vals.map(v => v.local));
+  out._localMean = avg('local');
+  return out;
+}

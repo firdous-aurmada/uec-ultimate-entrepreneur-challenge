@@ -15,6 +15,10 @@ export const STAGE = {
   FLOOR: 480,          // y of the ground line (fighter feet)
   MIN_X: 70,
   MAX_X: 890,
+  // Backdrop scrim: how far the arena is pushed down so the fighters read as
+  // the subject. Render-only — the sim never sees it. Measured with
+  // lab/contrast.js; see the note in render.js drawStageGrade.
+  SCRIM: 0.30,
 };
 
 export const PHYS = {
@@ -249,6 +253,19 @@ export const STYLIZE = {
   ELBOW: 14, KNEE: 12,
   ARM_SPAN: 118,       // limb length treated as fully extended
   LEG_SPAN: 112,
+  // Silhouette key line. Measured with lab/contrast.js: 39% of a fighter's
+  // on-screen pixels sat within 1.5 contrast of the stage behind them, and
+  // every one of those was in the 0–80 luminance band — the ink outline, the
+  // hair, the shadow side. Dark character on dark stage. Brightening the whole
+  // body would flatten the cel shading that gives it form, so instead a pale
+  // line rides just OUTSIDE the silhouette: the edge always reads, and the
+  // interior keeps its full range. Render-only; the sim never sees it.
+  // 2.0px at 0.5 measured best and looked worst — the cast read as die-cut
+  // stickers. The eye wins over the metric here: the line exists to make the
+  // edge legible, not to be seen.
+  KEYLINE_PX: 1.5,
+  KEYLINE_COL: '#dce6ff',
+  KEYLINE_A: 0.35,
 };
 
 export const BODY = {

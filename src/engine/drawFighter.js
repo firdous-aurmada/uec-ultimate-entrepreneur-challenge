@@ -859,13 +859,40 @@ function fighterBuffer(m) {
   if (!rec) {
     const buf = document.createElement('canvas');
     const tmp = document.createElement('canvas');
-    buf.width = tmp.width = m.w * SS;
-    buf.height = tmp.height = m.h * SS;
-    rec = { buf, tmp, ox: m.ox, oy: m.oy, w: m.w, h: m.h };
+    const out = document.createElement('canvas');   // key-line scratch
+    buf.width = tmp.width = out.width = m.w * SS;
+    buf.height = tmp.height = out.height = m.h * SS;
+    rec = { buf, tmp, out, ox: m.ox, oy: m.oy, w: m.w, h: m.h };
     _buffers.set(key, rec);
   }
   return rec;
 }
+// A pale line just outside the silhouette, drawn UNDER the fighter so only the
+// sliver that pokes past the body is visible. The shape is dilated by stamping
+// the finished fighter around a small ring and keeping the union — six taps is
+// enough for a 2px line to close without corner gaps, and it is six drawImages
+// of an already-rasterised buffer rather than any per-pixel work.
+function keyLine(ctx, B) {
+  const r = STYLIZE.KEYLINE_PX * SS;
+  const o = B.out, oc = o.getContext('2d');
+  oc.setTransform(1, 0, 0, 1, 0, 0);
+  oc.globalCompositeOperation = 'source-over';
+  oc.clearRect(0, 0, o.width, o.height);
+  for (let i = 0; i < 6; i++) {
+    const a = (i / 6) * Math.PI * 2;
+    oc.drawImage(B.buf, Math.cos(a) * r, Math.sin(a) * r);
+  }
+  oc.globalCompositeOperation = 'source-in';       // recolour the union flat
+  oc.fillStyle = STYLIZE.KEYLINE_COL;
+  oc.fillRect(0, 0, o.width, o.height);
+  oc.globalCompositeOperation = 'source-over';
+
+  ctx.save();
+  ctx.globalAlpha = STYLIZE.KEYLINE_A;
+  ctx.drawImage(o, 0, 0, o.width, o.height, -B.ox, -B.oy, B.w, B.h);
+  ctx.restore();
+}
+
 function shadeBuffer(b, B) {
   const _buf = B.buf, _tmp = B.tmp;
   const W = _buf.width, H = _buf.height, oy = B.oy * SS, ox = B.ox * SS;
@@ -886,10 +913,19 @@ function shadeBuffer(b, B) {
   // ---- form + directional shading, clipped to the fighter ----
   b.save();
   b.globalCompositeOperation = 'source-atop';
+  // Key light up, floor crush down, so the character is the brightest thing on
+  // screen. The old pair was +0.32 / -0.52.
+  //
+  // The numbers that first justified this change were junk: the probe sampled a
+  // fixed screen column and called it "the fighter", and the column was mostly
+  // backdrop. It reported the fighter's own brightness changing per arena,
+  // which cannot happen — this shader does not know what stage it is on.
+  // lab/contrast.js now locates the fighter by diffing a with- and a
+  // without-fighters render, and is the only thing worth trusting here.
   const g = b.createLinearGradient(0, oy - 178 * SS, 0, oy + 8 * SS);
-  g.addColorStop(0, 'rgba(255,243,216,0.32)');
-  g.addColorStop(0.44, 'rgba(255,255,255,0)');
-  g.addColorStop(1, 'rgba(5,5,16,0.52)');
+  g.addColorStop(0, 'rgba(255,246,224,0.46)');
+  g.addColorStop(0.44, 'rgba(255,255,255,0.10)');
+  g.addColorStop(1, 'rgba(5,5,16,0.30)');
   b.fillStyle = g; b.fillRect(0, 0, W, H);
   const g2 = b.createLinearGradient(ox - 84 * SS, 0, ox + 84 * SS, 0);
   g2.addColorStop(0, 'rgba(26,42,104,0.30)');
@@ -901,7 +937,7 @@ function shadeBuffer(b, B) {
   // ---- add the rim on top, additively (kept restrained so heads don't halo) ----
   b.save();
   b.globalCompositeOperation = 'lighter';
-  b.globalAlpha = 0.42;
+  b.globalAlpha = 0.55;
   b.drawImage(_tmp, 0, 0);
   b.restore();
 }
@@ -1054,6 +1090,7 @@ export function drawFighter(ctx, f, t) {
     INK = 1;                   // reset before shading/blit
     g.restore();               // undo scale/translate
     shadeBuffer(g, B);         // cel-shade the whole silhouette at once
+    if (STYLIZE.KEYLINE_A > 0) keyLine(ctx, B);   // separation, under the body
     ctx.save();
     if (f.flashT > 0 && FILTER_OK) ctx.filter = 'brightness(2.2) saturate(0.4)';
     ctx.drawImage(B.buf, 0, 0, B.buf.width, B.buf.height, -B.ox, -B.oy, B.w, B.h);
