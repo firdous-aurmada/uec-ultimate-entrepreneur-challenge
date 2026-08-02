@@ -427,7 +427,11 @@ function drawFace(ctx, cx, cy, r, face, c) {
       ctx.moveTo(cx + s * e + 4, cy - 4); ctx.lineTo(cx + s * e - 4, cy + 4);
       ctx.stroke();
     }
-    ctx.beginPath(); ctx.arc(cx, cy + r * 0.45, 4.5, 0, Math.PI); ctx.stroke();
+    // Out cold, mouth open. This used to be an upward arc — a knocked-out
+    // founder lying there grinning, which is the same cartoon tell the idle
+    // smile was, and it survived the face pass because it lives in its own
+    // branch. Every state got looked at after that.
+    ctx.beginPath(); ctx.ellipse(cx + 1, cy + r * 0.46, 4, 5.5, 0, 0, 7); ctx.stroke();
   } else if (face === 'happy') {
     for (const s of [-1, 1]) {
       ctx.beginPath(); ctx.arc(cx + s * e, cy - 1, 4.5, Math.PI, 0); ctx.stroke();
