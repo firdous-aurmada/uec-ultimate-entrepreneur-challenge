@@ -147,12 +147,12 @@ test('animation is never carried in a link', () => {
 
 // ---------------------------------------------------------------- netcode handshake
 
-import { validatePeerCharacter, CHARACTER_WIRE_VERSION } from '../src/net/online.js';
+import { validatePeerCharacter, CHARACTER_WIRE_VERSION, SIM_VERSION } from '../src/net/online.js';
 import { SCHEMA_VERSION } from '../src/data/schema.js';
 import { toCharacter, FIGHTERS } from '../src/data/fighters.js';
 
 const peerSpec = (over = {}) => ({
-  wv: CHARACTER_WIRE_VERSION, sv: SCHEMA_VERSION,
+  wv: CHARACTER_WIRE_VERSION, sv: SCHEMA_VERSION, simv: SIM_VERSION,
   kind: 'roster', id: 'dex', ch: toCharacter(FIGHTERS.find(f => f.id === 'dex')),
   ...over,
 });
@@ -164,6 +164,21 @@ test('a well-formed peer character is accepted', () => {
 test('a peer on a different wire version is refused, not guessed at', () => {
   assert.equal(validatePeerCharacter(peerSpec({ wv: 99 })).ok, false);
   assert.equal(validatePeerCharacter(peerSpec({ sv: 99 })).ok, false);
+});
+
+test('a peer on a different SIMULATION is refused before the match, not mid-match', () => {
+  // Two clients can agree perfectly on what a character IS and still disagree
+  // on what it DOES. v2.8 made LAWYERED deal the 13 damage it had always been
+  // priced at instead of 10 — an identical character payload, so wv and sv both
+  // still matched. Without simv the handshake passed and the state hash voided
+  // the match two seconds after the first counter, looking like a network drop.
+  assert.equal(validatePeerCharacter(peerSpec({ simv: SIM_VERSION + 1 })).ok, false);
+  assert.equal(validatePeerCharacter(peerSpec({ simv: SIM_VERSION - 1 })).ok, false);
+});
+
+test('a peer predating the sim-version field is refused rather than assumed current', () => {
+  const { simv, ...noSimv } = peerSpec();
+  assert.equal(validatePeerCharacter(noSimv).ok, false);
 });
 
 test('a peer sending no character at all is refused', () => {

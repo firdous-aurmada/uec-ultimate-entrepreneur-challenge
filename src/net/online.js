@@ -69,6 +69,20 @@ export class MaskController {
 // versions refuse rather than guess.
 export const CHARACTER_WIRE_VERSION = 1;
 
+// The version of the SIMULATION itself, as distinct from the character payload
+// format above. Two peers can agree perfectly on what a character IS and still
+// disagree on what it DOES.
+//
+// BUMP THIS WHENEVER FIGHT BEHAVIOUR CHANGES — damage, frame data, hit
+// resolution, how an archetype resolves. v2.8 is the case that forced it: the
+// counter fix made LAWYERED deal the 13 damage it had always been priced at
+// instead of 10. The character payload was byte-identical, so wv and sv both
+// still matched, and a v2.7 client would have shaken hands with a v2.8 one
+// happily and then diverged the instant either of them threw a counter — the
+// state hash voiding the match about two seconds later, wearing the costume of
+// a network fault. Refusing up front with an honest reason is the whole point.
+export const SIM_VERSION = 2;
+
 // Returns { ok, reason }. Never throws — a malformed payload is a refusal.
 export function validatePeerCharacter(spec) {
   if (!spec || typeof spec !== 'object') return { ok: false, reason: 'no character sent' };
@@ -76,6 +90,11 @@ export function validatePeerCharacter(spec) {
     return { ok: false, reason: 'your rival is on a different version of the game' };
   }
   if (spec.sv !== SCHEMA_VERSION) {
+    return { ok: false, reason: 'your rival is on a different version of the game' };
+  }
+  // A peer that predates the sim-version field is by definition on an older
+  // simulation, so an absent `simv` is a mismatch rather than a pass.
+  if (spec.simv !== SIM_VERSION) {
     return { ok: false, reason: 'your rival is on a different version of the game' };
   }
   const ch = spec.ch;

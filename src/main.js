@@ -22,7 +22,7 @@ import { AUTH, initAuth, onAuthChange, signInGoogle, signInMicrosoft, signInEmai
 import { syncProfileUp, syncProfileDown, reportOnlineMatch, fetchProfile } from './net/cloud.js';
 import {
   NetSession, LobbySession, pairFromRoster, MaskController, makeRoomId, padToMask,
-  STEP as NET_STEP, CHARACTER_WIRE_VERSION, validatePeerCharacter,
+  STEP as NET_STEP, CHARACTER_WIRE_VERSION, SIM_VERSION, validatePeerCharacter,
 } from './net/online.js';
 import { SCHEMA_VERSION } from './data/schema.js';
 
@@ -499,7 +499,7 @@ function defToSpec(def) {
   // Every pick carries the sender's whole character alongside the look, so the
   // receiver can check the numbers rather than resolve an id and hope. `wv`/`sv`
   // version the exchange; the receiver refuses on any mismatch.
-  const base = { wv: CHARACTER_WIRE_VERSION, sv: SCHEMA_VERSION, ch: toCharacter(def) };
+  const base = { wv: CHARACTER_WIRE_VERSION, sv: SCHEMA_VERSION, simv: SIM_VERSION, ch: toCharacter(def) };
   if (def.id === 'custom' && Save.profile) {
     const p = Save.profile;
     return {
