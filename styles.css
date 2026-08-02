@@ -347,7 +347,14 @@ input, textarea { user-select: text; -webkit-user-select: text; }
 #gameCanvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; border-radius: 6px; }
 
 #hud { position: absolute; inset: 0; pointer-events: none; z-index: 3; }
-.hud-top { display: flex; gap: 8px; padding: 10px 12px 0; align-items: flex-start; }
+/* The pause and controls buttons float over the stage's top-right corner, and
+   they were landing directly on P2's portrait — 40px of a 52px face on desktop,
+   the whole face on a phone. Reserve their footprint at BOTH ends of the row so
+   the portrait clears them and the timer stays on the stage centre line; one end
+   alone would fix the collision but slide the timer off centre. The buttons are
+   stacked (see .moves-ref) so this only ever has to be one button wide. */
+.stage-wrap { --fight-btns: 52px; }               /* 8px edge + 44px button */
+.hud-top { display: flex; gap: 8px; padding: 10px calc(var(--fight-btns) + 8px) 0; align-items: flex-start; }
 .hud-side { flex: 1; display: flex; gap: 8px; min-width: 0; }
 .hud-p2 { flex-direction: row; }
 .hud-p2 .hud-bars { align-items: flex-end; }
@@ -365,6 +372,11 @@ input, textarea { user-select: text; -webkit-user-select: text; }
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   text-shadow: 2px 2px 0 var(--shadow);
   display: flex; gap: 8px; align-items: baseline;
+  /* .hud-p2 .hud-bars sets align-items:flex-end, which stops this row from
+     stretching to the column — it sized to max-content instead and long names
+     spilled left across the timer instead of ellipsising. Pin it to the column
+     like .hp-track does so the truncation below can actually bite. */
+  width: 100%;
 }
 .hud-p2 .hud-name { flex-direction: row-reverse; }
 /* long parody names must not run off the edge of the HUD */
@@ -485,7 +497,11 @@ input, textarea { user-select: text; -webkit-user-select: text; }
 #btn-pause { position: absolute; top: 8px; right: 8px; z-index: 6; opacity: .85; }
 
 /* ---------- In-fight controls reference ---------- */
-.moves-ref { position: absolute; top: 8px; right: 60px; z-index: 7; }
+/* Stacked under the pause button rather than beside it: side by side the pair
+   was 104px wide, and the HUD has to reserve that width at BOTH ends to stay
+   symmetric — which left a 16px health bar on a 390px stage. One column costs
+   the bars a fifth of that. */
+.moves-ref { position: absolute; top: 58px; right: 8px; z-index: 7; }
 #btn-moves { opacity: .85; }
 .moves-card {
   position: absolute; top: 50px; right: 0; width: min(320px, 78vw);
@@ -857,6 +873,12 @@ label.btn { display: inline-block; }
   /* very narrow: drop company chips so names never collide with the timer */
   .hud-co { display: none; }
   .hud-center { min-width: 50px; }
+  /* A phone stage is only ~220px tall, so trim the floating buttons too — every
+     px reserved here comes straight off both health bars. */
+  #btn-pause, #btn-moves { width: 36px; height: 36px; font-size: 17px; }
+  #btn-pause { right: 6px; }
+  .moves-ref { top: 48px; right: 6px; }
+  .stage-wrap { --fight-btns: 42px; }
 }
 
 @media (max-width: 560px) {
