@@ -418,7 +418,10 @@ function computePose(f, t) {
 
 // ---------------------------------------------------------------- head & face
 
-function drawFace(ctx, cx, cy, r, face, c) {
+// `look` is the character's own facial geometry, layered over STYLIZE.FACE.
+// RENDER-ONLY: it is read here and nowhere else — never by the state machine,
+// hit resolution, the budget, or the codec. A face cannot change a fight.
+function drawFace(ctx, cx, cy, r, face, c, look) {
   ctx.lineCap = 'round';
   const e = r * 0.34;                       // eye offset
   ctx.strokeStyle = OUTLINE; ctx.fillStyle = OUTLINE;
@@ -456,12 +459,17 @@ function drawFace(ctx, cx, cy, r, face, c) {
     // brows angle down toward the nose, a heavy lid narrows the eye so the
     // fighter is glaring rather than gazing, and the mouth is set instead of
     // curved upward.
-    const F = STYLIZE.FACE;
+    // Every fighter used to share one face: same brow angle, same lid, same
+    // mouth, so nine characters wore one expression and were told apart only by
+    // hair and jacket. The knobs are the same, the VALUES are now the
+    // character's — Carl narrows to a slit, Lizbeth does not blink, Cathie is
+    // the only one in the game who is not glaring.
+    const F = { ...STYLIZE.FACE, ...(look || {}) };
     const tilt = F.BROW_TILT + (face === 'angry' || face === 'block' ? F.BROW_TILT_HARD : 0);
 
     // pupil, sitting high in the eye — looking AT something
     for (const s of [-1, 1]) {
-      ctx.beginPath(); ctx.arc(cx + s * e + 2, cy + 0.6, 2.5, 0, 7); ctx.fill();
+      ctx.beginPath(); ctx.arc(cx + s * e + 2, cy + 0.6, F.PUPIL_R, 0, 7); ctx.fill();
     }
 
     // heavy upper lid: the difference between open-eyed and narrowed
@@ -493,9 +501,13 @@ function drawFace(ctx, cx, cy, r, face, c) {
     } else if (face === 'angry') {                // snarl — corners pulled down
       ctx.moveTo(cx - mw, my - 2.4);
       ctx.quadraticCurveTo(cx + 2, my + 2.8, cx + mw + 2, my - 2.4);
-    } else {                                      // idle: jaw set, faint downturn
-      ctx.moveTo(cx - mw, my - 1);
-      ctx.quadraticCurveTo(cx + 2, my + 1.8, cx + mw + 2, my - 1);
+    } else {
+      // idle: the character's own set. MOUTH_CURVE < 0 pulls the corners down
+      // into a scowl, > 0 lets one or two of them look pleased with themselves.
+      // Nobody gets a full smile — that was the loudest cartoon tell of all.
+      const k = F.MOUTH_CURVE;
+      ctx.moveTo(cx - mw, my - k * 0.55);
+      ctx.quadraticCurveTo(cx + 2, my + k, cx + mw + 2, my - k * 0.55);
     }
     ctx.stroke();
   }
@@ -786,7 +798,7 @@ function drawHead(ctx, def, cx, cy, r, face, t, unicorn) {
     if (def.accessory === 'earrings') drawAccessory(ctx, cx, cy, r, def);
   } else {
     blob(ctx, () => { ctx.arc(cx, cy, r, 0, 7); }, def.c.skin);
-    drawFace(ctx, cx, cy, r, face, def.c);
+    drawFace(ctx, cx, cy, r, face, def.c, def.face);
     drawFacialHair(ctx, cx, cy, r, def);
     drawHair(ctx, cx, cy, r, def, t);
     drawEyewear(ctx, cx, cy, r, def);

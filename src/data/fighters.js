@@ -92,6 +92,10 @@ export const FIGHTERS = [
     id: 'ava', name: 'LIZBETH HOLMEZ', title: 'THE FRAUDSTER', company: 'THERAMOS',
     tagline: 'One drop of blood, $9B of lies, 11 years inside.',
     rap: 'Convicted · investor fraud',
+    // FACE (render-only): The stare. She is the only fighter whose lids are RAISED — brows high
+    // and flat, pupils wide, mouth a flat line. Unblinking conviction is the
+    // whole parody; a glare would make her look like she knew she was lying.
+    face: { BROW_Y: 10.5, BROW_TILT: -1.4, BROW_LEN: 6.2, LID_Y: 6.6, PUPIL_R: 3.6, MOUTH_W: 4.6, MOUTH_CURVE: 0 },
     special: 'pivot', style: 'phantom',
     // An ordinary frame is the point. Slight AND untouchable is the
     // compounding pattern the budget exists to catch — giving her a real body
@@ -117,6 +121,9 @@ export const FIGHTERS = [
     id: 'max', name: 'ADAM WEUMANN', title: 'THE BURNER', company: 'WEWERK',
     tagline: 'Torched $47B, kept the jet, blamed the vibes.',
     rap: 'Ousted · $47B evaporated',
+    // FACE (render-only): Manic. Brows up and apart, eyes wide, mouth wide and loose — a man
+    // enjoying the fire. The only face in the cast with any lift in the mouth.
+    face: { BROW_Y: 10, BROW_TILT: -2.6, BROW_LEN: 5, LID_Y: 6, PUPIL_R: 3.2, MOUTH_W: 7, MOUTH_CURVE: 2.6 },
     special: 'burnrate', style: 'brawler',
     // Wide as a doorway and built low. Reads as the biggest thing on stage.
     body: { height: 1.16, build: 1.00, reach: 1.02, stride: 1.13, shoulders: 1.25, head: 0.92 },
@@ -144,6 +151,9 @@ export const FIGHTERS = [
     id: 'kai', name: 'STEVE NOJOBS', title: 'THE VAPORWARE PROPHET', company: 'PEAR',
     tagline: 'Demoed a product that never existed. Twice.',
     rap: 'Sued · shipped nothing',
+    // FACE (render-only): The showman: heavy lids, level brows, a small knowing mouth. Not angry,
+    // just certain you will buy it.
+    face: { BROW_Y: 7.6, BROW_TILT: 1.2, BROW_LEN: 5.8, LID_Y: 3.2, PUPIL_R: 2.2, MOUTH_W: 5, MOUTH_CURVE: 0.8 },
     special: 'pitchdeck', style: 'showman',
     // All leg and no shoulder — the keynote posture, tall and unthreatening
     // right up until it isn't.
@@ -176,6 +186,9 @@ export const FIGHTERS = [
     id: 'zara', name: 'KIM KOINDASHIAN', title: 'THE RUG-PULLER', company: 'SKIMZCOIN',
     tagline: 'Shilled the coin, dumped the bag, deleted the post.',
     rap: 'Fined · undisclosed promo',
+    // FACE (render-only): Bored of you. The heaviest lids in the game, flat brows, a tiny mouth —
+    // contempt costs less effort than anger.
+    face: { BROW_Y: 7, BROW_TILT: 0.4, BROW_LEN: 5.2, LID_Y: 2.4, PUPIL_R: 2.0, MOUTH_W: 4, MOUTH_CURVE: -0.6 },
     special: 'growthhack', style: 'rushdown',
     // Small and light with an oversized head — reads young and quick, and
     // the smaller hurtbox is what her budget pays for.
@@ -218,6 +231,9 @@ export const FIGHTERS = [
     id: 'eleanor', name: 'CATHIE WOODZ', title: 'THE TRUE BELIEVER', company: 'ARKK CAPITAL',
     tagline: 'Bought every dip on the way to zero. Still bullish.',
     rap: 'Down 80% · still posting',
+    // FACE (render-only): Serene. The one face in the cast that is not glaring: soft raised brows,
+    // open eyes, a level mouth. Absolute faith reads as calm, not aggression.
+    face: { BROW_Y: 9.6, BROW_TILT: -0.8, BROW_LEN: 5.4, LID_Y: 5.4, PUPIL_R: 2.9, MOUTH_W: 5.4, MOUTH_CURVE: 0.4 },
     special: 'fundinground', style: 'zoner',
     // Tall, narrow, and longer in the arm than anyone. The silhouette IS
     // the zoning — you can see the range before she uses it.
@@ -250,6 +266,9 @@ export const FIGHTERS = [
     id: 'dex', name: 'CARL ICAHNT', title: 'THE ASSET STRIPPER', company: 'ICAHNT HOLDINGS',
     tagline: 'Bought it, gutted it, sold the parts, kept the jet.',
     rap: 'Hostile · 12 companies dismantled',
+    // FACE (render-only): Predator. Lowest, heaviest brow, eyes down to slits, mouth a thin hard
+    // line. He is already valuing the parts of you.
+    face: { BROW_Y: 6.2, BROW_TILT: 5.4, BROW_LEN: 6.4, BROW_W: 4.0, LID_Y: 2.0, LID_W: 3.0, PUPIL_R: 1.6, MOUTH_W: 6.4, MOUTH_CURVE: -2.2 },
     special: 'takeover', style: 'grappler',
     // Squat, enormous across the shoulders, short in the leg. A fireplug —
     // nothing about him says he can reach you, which is the honest advert.
@@ -285,6 +304,9 @@ export const FIGHTERS = [
     id: 'elo', name: 'ELO MA', title: 'THE TECHNOKING', company: 'SPACEY-X',
     tagline: 'Bought the platform, torched the value, called it free speech.',
     rap: 'Sued · $44B writedown',
+    // FACE (render-only): Thin-skinned. Brows up in permanent grievance, small mouth, eyes that
+    // are certain they are the smartest thing on the stage.
+    face: { BROW_Y: 9.2, BROW_TILT: -1.8, BROW_LEN: 4.8, LID_Y: 4.6, PUPIL_R: 2.6, MOUTH_W: 4.4, MOUTH_CURVE: -0.4 },
     special: 'burnrate', style: 'glass',
     // Tall and ordinary through the middle. GLASS CANNON is already the most
     // over-budget style shipped, so the frame has to be a real target.
@@ -308,6 +330,9 @@ export const FIGHTERS = [
     id: 'bozo', name: 'JEFF BOZO', title: 'THE EVERYTHING GUY', company: 'PRIMEZON',
     tagline: 'Your margin is his opportunity. Your warehouse is his gym.',
     rap: 'Antitrust · under investigation',
+    // FACE (render-only): The winner's face: hard flat brows, narrow eyes, a wide set jaw. Nothing
+    // about it is worried, because nothing about it has ever had to be.
+    face: { BROW_Y: 7.2, BROW_TILT: 2.8, BROW_LEN: 6.0, BROW_W: 3.6, LID_Y: 2.8, PUPIL_R: 2.1, MOUTH_W: 7.2, MOUTH_CURVE: 1.2 },
     special: 'takeover', style: 'technical',
     // Compact and barrel-chested with short arms — the warehouse build.
     body: { height: 0.92, build: 1.14, reach: 0.90, stride: 0.92, shoulders: 1.20, head: 1.12 },
@@ -329,6 +354,9 @@ export const FIGHTERS = [
     id: 'scam', name: 'SCAM ALT', title: 'THE ALIGNMENT GUY', company: 'CLOSEDAI',
     tagline: 'Fired by the board on Friday, back by Wednesday.',
     rap: 'Ousted · reinstated · unbothered',
+    // FACE (render-only): Reasonable. Deliberately the mildest face here — soft brows, neutral
+    // eyes, small even mouth. The unreadable one is the point.
+    face: { BROW_Y: 8.4, BROW_TILT: 0.6, BROW_LEN: 5.0, LID_Y: 4.4, PUPIL_R: 2.5, MOUTH_W: 5.0, MOUTH_CURVE: 0.2 },
     special: 'pivot', style: 'trickster',
     // Soft and unbothered — the man who was fired on Friday and back by
     // Wednesday does not look worried. TRICKSTER is expensive, so the comfort

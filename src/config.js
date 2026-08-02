@@ -320,6 +320,10 @@ export const STYLIZE = {
     EYE_W: 4.4,         // lid half-width
     MOUTH_Y: 0.46,      // fraction of head radius below centre
     MOUTH_W: 6,
+    // Defaults only — every roster fighter overrides these with its own face
+    // (see `face:` on each entry in data/fighters.js). Render-only.
+    PUPIL_R: 2.5,        // eye size: a slit at 1.6, a stare at 3.6
+    MOUTH_CURVE: 1.8,    // < 0 scowls, > 0 is pleased with itself
   },
   // Vertical form shading: warm key at the head, crushing to near-black at the
   // feet. The crush looks like it must be the problem — the biggest single
