@@ -69,6 +69,16 @@ Touch pads appear automatically on phones/tablets (or force them with `?touch=1`
 
 **Parry:** tap block at the instant a hit lands (0.12 s window) — the attacker staggers and you gain energy. Grabs beat parries; parries beat everything else.
 
+## What's new in v2.8 — everyone fights differently now
+
+v2.4 built a system for giving each founder their own moves. Two of them ever used it. Now all nine do.
+
+- 🥋 **Every founder has a signature move.** Hold ➡ toward your rival and press a button to get their version of it. Lizbeth answers your swing with **THE DEMO** — a stance, not a strike, and it turns out the machine was never plugged in. Adam **BLITZSCALEs** straight through you. Steve leaves the stage mid-sentence and is behind you. Cathie rains conviction on your head. Elo detonates the launchpad, Bozo undercuts you at the ankles, and Scam throws safety memos at speed.
+- 🛡 **Counters actually happen now.** The counter stance shipped priced, buildable, and offered to you in the founder builder — and no opponent could ever throw one. They can now, and they read the swing rather than a timer.
+- ⚖️ **LAWYERED hits for what you paid for it.** If you built a founder with the counter stance, it was sold to you at 13 damage and quietly hitting for 10. It hits for 13.
+
+Nothing changed about the cast's look, and no build you have saved is affected. 171 tests.
+
 ## What's new in v2.7 — the founders learned to fight
 
 Every previous art pass improved how the cast was **lit**. This one changes how they're **drawn**.
