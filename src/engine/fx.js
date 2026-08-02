@@ -126,14 +126,36 @@ export class FXSystem {
     this.rings.push({ x, y, r: 10, vr, t: 0, dur, color, width });
   }
 
+  // Comic word popups.
+  //
+  // A single hit can fire several of these at once — the move's name, an energy
+  // number, a combo milestone — and they used to land on top of each other in a
+  // jittered heap that read as one unreadable smear. Three rules fix that:
+  // never repeat yourself, stack instead of overlap, and stop after a few.
   popup(x, y, text, color = '#ffd23f') {
     // keep long labels (mystery-drop names) on screen even in the corners
     const margin = 40 + text.length * 8;
-    this.popups.push({
-      x: Math.max(margin, Math.min(960 - margin, x + (Math.random() - 0.5) * 30)),
-      y: y - 20 - Math.random() * 30,
-      text, color, t: 0, dur: 0.6, rot: (Math.random() - 0.5) * 0.5,
-    });
+    const px = Math.max(margin, Math.min(960 - margin, x + (Math.random() - 0.5) * 30));
+    let py = y - 20 - Math.random() * 30;
+
+    // 1. A word already on screen is not new information. Two hits landing in
+    //    the same instant should say it once, not print it twice.
+    if (this.popups.some(w => w.text === text && w.t < 0.2)) return;
+
+    // 2. Stack above anything still occupying that spot, so a name and a number
+    //    read as two lines rather than one collision.
+    for (let guard = 0; guard < 6; guard++) {
+      const clash = this.popups.find(w =>
+        Math.abs(w.x - px) < 130 && Math.abs((w.y - w.t / w.dur * 34) - py) < 30);
+      if (!clash) break;
+      py -= 34;
+    }
+
+    this.popups.push({ x: px, y: py, text, color, t: 0, dur: 0.6, rot: (Math.random() - 0.5) * 0.5 });
+
+    // 3. A hard cap. Past a few words the screen is shouting, not informing —
+    //    drop the oldest so the newest (most relevant) one always survives.
+    if (this.popups.length > 4) this.popups.splice(0, this.popups.length - 4);
   }
 
   draw(ctx) {
