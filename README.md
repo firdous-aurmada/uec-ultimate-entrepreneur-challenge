@@ -69,6 +69,17 @@ Touch pads appear automatically on phones/tablets (or force them with `?touch=1`
 
 **Parry:** tap block at the instant a hit lands (0.12 s window) — the attacker staggers and you gain energy. Grabs beat parries; parries beat everything else.
 
+## What's new in v2.7 — the founders learned to fight
+
+Every previous art pass improved how the cast was **lit**. This one changes how they're **drawn**.
+
+- 😠 **Nobody smiles any more.** Every founder used to stand in their idle wearing a gentle closed-mouth smile — six disgraced executives beaming at the person about to hit them. Brows angle down toward the nose now, a heavy lid narrows the eye, and the jaw is set. Winning still smiles; that one is earned.
+- 🥊 **A real stance.** They used to stand up straight with their hands out. Feet are 51px apart instead of 29 on a ~200px figure, hips and shoulders drop, the torso leans in, and the rear hand comes up to guard the chin.
+- 📏 **Fighting-game proportions.** 4.35 heads tall to 5.5 — smaller skull, longer limbs, a skeleton lengthened to keep the silhouette the stages were built around.
+- 💪 **Limbs with anatomy.** A limb was two even tubes. Now it's heavy at the shoulder and hip, pinched at the elbow and knee, swelling through the forearm and calf before tapering to the wrist and ankle, with deltoids at the shoulders.
+
+Nothing about the fight changed: hurtboxes come from the frame data, never the pose, and the rig is shared rather than per-character — so the power budget, the ladder and every saved founder are untouched. 169 tests, and the whole render still costs about 1 ms a frame.
+
 ## What's new in v2.6 — you can see who you're fighting
 
 A readability pass. Nothing about the fight changed; it just got easier to read.
