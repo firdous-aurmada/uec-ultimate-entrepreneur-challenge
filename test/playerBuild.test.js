@@ -59,10 +59,26 @@ test('the menu has both sides of a trade', () => {
 });
 
 test('an expensive move can be paid for by a cheap one', () => {
-  const solo = playerBuildCost({ moves: ['stonewall'] });
-  const paired = playerBuildCost({ moves: ['stonewall', 'sweep'] });
+  const solo = playerBuildCost({ moves: ['uppercut'] });
+  const paired = playerBuildCost({ moves: ['uppercut', 'sweep'] });
   assert.ok(solo > PLAYER_BUDGET, 'the expensive move should not be affordable alone');
   assert.ok(Math.abs(paired) <= PLAYER_BUDGET, `pairing should balance, got ${paired.toFixed(1)}`);
+});
+
+// LAWYERED used to be the example above, back when it cost 6.9 and one cheap
+// move covered it. Making it fast enough to actually counter anything doubled
+// the price to 13, and the whole menu now holds exactly one build that affords
+// it. That is a deliberately steep corner of the budget, not an accident — but
+// it is one assertion away from being a corner nobody can reach, so it is
+// pinned rather than left to drift.
+test('the priciest move is reachable, but only by committing the whole build', () => {
+  const solo = playerBuildCost({ moves: ['stonewall'] });
+  const paired = playerBuildCost({ moves: ['stonewall', 'sweep'] });
+  const full = playerBuildCost({ moves: ['stonewall', 'sweep', 'shoulder'] });
+  assert.ok(solo > PLAYER_BUDGET, 'a counter that beats three basics should not be free');
+  assert.ok(Math.abs(paired) > PLAYER_BUDGET, 'one cheap move should no longer cover it');
+  assert.ok(Math.abs(full) <= PLAYER_BUDGET,
+    `all three slots must still afford it, got ${full.toFixed(1)}`);
 });
 
 test('an expensive move can also be paid for with a bigger body', () => {

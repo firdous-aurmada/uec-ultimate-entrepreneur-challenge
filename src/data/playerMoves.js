@@ -78,7 +78,19 @@ export const PLAYER_MOVES = [
     tags: ['counter'],
     blurb: 'A stance, not a swing. Read their attack and it goes back at them. Grabs still beat it.',
     frameData: {
-      startup: launch.startup * 1.1, active: launch.active, recovery: launch.recovery * 1.15,
+      // A counter's startup is not a slope, it is a cliff: it must beat the
+      // attack it means to turn back, or the attack simply lands first. At
+      // 1.1x launch (0.066s) this was measured losing to slap, punch AND
+      // launch and beating only kick — a counter that loses to the two most
+      // pressed buttons in the game. 0.75x (0.045s) beats punch, kick and
+      // launch. Slap, the fastest button, still goes through: reading a jab
+      // with a counter should not be free.
+      //
+      // It is not cheap — the price roughly doubles, to 13 — but that is the
+      // honest cost of a defensive tool that actually works, and it is priced
+      // against launch's slow 0.06s base. A counter is affordable on fwd+slap
+      // and expensive here; that is the slot's character, not a bug.
+      startup: launch.startup * 0.75, active: launch.active, recovery: launch.recovery * 1.15,
       dmg: launch.dmg, reach: launch.reach, kbUp: launch.kbUp,
     },
     params: { window: 0.18, dmg: 13, kb: 300 },
