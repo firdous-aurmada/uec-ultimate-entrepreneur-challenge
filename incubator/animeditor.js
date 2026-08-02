@@ -62,17 +62,29 @@ const isLoop = () => !!ANIM_STATES.find(s => s.id === stateId)?.loop;
 const domainMax = () => (isLoop() ? 1 : 3);
 const clone = (v) => JSON.parse(JSON.stringify(v));
 
+// A track may be a bare array of keys or a { base, keys } pair — the stock
+// idle declares a base so it contributes only breathing (see tracks.js). The
+// editor works in keys, so unwrap. Missing this made every state that falls
+// back to the idle track — idle itself, and anything with no track of its own,
+// like walk — throw the moment the editor tried to sort it.
+function keysOf(t) {
+  return Array.isArray(t) ? t : ((t && t.keys) || []);
+}
+
 function baseTrack() {
-  return BASE_TRACKS[ATTACK_TRACK[stateId] || stateId] || BASE_TRACKS.idle;
+  return keysOf(BASE_TRACKS[ATTACK_TRACK[stateId] || stateId] || BASE_TRACKS.idle);
 }
 
 // Editing starts from the stock track rather than from nothing: an author
 // refining a punch wants the punch in front of them, not an empty timeline.
 function ensureTrack() {
   draft.animOverrides = draft.animOverrides || {};
-  if (!Array.isArray(draft.animOverrides[stateId]) || !draft.animOverrides[stateId].length) {
-    draft.animOverrides[stateId] = clone(baseTrack());
-  }
+  // Reloading a character authored earlier hands us the { base, keys } form;
+  // flatten it back to keys so the timeline can edit it. The base is re-stamped
+  // on export from the rig in front of the author.
+  const existing = keysOf(draft.animOverrides[stateId]);
+  if (!existing.length) draft.animOverrides[stateId] = clone(baseTrack());
+  else draft.animOverrides[stateId] = existing;
   track = draft.animOverrides[stateId];
   track.sort((a, b) => a.t - b.t);
   selected = Math.min(selected, track.length - 1);

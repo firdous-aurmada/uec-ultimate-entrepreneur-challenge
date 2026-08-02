@@ -24,6 +24,17 @@ import {
 import { drawFighter } from '../src/engine/drawFighter.js';
 import { initAnimEditor, refreshSummary } from './animeditor.js';
 import { Fighter } from '../src/engine/fighter.js';
+import { REST } from '../src/engine/anim.js';
+
+// A plain snapshot of the rig an authored track was posed against, taken at
+// export time. Not a reference to REST — that object moves when the stance is
+// retuned, and the whole point of stamping the base is that it must not.
+const REST_SNAPSHOT = {
+  hipY: REST.hipY, shoulderY: REST.shoulderY, headX: REST.headX, headY: REST.headY,
+  rot: REST.rot, crouch: REST.crouch, bodyLean: REST.bodyLean, sx: REST.sx, sy: REST.sy,
+  armF: { ...REST.armF }, armB: { ...REST.armB },
+  legF: { ...REST.legF }, legB: { ...REST.legB },
+};
 
 const $ = (id) => document.getElementById(id);
 const DRAFT_KEY = 'uec-incubator-draft-v1';
@@ -492,8 +503,21 @@ function toModule() {
     headwear: draft.headwear, eyewear: draft.eyewear, facialHair: draft.facialHair,
   };
   if (draft.commandNormals.length) clean.commandNormals = draft.commandNormals;
-  // render-only, but it belongs to the character, so it ships in the module
-  if (draft.animOverrides && Object.keys(draft.animOverrides).length) clean.animOverrides = draft.animOverrides;
+  // Render-only, but it belongs to the character, so it ships in the module.
+  //
+  // Each track is stamped with the rig it was posed against. The editor seeds
+  // keys from the LIVE rest pose, while addDelta measures an undeclared track
+  // against the frozen AUTHORED_REST — so without this stamp a character
+  // authored today would render with a constant offset the moment the stance
+  // moved again (22px at the hip, 48px at the head, last time). Declaring the
+  // base is what lets the stance keep changing without rewriting the roster.
+  if (draft.animOverrides && Object.keys(draft.animOverrides).length) {
+    clean.animOverrides = {};
+    for (const [state, t] of Object.entries(draft.animOverrides)) {
+      const keys = Array.isArray(t) ? t : (t && t.keys) || [];
+      if (keys.length) clean.animOverrides[state] = { base: { ...REST_SNAPSHOT }, keys };
+    }
+  }
   const body = JSON.stringify(clean, null, 2).replace(/^/gm, '  ');
   return `// Authored in THE INCUBATOR. Plain data — diff it, review it, commit it.
 // Drop into FIGHTERS in src/data/fighters.js, or import and spread it there.
