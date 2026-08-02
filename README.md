@@ -69,6 +69,12 @@ Touch pads appear automatically on phones/tablets (or force them with `?touch=1`
 
 **Parry:** tap block at the instant a hit lands (0.12 s window) — the attacker staggers and you gain energy. Grabs beat parries; parries beat everything else.
 
+## What's new in v2.9 — the founders stop growing mid-punch
+
+- 📐 **Fighters no longer get 27% bigger when they attack.** They did, for the whole length of every swing. The stance lived in two places in the code and only one of them was updated when v2.7 retuned the proportions — so a founder stood at the old skeleton and snapped to the new one to throw a punch. One rig now, and v2.7's proportions finally reach the character you actually look at, which means the whole cast is visibly taller at rest.
+- 📏 **Height means something.** Cathie is the tallest because she *is* the range — you should see it before she uses it. Adam isn't the tallest, he's the biggest. Lizbeth is deliberately, forgettably ordinary. Kim is the smallest and the hardest thing on stage to hit. It costs nobody any power budget: stature is spent through leg length, which the budget doesn't price.
+- 🌐 **Live matches refuse a mismatched opponent up front** instead of voiding thirty seconds in. The handshake checked what a character *is* but not what it *does*, so two players on different versions could start a fight that was already doomed and have it report itself as a network fault.
+
 ## What's new in v2.8 — everyone fights differently now
 
 v2.4 built a system for giving each founder their own moves. Two of them ever used it. Now all nine do.
