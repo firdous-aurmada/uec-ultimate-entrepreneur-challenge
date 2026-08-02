@@ -6,7 +6,7 @@ import { shade } from '../data/fighters.js';
 import { STYLES, STYLIZE } from '../config.js';
 import { clampBody, applyProportions, bufferMetrics } from './proportions.js';
 import { loadSpriteSet, drawSprite } from './sprites.js';
-import { samplePose, attackPhaseT, trackFor, addDelta, REST } from './anim.js';
+import { samplePose, attackPhaseT, trackFor, addDelta, poseFrom, AUTHORED_REST, REST } from './anim.js';
 import { BASE_TRACKS, ATTACK_TRACK, NOMINAL_REACH } from '../data/tracks.js';
 
 // How many idle loops per second. The stock track is one breath.
@@ -201,7 +201,15 @@ function computePose(f, t) {
       // A track may declare the rig it was authored against; without one it
       // predates AUTHORED_REST and is measured there. Never against the live
       // REST — see the note on AUTHORED_REST in anim.js.
-      addDelta(P, samplePose(idle, (phase + 1) % 1), idle.base);
+      //
+      // Sample ONTO that same base, not onto the live rest pose. A sparse
+      // override only keys a few joints and samplePose fills the rest from
+      // whatever it started on; starting from REST and subtracting
+      // AUTHORED_REST gave every untouched joint a spurious delta of the
+      // difference between the two rigs — 42px on the shoulders, which put one
+      // character's head below her own collarbone.
+      const base = idle.base || AUTHORED_REST;
+      addDelta(P, samplePose(idle, (phase + 1) % 1, poseFrom(base)), base);
     }
   } else if (st === 'walk') {
     const ph = f.walkPhase;

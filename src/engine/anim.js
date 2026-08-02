@@ -39,8 +39,8 @@
 // Attack tracks mostly do not key the legs, so they inherit this width and get
 // stancier for free. Render-only: hurtboxes come from ATTACKS, never the pose.
 export const REST = {
-  hipY: -60, shoulderY: -110, headX: 0, headY: -128, rot: 0, crouch: 0,
-  armF: { x: 33, y: -101 }, armB: { x: 13, y: -99 },
+  hipY: -88, shoulderY: -156, headX: 0, headY: -182, rot: 0, crouch: 0,
+  armF: { x: 34, y: -146 }, armB: { x: 13, y: -144 },
   legF: { x: 26, y: 0 }, legB: { x: -25, y: 0 },
   bodyLean: 0.05, sx: 1, sy: 1,
 };
@@ -62,14 +62,17 @@ export const EASE = {
 const clamp01 = (v) => (v < 0 ? 0 : v > 1 ? 1 : v);
 const lerp = (a, b, k) => a + (b - a) * k;
 
-// A fresh pose at rest. Callers mutate freely; REST is never handed out.
-export function restPose() {
+// A fresh, freely mutable copy of any rig. The source is never handed out.
+export function poseFrom(src = REST) {
   return {
-    ...REST,
-    armF: { ...REST.armF }, armB: { ...REST.armB },
-    legF: { ...REST.legF }, legB: { ...REST.legB },
+    ...src,
+    armF: { ...src.armF }, armB: { ...src.armB },
+    legF: { ...src.legF }, legB: { ...src.legB },
   };
 }
+
+// A fresh pose at rest. Callers mutate freely; REST is never handed out.
+export function restPose() { return poseFrom(REST); }
 
 // Blend b into a by k, in place on a. Only joints present in b move, so a
 // sparse keyframe means "leave everything else alone" rather than "snap the

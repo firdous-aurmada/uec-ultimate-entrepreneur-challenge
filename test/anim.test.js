@@ -3,7 +3,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  REST, AUTHORED_REST, EASE, restPose, blendInto, samplePose, attackPhaseT, trackFor,
+  REST, AUTHORED_REST, EASE, restPose, poseFrom, blendInto, samplePose, attackPhaseT, trackFor,
   validateTrack, MIN_ANTICIPATION_KEYS,
 } from '../src/engine/anim.js';
 import { BASE_TRACKS, ATTACK_TRACK, NOMINAL_REACH } from '../src/data/tracks.js';
@@ -350,6 +350,23 @@ test('an authored override is measured against the rig it was authored on', () =
   assert.equal(p.armF.y, REST.armF.y - 10, 'only the authored 10px lift should apply');
   assert.equal(p.hipY, REST.hipY, 'joints the override matches must not move');
   assert.equal(p.headY, REST.headY, 'especially the head');
+});
+
+test('a sparse override moves only the joints it keys', () => {
+  // The subtle half of the base bug. An override names a couple of joints;
+  // samplePose fills the REST of the pose from whatever it starts on. Start it
+  // on the live rest pose and subtract AUTHORED_REST, and every joint the
+  // override never mentioned picks up a delta of the gap between the two rigs
+  // — 42px on the shoulders once the stance moved, which put one character's
+  // head below her own collarbone. Sampling onto the base makes it zero.
+  const sparse = [{ t: 0, joints: { hipY: AUTHORED_REST.hipY - 6 } }];
+  const P = restPose();
+  addDelta(P, samplePose(sparse, 0, poseFrom(AUTHORED_REST)), AUTHORED_REST);
+  assert.equal(P.hipY, REST.hipY - 6, 'the keyed joint moves by its authored amount');
+  assert.equal(P.shoulderY, REST.shoulderY, 'an unkeyed joint must not move');
+  assert.equal(P.headY, REST.headY, 'an unkeyed joint must not move');
+  assert.equal(P.armF.y, REST.armF.y, 'an unkeyed limb must not move');
+  assert.ok(P.headY < P.shoulderY, 'the head must stay above the shoulders');
 });
 
 test('a partial base does not poison the pose with NaN', () => {

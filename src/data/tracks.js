@@ -34,9 +34,9 @@ export const BASE_TRACKS = {
   idle: {
     base: REST,
     keys: [
-      { t: 0,    joints: { hipY: -60, shoulderY: -110, headY: -128, armF: { x: 33, y: -101 }, armB: { x: 13, y: -99 } } },
-      { t: 0.5,  joints: { hipY: -57, shoulderY: -108, headY: -125, armF: { x: 32, y: -98 }, armB: { x: 12, y: -96 } }, ease: 'inOutCubic' },
-      { t: 1,    joints: { hipY: -60, shoulderY: -110, headY: -128, armF: { x: 33, y: -101 }, armB: { x: 13, y: -99 } }, ease: 'inOutCubic' },
+      { t: 0,    joints: { hipY: -88, shoulderY: -156, headY: -182, armF: { x: 34, y: -146 }, armB: { x: 13, y: -144 } } },
+      { t: 0.5,  joints: { hipY: -85, shoulderY: -154, headY: -179, armF: { x: 33, y: -143 }, armB: { x: 12, y: -141 } }, ease: 'inOutCubic' },
+      { t: 1,    joints: { hipY: -88, shoulderY: -156, headY: -182, armF: { x: 34, y: -146 }, armB: { x: 13, y: -144 } }, ease: 'inOutCubic' },
     ],
   },
 

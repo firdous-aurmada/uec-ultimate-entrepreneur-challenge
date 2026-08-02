@@ -31,7 +31,7 @@ export function isNeutral(b) {
 export function applyProportions(P, body) {
   if (isNeutral(body)) return P;
 
-  const oldHip = P.hipY, oldShoulder = P.shoulderY;
+  const oldHip = P.hipY, oldShoulder = P.shoulderY, oldHead = P.headY;
 
   // Rebuild the vertical chain from the feet up so the character never floats:
   // legs set the hip, torso sets the shoulder, neck sets the head.
@@ -56,7 +56,15 @@ export function applyProportions(P, body) {
 
   // Limb gauges now come from STYLIZE at draw time, scaled by build — the head
   // is the one part sized here, because `head` is its own proportion knob.
-  P.headR = STYLIZE.HEAD_R * body.head;
+  //
+  // The skull follows the body's own vertical scale (HEAD_FOLLOW), so `head`
+  // means "how big is my head FOR MY SIZE" rather than an absolute that fights
+  // the skeleton. Without this a short character with a large head knob and a
+  // tall one with a small head knob compound, and the cast's heads-tall spread
+  // doubles the moment the base skull shrinks. Not priced by the budget —
+  // only reach and height*build are — so this is free of balance.
+  const vert = oldHead ? Math.abs(P.headY / oldHead) : 1;
+  P.headR = STYLIZE.HEAD_R * body.head * Math.pow(vert, STYLIZE.HEAD_FOLLOW);
   P.shoulderW = body.shoulders;
   P.build = body.build;
   return P;

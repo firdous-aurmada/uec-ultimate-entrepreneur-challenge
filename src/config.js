@@ -244,15 +244,15 @@ export const STYLIZE = {
   HAND_F: 12.5,        // front glove — the thing that hits you
   HAND_B: 10.5,
   FOOT_W: 30, FOOT_H: 12,
-  UPPER_ARM: 11,       // narrow at the shoulder…
-  FOREARM: 15,         // …heavy at the glove
-  THIGH: 21, SHIN: 16,   // legs must out-weigh arms or the figure reads top-heavy
-  HEAD_R: 24,
+  UPPER_ARM: 13,       // narrow at the shoulder…
+  FOREARM: 16,         // …heavy at the glove
+  THIGH: 24, SHIN: 17,   // legs must out-weigh arms or the figure reads top-heavy
+  HEAD_R: 18,
   // How far a folded limb bows at the joint. Scales to zero as it straightens,
   // so a fully extended punch has a straight arm and a guard has a bent one.
   ELBOW: 14, KNEE: 12,
-  ARM_SPAN: 118,       // limb length treated as fully extended
-  LEG_SPAN: 112,
+  ARM_SPAN: 130,       // limb length treated as fully extended
+  LEG_SPAN: 138,
   // Shoulder-to-hip distance every torso DETAIL is authored against. Collars,
   // ties, lapels, plackets and hems were pinned at raw pixel offsets from the
   // collar, so a longer torso kept them all bunched at the neck above a blank
@@ -262,7 +262,7 @@ export const STYLIZE = {
   // = REST.hipY - REST.shoulderY on the stock rig, so k is exactly 1 and a
   // neutral body renders byte-identically to before this change. Move it if
   // the stance moves, or every outfit quietly shifts.
-  TORSO_REF: 50,
+  TORSO_REF: 68,
   // How far the base of the skull sits BELOW the shoulder line. The neck gap
   // was a free number — headY and shoulderY were independent — so it only
   // looked attached by coincidence of the values chosen. Shrink the head
@@ -270,6 +270,14 @@ export const STYLIZE = {
   // rig it happens to overlap by exactly this much, so deriving it changes
   // nothing today and makes the head impossible to detach tomorrow.
   NECK_OVERLAP: 4,
+  // How much a body's head follows its overall height. At 0 the skull is a
+  // fixed size that the `head` knob scales, independent of how tall the
+  // character is — so a short founder with a big-head knob and a tall one with
+  // a small-head knob compound, and the cast's heads-tall spread doubled the
+  // moment the base skull shrank (0.93 -> 1.76 across six fighters). At 1 the
+  // skull tracks the body, `head` becomes "how big is my head FOR MY SIZE",
+  // and the spread comes only from that knob — which is what it always meant.
+  HEAD_FOLLOW: 1,
   // Silhouette key line. Measured with lab/contrast.js: 39% of a fighter's
   // on-screen pixels sat within 1.5 contrast of the stage behind them, and
   // every one of those was in the 0–80 luminance band — the ink outline, the
