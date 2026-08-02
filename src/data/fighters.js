@@ -273,6 +273,16 @@ export const FIGHTERS = [
     ai: { aggr: 0.82, jump: 0.4, prefRange: 'close' },
     c: { skin: '#eec9a6', suit: '#1a1c24', suit2: '#0e0f15', accent: '#ff3d2e', hair: '#2a2118', pants: '#1a1c24', shoe: '#c9ced9' },
     hairStyle: 'buzz', outfit: 'tee', accessory: null, cameo: true,
+    // The rocket that does not make it to orbit. A point-blank blast from a
+    // glass cannon: it hurts, and standing there to throw it is the price.
+    commandNormals: [
+      {
+        slot: 'fwd+kick', archetype: 'aoe', displayName: 'PLATFORM BURN',
+        tags: ['punish'],
+        frameData: { startup: 0.14, active: 0.09, recovery: 0.24, dmg: 14, reach: 118 },
+        params: { reach: 118, kb: 300, kbUp: -140 },
+      },
+    ],
   },
   {
     id: 'bozo', name: 'JEFF BOZO', title: 'THE EVERYTHING GUY', company: 'PRIMEZON',
@@ -285,6 +295,15 @@ export const FIGHTERS = [
     ai: { aggr: 0.75, jump: 0.2, prefRange: 'close' },
     c: { skin: '#e2ab84', suit: '#243447', suit2: '#141f2c', accent: '#ff9d1a', hair: '#101116', pants: '#2c3644', shoe: '#3d4a5c' },
     hairStyle: 'bald', outfit: 'vest', accessory: 'shades', cameo: true,
+    // Undercutting, in both senses: a low sweep from the man whose whole
+    // strategy is going under everyone else's price.
+    commandNormals: [
+      {
+        slot: 'fwd+kick', archetype: 'strike', displayName: 'UNDERCUT',
+        tags: ['low'],
+        frameData: { startup: 0.095, active: 0.08, recovery: 0.19, dmg: 11, reach: 100, hitY: -46, kb: 240 },
+      },
+    ],
   },
   {
     id: 'scam', name: 'SCAM ALT', title: 'THE ALIGNMENT GUY', company: 'CLOSEDAI',
@@ -299,6 +318,17 @@ export const FIGHTERS = [
     ai: { aggr: 0.6, jump: 0.5, prefRange: 'mid' },
     c: { skin: '#ecc39e', suit: '#6d7382', suit2: '#4a4f5c', accent: '#29d9ff', hair: '#4a3527', pants: '#2c3040', shoe: '#f0f0f0' },
     hairStyle: 'curly', outfit: 'henley', accessory: null, cameo: true,
+    // Safety memos, thrown at speed. He spaces at ~210px, which is why this is
+    // tagged for that band rather than for true zoning range — a tag the AI
+    // never reaches is a move that does not exist.
+    commandNormals: [
+      {
+        slot: 'fwd+slap', archetype: 'projectile', displayName: 'SAFETY MEMO',
+        tags: ['gapCloser'],
+        frameData: { startup: 0.07, active: 0.06, recovery: 0.17, dmg: 6, reach: 78 },
+        params: { count: 2, speed: 520, interval: 0.12 },
+      },
+    ],
   },
 ];
 
