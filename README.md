@@ -69,6 +69,19 @@ Touch pads appear automatically on phones/tablets (or force them with `?touch=1`
 
 **Parry:** tap block at the instant a hit lands (0.12 s window) — the attacker staggers and you gain energy. Grabs beat parries; parries beat everything else.
 
+## What's new in v2.5 — build your own founder
+
+v2.4 gave the cast their own moves. v2.5 gives you yours.
+
+- 🧬 **Build your founder.** In your profile: shape your silhouette, then pick signature moves off a menu — a launcher, an unblockable command grab, a floor trap, a counter stance, a low sweep that outranges your punch. They come out on **hold ➡ toward your rival + the button**, same as the roster's.
+- ⚖️ **You cannot buy an advantage.** Everyone in UEC hits equally hard, and that hasn't changed. What you can do is **trade**. A stronger move has to be paid for — with a weaker one, or with a bigger body that's easier to hit. Your build has to balance to zero, and the game won't let you save it until it does. Silhouette is free: shoulders, leg length and head size cost nothing at all, so you can look like nobody else without owing anything.
+- ✨ **Suggest a build** seeds one from your name, so no two founders start the same.
+- 🔗 **Your founder travels.** Challenge links carry your shape and your moves, so the AI ghost your friends fight is the fighter you actually built.
+- 🫁 **Every fighter now breathes differently.** Carl shifts his weight slowly and doesn't fidget. Kim bounces twice per breath and is never quite still. Cathie is almost motionless — the stillness is the threat. Steve's presenting hand drifts up like he's about to say "one more thing".
+- 🛠 **The Incubator** — an internal authoring tool with a live power-budget meter, a spar mode running the real AI, and a keyframe timeline editor. Not part of the game; it's how the roster gets made.
+
+166 tests, up from 31 two releases ago.
+
 ## What's new in v2.4 — the character update
 
 Every fighter now **moves** differently, **hits** differently, and is **recognisable by shape alone**.
