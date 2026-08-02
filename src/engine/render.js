@@ -53,6 +53,12 @@ function drawPerspectiveFloor(ctx, t) {
 function drawFloorSheen(ctx, f) {
   const airK = Math.max(0, Math.min(1, (FLOOR - f.y) / 260));
   if (airK > 0.75) return;
+  // Do not "improve" this by making the pool bigger or brighter to light the
+  // legs. Measured: raising the surface behind a fighter from 33.6 to 46.5
+  // luminance took the Garage from 32.1% of the body near-invisible to 36.8%.
+  // The legs are dark but they are a minority; the body is bright (~105), so
+  // anything that lifts the backdrop costs the majority more than it pays the
+  // legs. Contrast here is won by darkening the stage, not lighting the floor.
   ctx.save();
   ctx.globalAlpha = 0.16 * (1 - airK);
   ctx.globalCompositeOperation = 'lighter';

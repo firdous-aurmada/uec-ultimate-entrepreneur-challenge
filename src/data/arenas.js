@@ -336,15 +336,21 @@ function drawSummit(ctx, t) {
 export const ARENAS = [
   { id: 'boardroom', name: 'THE BOARDROOM', tag: 'Quarterly results are in.', draw: drawBoardroom, tempo: 96, root: 0, mood: 'dark' },
   { id: 'demoday', name: 'DEMO DAY', tag: 'Live on the main stage.', draw: drawDemoDay, tempo: 118, root: 3, mood: 'hype' },
-  { id: 'garage', name: 'THE STARTUP GARAGE', tag: 'Where it all begins.', draw: drawGarage, tempo: 104, root: 5, mood: 'lofi' },
+  // scrim: 32.1% -> 29.2% of the body near-invisible. Stops at 0.45 rather than
+  // the 0.52 the metric prefers — this stage is already the dimmest on the
+  // roster, and past here the whiteboard, the shelving and the string lights
+  // stop reading, which is the entire character of the room.
+  { id: 'garage', name: 'THE STARTUP GARAGE', tag: 'Where it all begins.', draw: drawGarage, tempo: 104, root: 5, mood: 'lofi', scrim: 0.45 },
   { id: 'exchange', name: 'THE STOCK EXCHANGE', tag: 'Buy the dip. Throw the punch.', draw: drawExchange, tempo: 124, root: 7, mood: 'tense' },
   { id: 'unicorn', name: 'THE UNICORN CLUB', tag: 'Members only. Valuations $1B+.', draw: drawUnicornClub, tempo: 122, root: 8, mood: 'party' },
   // scrim: the mountains sit directly behind the fighters at close to their own
-  // mid-tones, which made this the worst stage on the roster to read a
-  // character against — 41.8% of a fighter's pixels within 1.5 contrast of what
-  // they covered, vs 34% on the best. 0.50 takes that to 34.9%. Past ~0.55 the
-  // gold sun and the bunting go grey and the stage stops looking like a summit,
-  // so this is as far as it goes; see lab/contrast.js.
+  // mid-tones, which makes this the hardest stage to read a character against.
+  // 34.1% -> 32.5% of the body near-invisible. Past ~0.55 the gold sun and the
+  // bunting go grey and the stage stops looking like a summit, so this is as
+  // far as it goes — it is still the worst arena, capped by its own art.
+  // (An earlier revision claimed 41.8% -> 34.9% here. That came from a mask
+  // that scored the contact shadow and floor pool as character, and from an
+  // unpinned cast. See the note on KEEP in lab/contrast.js.)
   { id: 'summit', name: 'THE VC SUMMIT', tag: 'The air is thin up here.', draw: drawSummit, tempo: 100, root: 2, mood: 'epic', scrim: 0.50 },
 ];
 

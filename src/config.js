@@ -272,11 +272,15 @@ export const STYLIZE = {
   // softened it and added a bounce light off the floor, which is what a real
   // lit stage does. Measured: loss got monotonically WORSE, 29.6% -> 33.2%.
   //
-  // The legs are not competing with the dark backdrop. They are standing on
-  // the LIT perspective floor, and being crushed dark is exactly what makes
-  // them read against it. Softening the crush walked them toward the floor's
-  // own luminance. Kept at 0.30; these live here now so the next person can
-  // re-run the sweep instead of re-deriving the trap.
+  // Re-run since, varying ONLY this alpha with the gradient shape untouched —
+  // the first sweep had also moved the floor stop from 1.0 to 0.82, so its
+  // "original" row was not the original. Same answer: 30.9% -> 34.1% as the
+  // crush comes out. The direction is solid across both sweeps.
+  //
+  // I do not have a confirmed mechanism for it. An earlier revision asserted
+  // the legs read against the lit perspective floor; that was a guess, and 68%
+  // of all loss genuinely is in the legs. Treat 0.30 as measured, not
+  // explained, and leave it alone until someone measures a reason to move it.
   SHADE_KEY: 0.46,      // warm key at the head
   SHADE_MID: 0.10,      // neutral through the torso
   SHADE_FLOOR: 0.30,    // crush at the feet — do not soften, see above

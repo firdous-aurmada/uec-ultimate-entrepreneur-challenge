@@ -14,6 +14,24 @@
 //   import { measure } from '/lab/contrast.js';
 //   await measure();                       // all arenas, current scene
 
+// Pin the cast. quickFight picks fighters at random, and a fighter's own
+// palette moves these numbers by more than the stage grade does — a dark-suit
+// founder and a bright-hoodie one differ by ~10 luminance. That made every
+// figure comparable only WITHIN one page load. Start from here instead and a
+// reading means the same thing tomorrow.
+export const PINNED = ['ava', 'zara'];   // one dark-suit, one bright — worst and best case
+export async function pin(ids = PINNED) {
+  const { FIGHTERS, getFighter } = await import('/src/data/fighters.js');
+  const { getArena } = await import('/src/data/arenas.js');
+  const [p1, p2] = ids.map((id) => getFighter(id) || FIGHTERS[0]);
+  UEC.startMatch({ mode: 'solo', p1Def: p1, p2Def: p2, arena: getArena('boardroom'),
+                   difficulty: 'contender', isChallenge: false });
+  for (let i = 0; i < 60 && (UEC.game?.fighters?.length ?? 0) < 2; i++) {
+    await new Promise((r) => setTimeout(r, 50));
+  }
+  return { p1: p1.id, p2: p2.id };
+}
+
 const LUM = (r, g, b) => 0.2126 * r + 0.7152 * g + 0.0722 * b;
 const SRGB = (v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); };
 
@@ -58,14 +76,22 @@ export async function measure({ arenas = null, converge = 60, halo = 9, diff = 4
   g.fx.particles.length = 0; g.fx.popups.length = 0; g.fx.shakeMag = 0;
   g.drops.length = 0; g.projectiles.length = 0;
 
-  // renderGame reads game.fighters once for the camera, then again for each
-  // draw loop. Feed the camera the real pair and the draw loops nothing, so
-  // both passes are framed identically and the diff is purely the fighters.
+  // renderGame reads game.fighters in a fixed order:
+  //   0 camera, 1 shadow+floor pool, 2 the bodies, 3 buff icons.
+  //
+  // Hiding everything from 1 onward was wrong. The contact shadow and the
+  // floor pool are STAGE LIGHTING that happens to follow a fighter, not the
+  // fighter — suppressing them in the second pass dumped a big soft halo of
+  // deliberately-low-contrast pixels into the diff and scored it as character.
+  // It made a brighter floor pool look like a catastrophe (33% -> 66% "lost")
+  // when all it had done was add glow the mask then blamed on the body.
+  // Keeping 0 and 1 in BOTH passes cancels the lighting and leaves the bodies.
+  const KEEP = 2;
   const real = g.fighters;
   let hide = false, n = 0;
   Object.defineProperty(g, 'fighters', {
     configurable: true,
-    get() { return (hide && n++ > 0) ? [] : real; },
+    get() { return (hide && n++ >= KEEP) ? [] : real; },
   });
 
   const W = cv.width, H = cv.height, DW = W >> 2, DH = H >> 2;
