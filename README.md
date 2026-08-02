@@ -69,6 +69,17 @@ Touch pads appear automatically on phones/tablets (or force them with `?touch=1`
 
 **Parry:** tap block at the instant a hit lands (0.12 s window) — the attacker staggers and you gain energy. Grabs beat parries; parries beat everything else.
 
+## What's new in v3.0 — the moves that never worked
+
+Three moves in this game played their animation, printed their popup, and did nothing at all. Nobody noticed because the tests checked that a character's numbers were *well-formed* and *correctly priced* — never that pressing the button did anything.
+
+- 📄 **PAPER TRAIL and SAFETY MEMO now actually throw something.** Both are projectile moves, and projectile moves fired zero projectiles for zero damage at every range, always. The engine seeded the firing counters on one code path and not the other, so the check that decides whether to spawn was comparing against `undefined` and quietly answering "no" on every frame. PAPER TRAIL is a move players pick in the founder creator — anyone who chose it had been paying budget for a move that could not fire.
+- ⚖️ **LAWYERED counters things.** The only counter a player could pick was beaten by slap, punch *and* launch — it caught kick and nothing else, which is a strange life for a move whose entire job is turning attacks back on people. A counter's startup turns out to be a cliff rather than a slope: four frames faster and it beats three of the four basics. It now does, paying for the speed out of its own damage. Slap still goes through, because reading a jab with a counter shouldn't be free.
+- 🖼 **Your rival has a face again.** The pause and controls buttons sat directly on top of the second player's portrait — 40px of it on desktop, all of it on a phone, where the rival was a gold frame with nothing inside.
+- 🧪 **Every move of every fighter is now fired in a live match by the test suite** — 9 fighters, 91 move-slots, plus all nine move archetypes. That is the check that was missing, and it is the reason the three above stayed hidden this long.
+
+> **Live matches:** v3.0 will not fight a v2.9 client. That's deliberate — the moves above behave differently now, so an old and a new client would silently disagree mid-fight. Both sides need to reload.
+
 ## What's new in v2.9 — the founders stop growing mid-punch
 
 - 📐 **Fighters no longer get 27% bigger when they attack.** They did, for the whole length of every swing. The stance lived in two places in the code and only one of them was updated when v2.7 retuned the proportions — so a founder stood at the old skeleton and snapped to the new one to throw a punch. One rig now, and v2.7's proportions finally reach the character you actually look at, which means the whole cast is visibly taller at rest.
