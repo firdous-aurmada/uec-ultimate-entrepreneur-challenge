@@ -334,7 +334,13 @@ function drawSummit(ctx, t) {
 }
 
 export const ARENAS = [
-  { id: 'boardroom', name: 'THE BOARDROOM', tag: 'Quarterly results are in.', draw: drawBoardroom, tempo: 96, root: 0, mood: 'dark' },
+  // scrim: 30.7% -> 28.6%. Nothing is wrong with this stage structurally — set
+  // it beside the Unicorn Club, the best arena on the roster, and the loss
+  // breaks down identically (legs 70%, torso 28%, head 2%). The only
+  // difference was that the skyline sits about 5 luminance brighter behind the
+  // body, 26.5 against 20.9. 0.45 closes that gap and costs the night city
+  // nothing that matters.
+  { id: 'boardroom', name: 'THE BOARDROOM', tag: 'Quarterly results are in.', draw: drawBoardroom, tempo: 96, root: 0, mood: 'dark', scrim: 0.45 },
   { id: 'demoday', name: 'DEMO DAY', tag: 'Live on the main stage.', draw: drawDemoDay, tempo: 118, root: 3, mood: 'hype' },
   // scrim: 32.1% -> 29.2% of the body near-invisible. Stops at 0.45 rather than
   // the 0.52 the metric prefers — this stage is already the dimmest on the
