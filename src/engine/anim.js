@@ -27,11 +27,22 @@
 
 // The joint set a pose is made of — the same flat shape the renderer has
 // always consumed, so a track and a computed pose are interchangeable.
+// The neutral stance every pose is measured from.
+//
+// It used to be a person standing up straight with their hands out: feet 29px
+// apart on a ~209px figure, hips high, torso vertical, back hand down by the
+// waist. Fighting games do not stand like that — they sit low, wide and
+// coiled, weight between the feet, back hand up near the chin. Feet are 51px
+// apart now, hips and shoulders drop, the torso leans in, and the rear hand
+// comes up to guard.
+//
+// Attack tracks mostly do not key the legs, so they inherit this width and get
+// stancier for free. Render-only: hurtboxes come from ATTACKS, never the pose.
 export const REST = {
-  hipY: -66, shoulderY: -114, headX: 0, headY: -134, rot: 0, crouch: 0,
-  armF: { x: 30, y: -98 }, armB: { x: 18, y: -90 },
-  legF: { x: 15, y: 0 }, legB: { x: -14, y: 0 },
-  bodyLean: 0, sx: 1, sy: 1,
+  hipY: -60, shoulderY: -110, headX: 0, headY: -128, rot: 0, crouch: 0,
+  armF: { x: 33, y: -101 }, armB: { x: 13, y: -99 },
+  legF: { x: 26, y: 0 }, legB: { x: -25, y: 0 },
+  bodyLean: 0.05, sx: 1, sy: 1,
 };
 
 const VEC_KEYS = ['armF', 'armB', 'legF', 'legB'];

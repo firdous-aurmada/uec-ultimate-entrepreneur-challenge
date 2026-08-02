@@ -400,21 +400,54 @@ function drawFace(ctx, cx, cy, r, face, c) {
     }
     ctx.beginPath(); ctx.arc(cx + 1, cy + r * 0.5, 4, Math.PI, 0); ctx.stroke();
   } else {
-    // idle / angry / block — pupils + brows + mouth
+    // idle / angry / block — the fighting face.
+    //
+    // This used to be dot eyes, a flat hairline brow and a SMILE, which is the
+    // single loudest cartoon signal on the whole character. Three changes:
+    // brows angle down toward the nose, a heavy lid narrows the eye so the
+    // fighter is glaring rather than gazing, and the mouth is set instead of
+    // curved upward.
+    const F = STYLIZE.FACE;
+    const tilt = F.BROW_TILT + (face === 'angry' || face === 'block' ? F.BROW_TILT_HARD : 0);
+
+    // pupil, sitting high in the eye — looking AT something
     for (const s of [-1, 1]) {
-      ctx.beginPath(); ctx.arc(cx + s * e + 2, cy, 2.6, 0, 7); ctx.fill();
+      ctx.beginPath(); ctx.arc(cx + s * e + 2, cy + 0.6, 2.5, 0, 7); ctx.fill();
     }
-    const browDrop = face === 'angry' || face === 'block' ? 4 : 0;
+
+    // heavy upper lid: the difference between open-eyed and narrowed
+    ctx.lineWidth = F.LID_W;
     for (const s of [-1, 1]) {
+      const ex = cx + s * e + 2;
       ctx.beginPath();
-      ctx.moveTo(cx + s * e - 5, cy - 7 + (s === 1 ? browDrop : browDrop * 0.6));
-      ctx.lineTo(cx + s * e + 5, cy - 7 + (s === 1 ? 0 : browDrop));
+      ctx.moveTo(ex - F.EYE_W, cy - F.LID_Y);
+      ctx.lineTo(ex + F.EYE_W, cy - F.LID_Y);
       ctx.stroke();
     }
+
+    // brows — inner end LOWER than outer, which is the whole expression
+    ctx.lineWidth = F.BROW_W;
+    for (const s of [-1, 1]) {
+      const ex = cx + s * e + 2;
+      ctx.beginPath();
+      ctx.moveTo(ex - s * F.BROW_LEN, cy - F.BROW_Y + tilt);     // inner, dropped
+      ctx.lineTo(ex + s * F.BROW_LEN, cy - F.BROW_Y - tilt * 0.45);
+      ctx.stroke();
+    }
+
+    // mouth: set, never smiling
+    ctx.lineWidth = 2.6;
+    const my = cy + r * F.MOUTH_Y, mw = F.MOUTH_W;
     ctx.beginPath();
-    if (face === 'block') { ctx.moveTo(cx - 5, cy + r * 0.46); ctx.lineTo(cx + 6, cy + r * 0.46); }
-    else if (face === 'angry') ctx.arc(cx + 2, cy + r * 0.52, 4, Math.PI + 0.4, -0.4);
-    else ctx.arc(cx + 2, cy + r * 0.42, 5, 0.3, Math.PI * 0.75);
+    if (face === 'block') {                       // gritted, teeth together
+      ctx.moveTo(cx - mw, my); ctx.lineTo(cx + mw + 2, my);
+    } else if (face === 'angry') {                // snarl — corners pulled down
+      ctx.moveTo(cx - mw, my - 2.4);
+      ctx.quadraticCurveTo(cx + 2, my + 2.8, cx + mw + 2, my - 2.4);
+    } else {                                      // idle: jaw set, faint downturn
+      ctx.moveTo(cx - mw, my - 1);
+      ctx.quadraticCurveTo(cx + 2, my + 1.8, cx + mw + 2, my - 1);
+    }
     ctx.stroke();
   }
 }

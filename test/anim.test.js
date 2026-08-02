@@ -9,10 +9,16 @@ import {
 import { BASE_TRACKS, ATTACK_TRACK, NOMINAL_REACH } from '../src/data/tracks.js';
 
 test('restPose hands out a fresh object every time', () => {
+  // Snapshot rather than a literal: the point of this test is that REST is not
+  // MUTATED, not that the stance holds any particular value. Pinning the
+  // number turned it into a change-detector that failed the moment the neutral
+  // stance was retuned, which is a thing the stance is allowed to do.
+  const armFX = REST.armF.x, hipY = REST.hipY;
   const a = restPose(), b = restPose();
   a.armF.x = 999; a.hipY = 999;
   assert.notEqual(b.armF.x, 999, 'poses must not share limb objects');
-  assert.equal(REST.armF.x, 30, 'REST itself must never be mutated');
+  assert.equal(REST.armF.x, armFX, 'REST itself must never be mutated');
+  assert.equal(REST.hipY, hipY, 'REST itself must never be mutated');
   assert.equal(b.hipY, REST.hipY);
 });
 

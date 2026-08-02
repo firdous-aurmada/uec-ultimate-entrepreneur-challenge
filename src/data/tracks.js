@@ -21,10 +21,12 @@ export const NOMINAL_REACH = { slap: 78, punch: 84, kick: 106, launch: 74 };
 export const BASE_TRACKS = {
   // ---------------------------------------------------------------- idle
   // Breathing, not swaying. Two beats: settle down, drift up.
+  // Values restate REST, so they move with it — see the note on REST in
+  // engine/anim.js for why the stance sits low and wide.
   idle: [
-    { t: 0,    joints: { hipY: -66, shoulderY: -114, headY: -134, armF: { x: 30, y: -98 }, armB: { x: 18, y: -90 } } },
-    { t: 0.5,  joints: { hipY: -63, shoulderY: -112, headY: -131, armF: { x: 29, y: -95 }, armB: { x: 17, y: -87 } }, ease: 'inOutCubic' },
-    { t: 1,    joints: { hipY: -66, shoulderY: -114, headY: -134, armF: { x: 30, y: -98 }, armB: { x: 18, y: -90 } }, ease: 'inOutCubic' },
+    { t: 0,    joints: { hipY: -60, shoulderY: -110, headY: -128, armF: { x: 33, y: -101 }, armB: { x: 13, y: -99 } } },
+    { t: 0.5,  joints: { hipY: -57, shoulderY: -108, headY: -125, armF: { x: 32, y: -98 }, armB: { x: 12, y: -96 } }, ease: 'inOutCubic' },
+    { t: 1,    joints: { hipY: -60, shoulderY: -110, headY: -128, armF: { x: 33, y: -101 }, armB: { x: 13, y: -99 } }, ease: 'inOutCubic' },
   ],
 
   // ---------------------------------------------------------------- punch

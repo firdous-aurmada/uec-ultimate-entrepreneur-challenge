@@ -266,6 +266,23 @@ export const STYLIZE = {
   KEYLINE_PX: 1.5,
   KEYLINE_COL: '#dce6ff',
   KEYLINE_A: 0.35,
+  // The fighting face. Every founder used to stand in their idle wearing a
+  // gentle closed-mouth smile — six disgraced executives beaming at the person
+  // about to hit them. Nothing else on the character said "cartoon" as loudly.
+  // Brows angle DOWN toward the nose, a heavy lid narrows the eye, and the
+  // mouth is set rather than curved. Victory still smiles; that one is earned.
+  FACE: {
+    BROW_LEN: 5.5,      // half-length of the brow stroke
+    BROW_Y: 8,          // height above eye centre
+    BROW_TILT: 3.2,     // inner end drops this much — the whole expression
+    BROW_TILT_HARD: 2.4,  // extra drop when angry or blocking
+    BROW_W: 3.2,        // brows are heavier than the old hairline strokes
+    LID_Y: 4.2,         // upper lid sits just above the pupil
+    LID_W: 2.4,
+    EYE_W: 4.4,         // lid half-width
+    MOUTH_Y: 0.46,      // fraction of head radius below centre
+    MOUTH_W: 6,
+  },
   // Vertical form shading: warm key at the head, crushing to near-black at the
   // feet. The crush looks like it must be the problem — the biggest single
   // source of near-invisible pixels is the lower body, 57% of all loss — so I
