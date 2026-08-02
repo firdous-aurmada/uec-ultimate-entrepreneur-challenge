@@ -253,6 +253,23 @@ export const STYLIZE = {
   ELBOW: 14, KNEE: 12,
   ARM_SPAN: 118,       // limb length treated as fully extended
   LEG_SPAN: 112,
+  // Shoulder-to-hip distance every torso DETAIL is authored against. Collars,
+  // ties, lapels, plackets and hems were pinned at raw pixel offsets from the
+  // collar, so a longer torso kept them all bunched at the neck above a blank
+  // expanse — which is why a taller skeleton rendered as a slab instead of a
+  // taller person. Detail is placed as a fraction of this now, so the outfit
+  // stretches with the body.
+  // = REST.hipY - REST.shoulderY on the stock rig, so k is exactly 1 and a
+  // neutral body renders byte-identically to before this change. Move it if
+  // the stance moves, or every outfit quietly shifts.
+  TORSO_REF: 50,
+  // How far the base of the skull sits BELOW the shoulder line. The neck gap
+  // was a free number — headY and shoulderY were independent — so it only
+  // looked attached by coincidence of the values chosen. Shrink the head
+  // without moving headY and the skull floats clear of the body; on the stock
+  // rig it happens to overlap by exactly this much, so deriving it changes
+  // nothing today and makes the head impossible to detach tomorrow.
+  NECK_OVERLAP: 4,
   // Silhouette key line. Measured with lab/contrast.js: 39% of a fighter's
   // on-screen pixels sat within 1.5 contrast of the stage behind them, and
   // every one of those was in the 0–80 luminance band — the ink outline, the

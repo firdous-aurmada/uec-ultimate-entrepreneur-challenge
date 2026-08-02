@@ -3,7 +3,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  REST, EASE, restPose, blendInto, samplePose, attackPhaseT, trackFor,
+  REST, AUTHORED_REST, EASE, restPose, blendInto, samplePose, attackPhaseT, trackFor,
   validateTrack, MIN_ANTICIPATION_KEYS,
 } from '../src/engine/anim.js';
 import { BASE_TRACKS, ATTACK_TRACK, NOMINAL_REACH } from '../src/data/tracks.js';
@@ -330,9 +330,35 @@ test('layering an idle delta preserves the stance it was added to', () => {
   assert.equal(sumo.legF.x - sprinter.legF.x, 5, 'stance separation must survive untouched');
 });
 
-test('a delta of the rest pose changes nothing', () => {
+test('a delta of the base pose changes nothing', () => {
   const p = restPose();
   const before = JSON.stringify(p);
-  addDelta(p, restPose());
+  addDelta(p, restPose(), REST);          // pose === base ⇒ no-op
   assert.equal(JSON.stringify(p), before);
+});
+
+test('an authored override is measured against the rig it was authored on', () => {
+  // The bug this pins: character idles are ABSOLUTE joint positions sitting
+  // near AUTHORED_REST, and addDelta turns them into deltas by subtracting a
+  // base. Subtracting the LIVE rest pose instead meant that retuning the
+  // stance silently displaced every override — one character's head ended up
+  // inside her own chest, and four of them had their hands drop off their
+  // arms, with no test and no error to say so.
+  const override = { ...AUTHORED_REST, armF: { ...AUTHORED_REST.armF, y: AUTHORED_REST.armF.y - 10 } };
+  const p = restPose();
+  addDelta(p, override);                   // no base ⇒ AUTHORED_REST
+  assert.equal(p.armF.y, REST.armF.y - 10, 'only the authored 10px lift should apply');
+  assert.equal(p.hipY, REST.hipY, 'joints the override matches must not move');
+  assert.equal(p.headY, REST.headY, 'especially the head');
+});
+
+test('a partial base does not poison the pose with NaN', () => {
+  const p = restPose();
+  addDelta(p, restPose(), { hipY: REST.hipY });   // base names one joint only
+  for (const [k, v] of Object.entries(p)) {
+    if (typeof v === 'number') assert.ok(Number.isFinite(v), `${k} went non-finite`);
+    else if (v && typeof v === 'object') {
+      assert.ok(Number.isFinite(v.x) && Number.isFinite(v.y), `${k} went non-finite`);
+    }
+  }
 });

@@ -198,7 +198,10 @@ function computePose(f, t) {
     if (idle) {
       // side offset so two fighters facing off never breathe in lockstep
       const phase = (t * IDLE_RATE + (f.side === 0 ? 0 : 0.42)) % 1;
-      addDelta(P, samplePose(idle, (phase + 1) % 1));
+      // A track may declare the rig it was authored against; without one it
+      // predates AUTHORED_REST and is measured there. Never against the live
+      // REST — see the note on AUTHORED_REST in anim.js.
+      addDelta(P, samplePose(idle, (phase + 1) % 1), idle.base);
     }
   } else if (st === 'walk') {
     const ph = f.walkPhase;
@@ -764,85 +767,95 @@ function drawTorso(ctx, def, P) {
   // rather than being a normal torso with thicker arms bolted on.
   const w = 24 * (P.shoulderW ?? 1) * (0.5 + 0.5 * (P.build ?? 1));
   const topY = P.shoulderY, botY = P.hipY;
+
+  // Every detail below is authored against a STYLIZE.TORSO_REF-tall torso.
+  // `ty` places one a fraction of the way down from the collar instead of a
+  // fixed number of pixels, so a longer torso carries its collar, tie, lapels
+  // and hem down with it rather than stranding them at the neck above a blank
+  // slab. `by` does the same from the waist up.
+  const k = Math.max(1, botY - topY) / STYLIZE.TORSO_REF;
+  const ty = (d) => topY + d * k;
+  const by = (d) => botY + d * k;
+
   blob(ctx, () => {
-    ctx.moveTo(-w + 3, botY + 8);
-    ctx.quadraticCurveTo(-w - 4, (topY + botY) / 2, -w + 2, topY + 2);
-    ctx.quadraticCurveTo(0, topY - 10, w + 2, topY + 4);
-    ctx.quadraticCurveTo(w + 7, (topY + botY) / 2, w - 2, botY + 8);
+    ctx.moveTo(-w + 3, by(8));
+    ctx.quadraticCurveTo(-w - 4, (topY + botY) / 2, -w + 2, ty(2));
+    ctx.quadraticCurveTo(0, ty(-10), w + 2, ty(4));
+    ctx.quadraticCurveTo(w + 7, (topY + botY) / 2, w - 2, by(8));
     ctx.closePath();
   }, c.suit);
   if (def.outfit === 'blazer' || def.outfit === 'suit' || def.outfit === 'pinstripe') {
     // shirt V + lapels
     blob(ctx, () => {
-      ctx.moveTo(-7, topY + 2); ctx.lineTo(0, topY + 22); ctx.lineTo(7, topY + 2); ctx.closePath();
+      ctx.moveTo(-7, ty(2)); ctx.lineTo(0, ty(22)); ctx.lineTo(7, ty(2)); ctx.closePath();
     }, '#f4f6ff');
     if (def.outfit === 'pinstripe') {
       ctx.strokeStyle = 'rgba(255,255,255,0.22)'; ctx.lineWidth = 1.5;
       for (let i = -3; i <= 3; i++) {
-        ctx.beginPath(); ctx.moveTo(i * 7, topY + 2); ctx.lineTo(i * 7, botY + 4); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(i * 7, ty(2)); ctx.lineTo(i * 7, by(4)); ctx.stroke();
       }
     }
     // suit and pinstripe wear a tie; a blazer is worn open
     if (def.outfit === 'pinstripe' || def.outfit === 'suit') {
       blob(ctx, () => {
-        ctx.moveTo(-3, topY + 14); ctx.lineTo(3, topY + 14); ctx.lineTo(1, topY + 38); ctx.lineTo(-1, topY + 38); ctx.closePath();
+        ctx.moveTo(-3, ty(14)); ctx.lineTo(3, ty(14)); ctx.lineTo(1, ty(38)); ctx.lineTo(-1, ty(38)); ctx.closePath();
       }, c.accent);
     }
     ctx.strokeStyle = c.suit2; ctx.lineWidth = 3;
-    ctx.beginPath(); ctx.moveTo(-8, topY + 2); ctx.lineTo(-2, topY + 16); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(8, topY + 2); ctx.lineTo(2, topY + 16); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(-8, ty(2)); ctx.lineTo(-2, ty(16)); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(8, ty(2)); ctx.lineTo(2, ty(16)); ctx.stroke();
   } else if (def.outfit === 'hoodie') {
     // hood behind neck + pocket + strings
-    blob(ctx, () => { ctx.arc(-14, topY + 6, 11, Math.PI * 0.6, Math.PI * 1.9); }, c.suit2);
+    blob(ctx, () => { ctx.arc(-14, ty(6), 11, Math.PI * 0.6, Math.PI * 1.9); }, c.suit2);
     ctx.strokeStyle = c.accent; ctx.lineWidth = 2.5;
-    ctx.beginPath(); ctx.moveTo(-4, topY + 8); ctx.lineTo(-4, topY + 22); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(4, topY + 8); ctx.lineTo(4, topY + 22); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(-4, ty(8)); ctx.lineTo(-4, ty(22)); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(4, ty(8)); ctx.lineTo(4, ty(22)); ctx.stroke();
     ctx.strokeStyle = c.suit2; ctx.lineWidth = 3;
-    ctx.beginPath(); ctx.moveTo(-14, botY - 2); ctx.quadraticCurveTo(0, botY + 8, 14, botY - 2); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(-14, by(-2)); ctx.quadraticCurveTo(0, by(8), 14, by(-2)); ctx.stroke();
   } else if (def.outfit === 'turtleneck') {
-    blob(ctx, () => { ctx.roundRect(-11, topY - 6, 22, 10, 3); }, c.suit2);
+    blob(ctx, () => { ctx.roundRect(-11, ty(-6), 22, 10, 3); }, c.suit2);
   } else if (def.outfit === 'tee') {
     // plain crew-neck tee with a tiny rocket doodle
     ctx.strokeStyle = c.suit2; ctx.lineWidth = 3;
-    ctx.beginPath(); ctx.arc(0, topY + 3, 8, 0.25, Math.PI - 0.25); ctx.stroke();
+    ctx.beginPath(); ctx.arc(0, ty(3), 8, 0.25, Math.PI - 0.25); ctx.stroke();
     ctx.fillStyle = c.accent;
     ctx.beginPath();
-    ctx.moveTo(0, topY + 16); ctx.lineTo(4, topY + 26); ctx.lineTo(0, topY + 36); ctx.lineTo(-4, topY + 26);
+    ctx.moveTo(0, ty(16)); ctx.lineTo(4, ty(26)); ctx.lineTo(0, ty(36)); ctx.lineTo(-4, ty(26));
     ctx.closePath(); ctx.fill();
   } else if (def.outfit === 'vest') {
     // shirt + puffer vest panels
     blob(ctx, () => {
-      ctx.moveTo(-7, topY + 2); ctx.lineTo(0, topY + 18); ctx.lineTo(7, topY + 2); ctx.closePath();
+      ctx.moveTo(-7, ty(2)); ctx.lineTo(0, ty(18)); ctx.lineTo(7, ty(2)); ctx.closePath();
     }, '#e8ecf4');
     ctx.strokeStyle = c.suit2; ctx.lineWidth = 4;
     for (const s of [-1, 1]) {
       ctx.beginPath();
-      ctx.moveTo(s * 9, topY + 2);
-      ctx.quadraticCurveTo(s * 15, (topY + botY) / 2, s * 11, botY + 4);
+      ctx.moveTo(s * 9, ty(2));
+      ctx.quadraticCurveTo(s * 15, (topY + botY) / 2, s * 11, by(4));
       ctx.stroke();
     }
     ctx.strokeStyle = 'rgba(255,255,255,0.14)'; ctx.lineWidth = 2;
     for (let i = 0; i < 3; i++) {
-      ctx.beginPath(); ctx.moveTo(-16, topY + 14 + i * 12); ctx.lineTo(-9, topY + 14 + i * 12); ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(9, topY + 14 + i * 12); ctx.lineTo(16, topY + 14 + i * 12); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(-16, ty(14 + i * 12)); ctx.lineTo(-9, ty(14 + i * 12)); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(9, ty(14 + i * 12)); ctx.lineTo(16, ty(14 + i * 12)); ctx.stroke();
     }
   } else if (def.outfit === 'henley') {
     // crew neck + button placket
     ctx.strokeStyle = c.suit2; ctx.lineWidth = 3;
-    ctx.beginPath(); ctx.arc(0, topY + 3, 8, 0.25, Math.PI - 0.25); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(0, topY + 10); ctx.lineTo(0, topY + 26); ctx.stroke();
+    ctx.beginPath(); ctx.arc(0, ty(3), 8, 0.25, Math.PI - 0.25); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0, ty(10)); ctx.lineTo(0, ty(26)); ctx.stroke();
     ctx.fillStyle = c.suit2;
     for (let i = 0; i < 3; i++) {
-      ctx.beginPath(); ctx.arc(3, topY + 13 + i * 6, 1.6, 0, 7); ctx.fill();
+      ctx.beginPath(); ctx.arc(3, ty(13 + i * 6), 1.6, 0, 7); ctx.fill();
     }
   } else if (def.outfit === 'bomber') {
     ctx.strokeStyle = c.accent; ctx.lineWidth = 3;
-    ctx.beginPath(); ctx.moveTo(-w + 3, botY + 4); ctx.lineTo(w - 2, botY + 4); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(0, topY + 4); ctx.lineTo(0, botY + 4); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(-w + 3, by(4)); ctx.lineTo(w - 2, by(4)); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0, ty(4)); ctx.lineTo(0, by(4)); ctx.stroke();
   }
   if (def.accessory === 'brooch') {
     ctx.fillStyle = c.accent;
-    ctx.beginPath(); ctx.arc(10, topY + 10, 3.6, 0, 7); ctx.fill();
+    ctx.beginPath(); ctx.arc(10, ty(10), 3.6, 0, 7); ctx.fill();
   }
 }
 
@@ -1079,7 +1092,12 @@ export function drawFighter(ctx, f, t) {
     g.translate(0, -P.hipY);
   }
   drawTorso(g, def, P);
-  drawHead(g, def, P.headX + (P.bodyLean * 26), P.headY, P.headR ?? STYLIZE.HEAD_R, P.face, t, f.unicornT > 0);
+  // Keep the skull on the neck. headY and shoulderY are independent joints, so
+  // a smaller head or a longer torso can leave it floating clear of the body —
+  // never lower it, only stop it drifting up off the shoulders.
+  const headR = P.headR ?? STYLIZE.HEAD_R;
+  const headTop = P.shoulderY - (headR - STYLIZE.NECK_OVERLAP);
+  drawHead(g, def, P.headX + (P.bodyLean * 26), Math.max(P.headY, headTop), headR, P.face, t, f.unicornT > 0);
   g.restore();
 
   // Motion smear behind the striking limb — the arc it swept through, drawn as

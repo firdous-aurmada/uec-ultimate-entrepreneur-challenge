@@ -135,16 +135,41 @@ export function samplePose(track, t, base) {
 // a brawler like a sumo — and a track that overwrote the pose would flatten all
 // of that into one shape. Layering the delta means the track supplies the
 // BREATHING and the stance keeps the identity.
-export function addDelta(P, pose) {
+// The rig every existing character idle was authored against.
+//
+// Those overrides are ABSOLUTE joint positions that happen to sit near the old
+// neutral pose, and addDelta turns them into deltas by subtracting a base. If
+// that base is the LIVE rest pose, then moving the stance silently rewrites
+// every override: retuning REST.headY from -134 to -182 turned Kim's idle from
+// "head 0px from neutral" into "head 48px lower", which drove her head into
+// her own chest, and dropped four characters' hands off their arms. Nothing
+// warned, because the data was still perfectly valid — it was measured against
+// a rig that no longer existed.
+//
+// A track may declare its own `base`; otherwise it is assumed to predate this
+// and is measured against the rig below, which must never change.
+export const AUTHORED_REST = Object.freeze({
+  hipY: -66, shoulderY: -114, headX: 0, headY: -134, rot: 0, crouch: 0,
+  armF: Object.freeze({ x: 30, y: -98 }), armB: Object.freeze({ x: 18, y: -90 }),
+  legF: Object.freeze({ x: 15, y: 0 }), legB: Object.freeze({ x: -14, y: 0 }),
+  bodyLean: 0, sx: 1, sy: 1,
+});
+
+export function addDelta(P, pose, base) {
   if (!P || !pose) return P;
+  // Per-key fallback: a partial base is a silent NaN factory otherwise, since
+  // the sampled pose always carries every joint even when the base does not.
+  const B = base || AUTHORED_REST;
+  const at = (k) => (B[k] !== undefined ? B[k] : AUTHORED_REST[k]);
   for (const key of NUM_KEYS) {
-    if (typeof pose[key] === 'number') P[key] += pose[key] - REST[key];
+    if (typeof pose[key] === 'number') P[key] += pose[key] - at(key);
   }
   for (const key of VEC_KEYS) {
     const v = pose[key];
     if (!v) continue;
-    P[key].x += v.x - REST[key].x;
-    P[key].y += v.y - REST[key].y;
+    const b = at(key);
+    P[key].x += v.x - b.x;
+    P[key].y += v.y - b.y;
   }
   return P;
 }

@@ -16,6 +16,8 @@
 // Reach the arm/leg extension is authored against. The renderer scales the
 // extension by the move's real reach, so a zoner visibly out-ranges a
 // grappler with the same track.
+import { REST } from '../engine/anim.js';
+
 export const NOMINAL_REACH = { slap: 78, punch: 84, kick: 106, launch: 74 };
 
 export const BASE_TRACKS = {
@@ -23,11 +25,20 @@ export const BASE_TRACKS = {
   // Breathing, not swaying. Two beats: settle down, drift up.
   // Values restate REST, so they move with it — see the note on REST in
   // engine/anim.js for why the stance sits low and wide.
-  idle: [
-    { t: 0,    joints: { hipY: -60, shoulderY: -110, headY: -128, armF: { x: 33, y: -101 }, armB: { x: 13, y: -99 } } },
-    { t: 0.5,  joints: { hipY: -57, shoulderY: -108, headY: -125, armF: { x: 32, y: -98 }, armB: { x: 12, y: -96 } }, ease: 'inOutCubic' },
-    { t: 1,    joints: { hipY: -60, shoulderY: -110, headY: -128, armF: { x: 33, y: -101 }, armB: { x: 13, y: -99 } }, ease: 'inOutCubic' },
-  ],
+  //
+  // `base: REST` is what keeps that true. addDelta subtracts a track's base, so
+  // this one contributes ONLY the breathing and never a constant offset, no
+  // matter where the stance sits. Character overrides deliberately do NOT get
+  // this base — they were authored against AUTHORED_REST and stay measured
+  // there, or moving the stance silently displaces every one of them.
+  idle: {
+    base: REST,
+    keys: [
+      { t: 0,    joints: { hipY: -60, shoulderY: -110, headY: -128, armF: { x: 33, y: -101 }, armB: { x: 13, y: -99 } } },
+      { t: 0.5,  joints: { hipY: -57, shoulderY: -108, headY: -125, armF: { x: 32, y: -98 }, armB: { x: 12, y: -96 } }, ease: 'inOutCubic' },
+      { t: 1,    joints: { hipY: -60, shoulderY: -110, headY: -128, armF: { x: 33, y: -101 }, armB: { x: 13, y: -99 } }, ease: 'inOutCubic' },
+    ],
+  },
 
   // ---------------------------------------------------------------- punch
   punch: [
