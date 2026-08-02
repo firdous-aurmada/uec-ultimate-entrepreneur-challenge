@@ -42,56 +42,56 @@ export const BASE_TRACKS = {
 
   // ---------------------------------------------------------------- punch
   punch: [
-    { t: 0,    joints: { armF: { x: 26, y: -100 }, armB: { x: 14, y: -88 }, bodyLean: 0, sx: 1, sy: 1 } },
+    { t: 0,    joints: { armF: { x: 26, y: -148 }, armB: { x: 14, y: -142 }, bodyLean: 0, sx: 1, sy: 1 } },
     // coil: fist withdraws past the shoulder, weight sinks onto the back foot
-    { t: 0.55, joints: { armF: { x: 4, y: -104 }, armB: { x: 20, y: -86 }, bodyLean: -0.16, hipY: -60, headX: -4, sx: 1.06, sy: 0.94, legB: { x: -18, y: 0 } }, ease: 'outCubic' },
-    { t: 0.95, joints: { armF: { x: -6, y: -106 }, bodyLean: -0.22, hipY: -58, headX: -6, sx: 1.08, sy: 0.92 }, ease: 'outQuad' },
+    { t: 0.55, joints: { armF: { x: 4, y: -152 }, armB: { x: 20, y: -140 }, bodyLean: -0.16, hipY: -82, headX: -4, sx: 1.06, sy: 0.94, legB: { x: -18, y: 0 } }, ease: 'outCubic' },
+    { t: 0.95, joints: { armF: { x: -6, y: -154 }, bodyLean: -0.22, hipY: -80, headX: -6, sx: 1.08, sy: 0.92 }, ease: 'outQuad' },
     // impact: everything travels here, in one frame
-    { t: 1.15, joints: { armF: { x: 106, y: -104 }, armB: { x: -6, y: -84 }, bodyLean: 0.30, hipY: -70, headX: 4, sx: 0.94, sy: 1.07 }, ease: 'outBack', smear: true },
-    { t: 2,    joints: { armF: { x: 100, y: -104 }, bodyLean: 0.26, hipY: -68 }, hold: true },
-    { t: 2.4,  joints: { armF: { x: 44, y: -100 }, armB: { x: 6, y: -88 }, bodyLean: 0.10, hipY: -66, headX: 1, sx: 1, sy: 1 }, ease: 'outQuad' },
-    { t: 3,    joints: { armF: { x: 30, y: -98 }, armB: { x: 18, y: -90 }, bodyLean: 0 }, ease: 'inOutCubic' },
+    { t: 1.15, joints: { armF: { x: 106, y: -152 }, armB: { x: -6, y: -138 }, bodyLean: 0.30, hipY: -92, headX: 4, sx: 0.94, sy: 1.07 }, ease: 'outBack', smear: true },
+    { t: 2,    joints: { armF: { x: 100, y: -152 }, bodyLean: 0.26, hipY: -90 }, hold: true },
+    { t: 2.4,  joints: { armF: { x: 44, y: -148 }, armB: { x: 6, y: -142 }, bodyLean: 0.10, hipY: -88, headX: 1, sx: 1, sy: 1 }, ease: 'outQuad' },
+    { t: 3,    joints: { armF: { x: 30, y: -146 }, armB: { x: 18, y: -144 }, bodyLean: 0 }, ease: 'inOutCubic' },
   ],
 
   // ---------------------------------------------------------------- kick
   // Bigger body commitment: the whole torso counter-rotates against the leg.
   kick: [
-    { t: 0,    joints: { legF: { x: 15, y: 0 }, legB: { x: -14, y: 0 }, armF: { x: 20, y: -100 }, bodyLean: 0 } },
-    { t: 0.5,  joints: { legF: { x: 2, y: -22 }, legB: { x: -20, y: 0 }, armF: { x: 26, y: -108 }, armB: { x: -6, y: -84 }, bodyLean: -0.14, hipY: -60, sx: 1.07, sy: 0.93 }, ease: 'outCubic' },
-    { t: 0.95, joints: { legF: { x: -6, y: -30 }, bodyLean: -0.20, hipY: -58, sx: 1.09, sy: 0.91 }, ease: 'outQuad' },
+    { t: 0,    joints: { legF: { x: 15, y: 0 }, legB: { x: -14, y: 0 }, armF: { x: 20, y: -148 }, bodyLean: 0 } },
+    { t: 0.5,  joints: { legF: { x: 2, y: -22 }, legB: { x: -20, y: 0 }, armF: { x: 26, y: -156 }, armB: { x: -6, y: -138 }, bodyLean: -0.14, hipY: -82, sx: 1.07, sy: 0.93 }, ease: 'outCubic' },
+    { t: 0.95, joints: { legF: { x: -6, y: -30 }, bodyLean: -0.20, hipY: -80, sx: 1.09, sy: 0.91 }, ease: 'outQuad' },
     // The counter-lean is what sells a kick's weight, but HELD at full depth it
     // reads as falling over backwards rather than committing to a kick — so the
     // hold sits shallower than the impact frame.
-    { t: 1.15, joints: { legF: { x: 104, y: -74 }, legB: { x: -20, y: 0 }, armF: { x: -12, y: -104 }, armB: { x: -26, y: -86 }, bodyLean: -0.18, hipY: -72, sx: 0.93, sy: 1.08 }, ease: 'outBack', smear: true },
-    { t: 2,    joints: { legF: { x: 96, y: -68 }, bodyLean: -0.11, hipY: -70 }, hold: true },
-    { t: 2.3,  joints: { legF: { x: 40, y: -18 }, armF: { x: 6, y: -102 }, bodyLean: -0.02, hipY: -66, sx: 1, sy: 1 }, ease: 'outQuad' },
-    { t: 3,    joints: { legF: { x: 15, y: 0 }, legB: { x: -14, y: 0 }, armF: { x: 30, y: -98 }, armB: { x: 18, y: -90 }, bodyLean: 0 }, ease: 'inOutCubic' },
+    { t: 1.15, joints: { legF: { x: 104, y: -74 }, legB: { x: -20, y: 0 }, armF: { x: -12, y: -152 }, armB: { x: -26, y: -140 }, bodyLean: -0.18, hipY: -94, sx: 0.93, sy: 1.08 }, ease: 'outBack', smear: true },
+    { t: 2,    joints: { legF: { x: 96, y: -68 }, bodyLean: -0.11, hipY: -92 }, hold: true },
+    { t: 2.3,  joints: { legF: { x: 40, y: -18 }, armF: { x: 6, y: -150 }, bodyLean: -0.02, hipY: -88, sx: 1, sy: 1 }, ease: 'outQuad' },
+    { t: 3,    joints: { legF: { x: 15, y: 0 }, legB: { x: -14, y: 0 }, armF: { x: 30, y: -146 }, armB: { x: 18, y: -144 }, bodyLean: 0 }, ease: 'inOutCubic' },
   ],
 
   // ---------------------------------------------------------------- slap
   // Cocked high, whips down and across. Fast in, fast out — it is a taunt.
   slap: [
-    { t: 0,    joints: { armF: { x: 22, y: -102 }, bodyLean: 0 } },
-    { t: 0.6,  joints: { armF: { x: 2, y: -136 }, armB: { x: 14, y: -86 }, bodyLean: -0.14, headX: -3, sx: 1.04, sy: 0.96 }, ease: 'outCubic' },
-    { t: 0.95, joints: { armF: { x: -8, y: -142 }, bodyLean: -0.18 }, ease: 'outQuad' },
-    { t: 1.15, joints: { armF: { x: 92, y: -96 }, armB: { x: -20, y: -84 }, bodyLean: 0.30, headX: 5, sx: 0.95, sy: 1.05 }, ease: 'outBack', smear: true },
-    { t: 2,    joints: { armF: { x: 86, y: -94 }, bodyLean: 0.26 }, hold: true },
-    { t: 2.5,  joints: { armF: { x: 40, y: -98 }, bodyLean: 0.08, headX: 1, sx: 1, sy: 1 }, ease: 'outQuad' },
-    { t: 3,    joints: { armF: { x: 30, y: -98 }, armB: { x: 18, y: -90 }, bodyLean: 0 }, ease: 'inOutCubic' },
+    { t: 0,    joints: { armF: { x: 22, y: -150 }, bodyLean: 0 } },
+    { t: 0.6,  joints: { armF: { x: 2, y: -184 }, armB: { x: 14, y: -140 }, bodyLean: -0.14, headX: -3, sx: 1.04, sy: 0.96 }, ease: 'outCubic' },
+    { t: 0.95, joints: { armF: { x: -8, y: -190 }, bodyLean: -0.18 }, ease: 'outQuad' },
+    { t: 1.15, joints: { armF: { x: 92, y: -144 }, armB: { x: -20, y: -138 }, bodyLean: 0.30, headX: 5, sx: 0.95, sy: 1.05 }, ease: 'outBack', smear: true },
+    { t: 2,    joints: { armF: { x: 86, y: -142 }, bodyLean: 0.26 }, hold: true },
+    { t: 2.5,  joints: { armF: { x: 40, y: -146 }, bodyLean: 0.08, headX: 1, sx: 1, sy: 1 }, ease: 'outQuad' },
+    { t: 3,    joints: { armF: { x: 30, y: -146 }, armB: { x: 18, y: -144 }, bodyLean: 0 }, ease: 'inOutCubic' },
   ],
 
   // ---------------------------------------------------------------- launch
   // Rising uppercut: sink hard, then drive the whole body up off the back foot.
   launch: [
-    { t: 0,    joints: { armF: { x: 22, y: -100 }, bodyLean: 0 } },
-    { t: 0.55, joints: { armF: { x: 14, y: -82 }, armB: { x: 8, y: -84 }, hipY: -52, shoulderY: -102, headY: -122, bodyLean: 0.10, sx: 1.09, sy: 0.90 }, ease: 'outCubic' },
-    { t: 0.95, joints: { armF: { x: 10, y: -74 }, hipY: -48, shoulderY: -98, headY: -118, sx: 1.12, sy: 0.88 }, ease: 'outQuad' },
+    { t: 0,    joints: { armF: { x: 22, y: -148 }, bodyLean: 0 } },
+    { t: 0.55, joints: { armF: { x: 14, y: -130 }, armB: { x: 8, y: -138 }, hipY: -74, shoulderY: -144, headY: -170, bodyLean: 0.10, sx: 1.09, sy: 0.90 }, ease: 'outCubic' },
+    { t: 0.95, joints: { armF: { x: 10, y: -122 }, hipY: -70, shoulderY: -140, headY: -166, sx: 1.12, sy: 0.88 }, ease: 'outQuad' },
     // Rising off the back foot, not curling up: the hip climbs less than the
     // shoulders and head, or the torso compresses and he reads as hunched.
-    { t: 1.15, joints: { armF: { x: 44, y: -196 }, armB: { x: -20, y: -78 }, legF: { x: 14, y: -22 }, hipY: -82, shoulderY: -142, headY: -168, bodyLean: -0.12, sx: 0.90, sy: 1.12 }, ease: 'outBack', smear: true },
-    { t: 2,    joints: { armF: { x: 40, y: -188 }, hipY: -78, shoulderY: -138, headY: -164 }, hold: true },
-    { t: 2.35, joints: { armF: { x: 30, y: -128 }, legF: { x: 15, y: 0 }, hipY: -70, shoulderY: -120, headY: -140, bodyLean: 0, sx: 1, sy: 1 }, ease: 'outQuad' },
-    { t: 3,    joints: { armF: { x: 30, y: -98 }, armB: { x: 18, y: -90 }, hipY: -66, shoulderY: -114, headY: -134, bodyLean: 0 }, ease: 'inOutCubic' },
+    { t: 1.15, joints: { armF: { x: 44, y: -244 }, armB: { x: -20, y: -132 }, legF: { x: 14, y: -22 }, hipY: -104, shoulderY: -184, headY: -216, bodyLean: -0.12, sx: 0.90, sy: 1.12 }, ease: 'outBack', smear: true },
+    { t: 2,    joints: { armF: { x: 40, y: -236 }, hipY: -100, shoulderY: -180, headY: -212 }, hold: true },
+    { t: 2.35, joints: { armF: { x: 30, y: -176 }, legF: { x: 15, y: 0 }, hipY: -92, shoulderY: -162, headY: -188, bodyLean: 0, sx: 1, sy: 1 }, ease: 'outQuad' },
+    { t: 3,    joints: { armF: { x: 30, y: -146 }, armB: { x: 18, y: -144 }, hipY: -88, shoulderY: -156, headY: -182, bodyLean: 0 }, ease: 'inOutCubic' },
   ],
 };
 

@@ -6,7 +6,7 @@ import { shade } from '../data/fighters.js';
 import { STYLES, STYLIZE } from '../config.js';
 import { clampBody, applyProportions, bufferMetrics } from './proportions.js';
 import { loadSpriteSet, drawSprite } from './sprites.js';
-import { samplePose, attackPhaseT, trackFor, addDelta, poseFrom, AUTHORED_REST, REST } from './anim.js';
+import { samplePose, attackPhaseT, trackFor, addDelta, poseFrom, restPose, AUTHORED_REST, REST } from './anim.js';
 import { BASE_TRACKS, ATTACK_TRACK, NOMINAL_REACH } from '../data/tracks.js';
 
 // How many idle loops per second. The stock track is one breath.
@@ -180,11 +180,14 @@ function trackedAttackPose(f, atk) {
 function computePose(f, t) {
   // sx/sy = squash & stretch, applied around the feet in drawFighter. Purely
   // visual weight — hitboxes come from ATTACKS timing, never from the pose.
+  // The rig comes from REST — the ONE place the stance is defined. This used to
+  // be a second copy of those numbers written out inline, and when the stance
+  // was retuned for v2.7's proportions only the copy in anim.js moved. Tracked
+  // attacks sample from REST, everything else came from here, so a fighter
+  // stood at the old skeleton and grew 54px the instant they threw a punch.
   const P = {
-    hipY: -66, shoulderY: -114, headX: 0, headY: -134, rot: 0, crouch: 0,
-    armF: { x: 30, y: -98 }, armB: { x: 18, y: -90 },
-    legF: { x: 15, y: 0 }, legB: { x: -14, y: 0 },
-    face: 'idle', briefcase: false, bodyLean: 0, sx: 1, sy: 1,
+    ...restPose(),
+    face: 'idle', briefcase: false,
   };
   const bob = Math.sin(t * 4 + (f.side === 0 ? 0 : 1.7)) * 2.2;   // walk head bounce
   const st = f.state;
@@ -198,27 +201,27 @@ function computePose(f, t) {
     // reason you can tell who someone picked before they throw a button.
     if (stance === 'coiled') {                 // rushdown: low, hands up, leaning in
       P.hipY += 8; P.shoulderY += 5; P.headY += 6; P.bodyLean = 0.14;
-      P.armF = { x: 26, y: -112 }; P.armB = { x: 12, y: -104 };
+      P.armF = { x: 26, y: -160 }; P.armB = { x: 12, y: -158 };
       P.legF = { x: 19, y: 0 }; P.legB = { x: -17, y: 0 };
     } else if (stance === 'heavy') {           // brawler: wide, arms hanging, chin down
       P.hipY += 4; P.bodyLean = 0.05;
-      P.armF = { x: 34, y: -84 }; P.armB = { x: 24, y: -78 };
+      P.armF = { x: 34, y: -132 }; P.armB = { x: 24, y: -132 };
       P.legF = { x: 24, y: 0 }; P.legB = { x: -24, y: 0 };
       P.sx = 1.05; P.sy = 0.98;
     } else if (stance === 'poised') {          // zoner: tall, upright, arm extended out
       P.hipY -= 3; P.headY -= 3; P.bodyLean = -0.05;
-      P.armF = { x: 40, y: -104 }; P.armB = { x: 8, y: -92 };
+      P.armF = { x: 40, y: -152 }; P.armB = { x: 8, y: -146 };
       P.legF = { x: 12, y: 0 }; P.legB = { x: -11, y: 0 };
       P.sy = 1.03;
     } else if (stance === 'loose') {           // trickster: off-balance, hands low, swaying
       const sway = Math.sin(t * 2.6) * 4;
       P.bodyLean = 0.10 + Math.sin(t * 2.2) * 0.05;
       P.headX = sway * 0.5;
-      P.armF = { x: 30 + sway, y: -80 }; P.armB = { x: -22 - sway, y: -86 };
+      P.armF = { x: 30 + sway, y: -128 }; P.armB = { x: -22 - sway, y: -140 };
       P.legF = { x: 17, y: 0 }; P.legB = { x: -13, y: 0 };
     } else if (stance === 'flair') {           // showman: one arm out presenting, chest up
       P.bodyLean = -0.08;
-      P.armF = { x: 38, y: -128 }; P.armB = { x: -16, y: -88 };
+      P.armF = { x: 38, y: -176 }; P.armB = { x: -16, y: -142 };
       P.headY -= 2; P.legF = { x: 16, y: 0 }; P.legB = { x: -15, y: 0 };
     }
     // Breathing comes from an authored loop, layered as a DELTA so it adds to
@@ -252,7 +255,7 @@ function computePose(f, t) {
     P.bodyLean = 0.06 * (f.movingBack ? -1 : 1);
   } else if (st === 'jump') {
     P.legF = { x: 18, y: -26 }; P.legB = { x: -6, y: -16 };
-    P.armF = { x: 36, y: -120 }; P.armB = { x: -20, y: -112 };
+    P.armF = { x: 36, y: -168 }; P.armB = { x: -20, y: -166 };
     P.bodyLean = 0.1;
     // stretch on the way up, squash as gravity takes over — reads as real air time
     const rise = Math.max(-1, Math.min(1, -f.vy / 700));
@@ -294,21 +297,21 @@ function computePose(f, t) {
       const reach = (atk.reach || 100) * 0.92;
       P.legF = { x: 6 + reach * hitK, y: -70 * hitK - (f.airborne ? 20 : 0) };
       P.legB = { x: -12, y: 0 };
-      P.armF = { x: -6, y: -104 }; P.armB = { x: -22, y: -88 };
+      P.armF = { x: -6, y: -152 }; P.armB = { x: -22, y: -142 };
       P.bodyLean = -0.22 * hitK;
       P.hipY += 4 * hitK;
     } else if (atk.kind === 'grab') {
-      P.armF = { x: 20 + 46 * hitK, y: -100 };
-      P.armB = { x: 16 + 44 * hitK, y: -86 };
+      P.armF = { x: 20 + 46 * hitK, y: -148 };
+      P.armB = { x: 16 + 44 * hitK, y: -140 };
       P.bodyLean = 0.24 * hitK;
       P.face = 'angry';
     } else if (atk.kind === 'rain' || atk.kind === 'bomb') {
-      P.armF = { x: 12, y: -100 - 66 * hitK };
-      P.armB = { x: -12, y: -92 };
+      P.armF = { x: 12, y: -148 - 66 * hitK };
+      P.armB = { x: -12, y: -146 };
       P.bodyLean = -0.1 * hitK;
     } else if (atk.kind === 'aoe') {
-      P.armF = { x: 44 * hitK, y: -96 };
-      P.armB = { x: -30 * hitK, y: -96 };
+      P.armF = { x: 44 * hitK, y: -144 };
+      P.armB = { x: -30 * hitK, y: -150 };
       P.bodyLean = 0.12 * hitK;
       P.hipY += 6 * hitK;
     } else if (atk.kind === 'rush') {
@@ -316,12 +319,12 @@ function computePose(f, t) {
       P.bodyLean = 0.5;
       P.legF = { x: 15 + Math.sin(ph) * 20, y: -Math.max(0, Math.sin(ph + 1.5)) * 12 };
       P.legB = { x: -14 + Math.sin(ph + Math.PI) * 20, y: -Math.max(0, Math.sin(ph + Math.PI + 1.5)) * 12 };
-      P.armF = { x: 48, y: -96 }; P.armB = { x: -30, y: -80 };
+      P.armF = { x: 48, y: -144 }; P.armB = { x: -30, y: -134 };
     } else if (atk.kind === 'launch') {
       // rising uppercut: fist punches skyward, body lifts off the back foot
       const rise = Math.max(0, hitK);
-      P.armF = { x: 16 + 26 * rise, y: -120 - 74 * rise };
-      P.armB = { x: -20, y: -78 };
+      P.armF = { x: 16 + 26 * rise, y: -168 - 74 * rise };
+      P.armB = { x: -20, y: -132 };
       P.legF = { x: 14, y: -26 * rise };
       P.legB = { x: -16, y: 0 };
       P.hipY -= 30 * rise; P.shoulderY -= 22 * rise; P.headY -= 30 * rise;
@@ -331,60 +334,60 @@ function computePose(f, t) {
       // open-hand backhand: arm swings high and across, big shoulder rotation
       const reach = (atk.reach || 78) * 0.95;
       const swing = hitK;                                    // 0→1 across the swing
-      P.armF = { x: 8 + reach * swing, y: -128 + 30 * swing };  // starts cocked high, whips down-across
-      P.armB = { x: -18 - 10 * swing, y: -84 };
+      P.armF = { x: 8 + reach * swing, y: -176 + 30 * swing };  // starts cocked high, whips down-across
+      P.armB = { x: -18 - 10 * swing, y: -138 };
       P.bodyLean = 0.26 * swing;
       P.headX = 3 * swing;
     } else { // punch / projectile / teleport strike
       const reach = (atk.kind === 'punch' ? (atk.reach || 82) : 88) * 0.95;
-      P.armF = { x: 22 + reach * hitK, y: -104 };
-      P.armB = { x: 10 - 14 * hitK, y: -88 };
+      P.armF = { x: 22 + reach * hitK, y: -152 };
+      P.armB = { x: 10 - 14 * hitK, y: -142 };
       P.bodyLean = 0.2 * hitK;
     }
   } else if (st === 'dash') {
     P.bodyLean = 0.42;
     P.legF = { x: 34, y: -6 };
     P.legB = { x: -26, y: -2 };
-    P.armF = { x: 40, y: -92 };
-    P.armB = { x: -34, y: -78 };
+    P.armF = { x: 40, y: -140 };
+    P.armB = { x: -34, y: -132 };
     P.face = 'angry';
   } else if (st === 'crouch') {
     // low stance you can still attack from — knees bent, guard up, head down
     P.hipY += 26; P.shoulderY += 22; P.headY += 26; P.headX = 3;
-    P.armF = { x: 24, y: -76 }; P.armB = { x: 6, y: -66 };
+    P.armF = { x: 24, y: -124 }; P.armB = { x: 6, y: -120 };
     P.legF = { x: 24, y: 0 }; P.legB = { x: -20, y: 0 };
     P.sx = 1.10; P.sy = 0.90;
     P.bodyLean = 0.12;
     // …and each style crouches in character, too
     if (stance === 'coiled') {                 // sprinter's crouch, ready to burst
       P.hipY += 4; P.bodyLean = 0.26; P.headX = 6;
-      P.armF = { x: 30, y: -84 }; P.armB = { x: -14, y: -60 };
+      P.armF = { x: 30, y: -132 }; P.armB = { x: -14, y: -114 };
       P.legF = { x: 28, y: 0 }; P.legB = { x: -14, y: 0 };
       P.sx = 1.06; P.sy = 0.92;
     } else if (stance === 'heavy') {           // sumo-wide, arms braced on knees
       P.hipY += 6; P.bodyLean = 0.06;
-      P.armF = { x: 30, y: -58 }; P.armB = { x: -24, y: -56 };
+      P.armF = { x: 30, y: -106 }; P.armB = { x: -24, y: -110 };
       P.legF = { x: 32, y: 0 }; P.legB = { x: -30, y: 0 };
       P.sx = 1.20; P.sy = 0.86;
     } else if (stance === 'poised') {          // low but tall-backed, one arm still out
       P.hipY -= 2; P.bodyLean = -0.06;
-      P.armF = { x: 38, y: -80 }; P.armB = { x: 4, y: -62 };
+      P.armF = { x: 38, y: -128 }; P.armB = { x: 4, y: -116 };
       P.legF = { x: 20, y: 0 }; P.legB = { x: -22, y: 0 };
       P.sx = 1.06; P.sy = 0.94;
     } else if (stance === 'loose') {           // slouched, weight on the back foot
       P.bodyLean = -0.14; P.headX = -4;
-      P.armF = { x: 18, y: -70 }; P.armB = { x: -26, y: -58 };
+      P.armF = { x: 18, y: -118 }; P.armB = { x: -26, y: -112 };
       P.legF = { x: 26, y: 0 }; P.legB = { x: -18, y: 0 };
       P.sx = 1.12; P.sy = 0.89;
     } else if (stance === 'flair') {           // theatrical kneel, arm flourished out
       P.bodyLean = 0.04;
-      P.armF = { x: 36, y: -96 }; P.armB = { x: -20, y: -58 };
+      P.armF = { x: 36, y: -144 }; P.armB = { x: -20, y: -112 };
       P.legF = { x: 22, y: 0 }; P.legB = { x: -24, y: 0 };
       P.sx = 1.08; P.sy = 0.91;
     }
   } else if (st === 'block') {
     P.crouch = 8; P.hipY += 8; P.headY += 10; P.shoulderY += 8;
-    P.armF = { x: 26, y: -96 }; P.armB = { x: 24, y: -84 };
+    P.armF = { x: 26, y: -144 }; P.armB = { x: 24, y: -138 };
     P.legF = { x: 20, y: 0 }; P.legB = { x: -10, y: 0 };
     P.briefcase = true; P.face = 'block'; P.bodyLean = -0.06;
   } else if (st === 'hitstun') {
@@ -393,20 +396,20 @@ function computePose(f, t) {
     const impact = Math.max(0, 1 - f.stateT * 14);
     P.bodyLean = -0.3 * k - 0.22 * impact;
     P.headX = -6 * k - 7 * impact; P.headY += 4 * k;
-    P.armF = { x: 4, y: -66 }; P.armB = { x: -26, y: -102 };
+    P.armF = { x: 4, y: -114 }; P.armB = { x: -26, y: -156 };
     P.legF = { x: 22, y: 0 }; P.legB = { x: -20, y: 0 };
     P.sx = 1 + 0.13 * impact; P.sy = 1 - 0.13 * impact;   // squash on contact
     P.face = 'hurt';
   } else if (st === 'ko') {
     const k = Math.min(1, f.stateT / 0.45);
     P.rot = -1.45 * ease.outQuad(k);
-    P.armF = { x: 30, y: -60 }; P.armB = { x: -30, y: -70 };
+    P.armF = { x: 30, y: -108 }; P.armB = { x: -30, y: -124 };
     P.legF = { x: 26, y: -4 }; P.legB = { x: -18, y: -2 };
     P.face = 'ko';
   } else if (st === 'victory') {
     const pump = Math.abs(Math.sin(t * 6));
-    P.armF = { x: 20, y: -150 - pump * 14 };
-    P.armB = { x: -18, y: -92 };
+    P.armF = { x: 20, y: -198 - pump * 14 };
+    P.armB = { x: -18, y: -146 };
     P.headY -= pump * 4; P.hipY -= pump * 3;
     P.face = 'happy';
   }
