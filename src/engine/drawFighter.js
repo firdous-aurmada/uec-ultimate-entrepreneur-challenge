@@ -71,6 +71,19 @@ function capsule(ctx, x1, y1, x2, y2, w, color, outline = true) {
 //
 // `bend` is signed: arms bow one way, legs the other, which is what stops a
 // kick from reading as a backwards knee.
+// Sub-segments along a straight run, widths sampled from a profile.
+function limbRun(out, ax, ay, bx, by, w, profile) {
+  const n = profile.length - 1;
+  for (let i = 0; i < n; i++) {
+    const t0 = i / n, t1 = (i + 1) / n;
+    out.push({
+      x1: ax + (bx - ax) * t0, y1: ay + (by - ay) * t0,
+      x2: ax + (bx - ax) * t1, y2: ay + (by - ay) * t1,
+      w: w * (profile[i] + profile[i + 1]) * 0.5,
+    });
+  }
+}
+
 function jointed(ctx, x1, y1, x2, y2, wNear, wFar, color, bend, span) {
   const dx = x2 - x1, dy = y2 - y1;
   const len = Math.hypot(dx, dy);
@@ -79,8 +92,26 @@ function jointed(ctx, x1, y1, x2, y2, wNear, wFar, color, bend, span) {
   const px = -dy / len, py = dx / len;              // perpendicular
   const ex = x1 + dx * 0.5 + px * bend * slack;
   const ey = y1 + dy * 0.5 + py * bend * slack;
-  capsule(ctx, x1, y1, ex, ey, wNear, color);
-  capsule(ctx, ex, ey, x2, y2, wFar, color);
+
+  const segs = [];
+  limbRun(segs, x1, y1, ex, ey, wNear, STYLIZE.LIMB_UPPER);
+  limbRun(segs, ex, ey, x2, y2, wFar, STYLIZE.LIMB_LOWER);
+
+  // Outline every sub-segment BEFORE filling any of them. Outline-then-fill
+  // per segment (which is what capsule does alone) leaves each segment's dark
+  // cap stamped across the middle of the next one, so a tapered limb comes out
+  // banded like a caterpillar. Two passes make the whole limb one shape.
+  ctx.lineCap = 'round';
+  ctx.strokeStyle = OUTLINE;
+  for (const s of segs) {
+    ctx.lineWidth = s.w + 5 * INK;
+    ctx.beginPath(); ctx.moveTo(s.x1, s.y1); ctx.lineTo(s.x2, s.y2); ctx.stroke();
+  }
+  ctx.strokeStyle = color;
+  for (const s of segs) {
+    ctx.lineWidth = s.w;
+    ctx.beginPath(); ctx.moveTo(s.x1, s.y1); ctx.lineTo(s.x2, s.y2); ctx.stroke();
+  }
 }
 
 // A boot that points where the leg points. Left axis-aligned, a horizontal
@@ -1085,6 +1116,7 @@ export function drawFighter(ctx, f, t) {
   const [hipBx, hipBy] = socket(-8, P.hipY);
 
   // back arm, back leg — one shade back so the near side reads in front
+  blob(g, () => { g.arc(shBx, shBy, upperArm * 0.9 * STYLIZE.DELTOID * 0.5, 0, 7); }, c.suit2);
   jointed(g, shBx, shBy, P.armB.x, P.armB.y, upperArm * 0.9, foreArm * 0.9,
           c.suit2, STYLIZE.ELBOW, STYLIZE.ARM_SPAN);
   blob(g, () => { g.arc(P.armB.x, P.armB.y, handB, 0, 7); }, c.skin);
@@ -1139,6 +1171,9 @@ export function drawFighter(ctx, f, t) {
   jointed(g, hipFx, hipFy, P.legF.x, P.legF.y - 6, thigh, shin,
           c.pants, -STYLIZE.KNEE, STYLIZE.LEG_SPAN);
   boot(g, hipFx, hipFy, P.legF.x, P.legF.y, footW, footH, c.shoe, 0.26);
+  // Deltoid first, then the arm over it — the cap only shows where it actually
+  // protrudes, and the limb's own outline stays clean.
+  blob(g, () => { g.arc(shFx, shFy, upperArm * STYLIZE.DELTOID * 0.5, 0, 7); }, c.suit);
   jointed(g, shFx, shFy, P.armF.x, P.armF.y, upperArm, foreArm,
           c.suit, STYLIZE.ELBOW, STYLIZE.ARM_SPAN);
   blob(g, () => { g.arc(P.armF.x, P.armF.y, handF, 0, 7); }, c.skin);

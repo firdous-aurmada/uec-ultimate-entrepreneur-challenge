@@ -247,6 +247,19 @@ export const STYLIZE = {
   UPPER_ARM: 13,       // narrow at the shoulder…
   FOREARM: 16,         // …heavy at the glove
   THIGH: 24, SHIN: 17,   // legs must out-weigh arms or the figure reads top-heavy
+  // Limb mass. A limb was two EVEN capsules — one tube shoulder to elbow, a
+  // second elbow to wrist — which is why the cast still read as dolls with
+  // arms pushed into them however good the shading got. These are width
+  // multipliers sampled along each half: heavy at the shoulder and hip,
+  // pinched at the elbow and knee, swelling again through the forearm and calf
+  // before tapering to the wrist and ankle. Same anatomy every fighting game
+  // exaggerates, and it is a couple of extra strokes per limb.
+  LIMB_UPPER: [1.32, 1.10, 0.84],   // shoulder/hip → belly → elbow/knee
+  LIMB_LOWER: [0.90, 1.08, 0.68],   // elbow/knee → belly → wrist/ankle
+  // Deltoid cap as a multiple of the upper arm, drawn UNDER the limb so only
+  // the part that protrudes past it shows. There was no shoulder at all before
+  // — the arm socketed straight into the torso.
+  DELTOID: 1.45,
   HEAD_R: 18,
   // How far a folded limb bows at the joint. Scales to zero as it straightens,
   // so a fully extended punch has a straight arm and a guard has a bent one.
