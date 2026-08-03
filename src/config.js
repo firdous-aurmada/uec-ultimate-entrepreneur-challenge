@@ -341,6 +341,10 @@ export const STYLIZE = {
   // of all loss genuinely is in the legs. Treat 0.30 as measured, not
   // explained, and leave it alone until someone measures a reason to move it.
   SHADE_KEY: 0.46,      // warm key at the head
+  // How the key is applied. 'source-atop' is a flat lerp and CONVERGES — it
+  // pulled every dark hair in the roster to the same grey. 'screen' lifts
+  // without collapsing the differences between them. See drawFighter.
+  SHADE_KEY_MODE: 'overlay',
   SHADE_MID: 0.10,      // neutral through the torso
   SHADE_FLOOR: 0.30,    // crush at the feet — do not soften, see above
 };

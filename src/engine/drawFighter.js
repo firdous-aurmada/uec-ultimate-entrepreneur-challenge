@@ -1001,10 +1001,43 @@ function shadeBuffer(b, B) {
   const _buf = B.buf, _tmp = B.tmp;
   const W = _buf.width, H = _buf.height, oy = B.oy * SS, ox = B.ox * SS;
 
+  const tc = _tmp.getContext('2d');
+
+  // ---- key light ----
+  // Runs FIRST, and borrows _tmp as a silhouette mask before the rim needs it.
+  //
+  // This used to be one stop of the shading gradient below, filled with
+  // source-atop. source-atop is a flat lerp toward the fill colour, and a flat
+  // lerp CONVERGES: at 0.46 toward a warm white, every colour moved 46% of the
+  // way to the same value. Six characters with near-black hair (17-56
+  // luminance) all landed on 110-144 — the same grey. Nobody in the game had
+  // dark hair, and the cast read as one silver-haired person in nine jackets.
+  //
+  // `overlay` multiplies where the base is dark and screens where it is light,
+  // so material colour survives the light. The catch, and it is the whole
+  // reason this is three statements instead of one: source-atop clips itself
+  // to existing pixels, and overlay does NOT — it paints the full rect. Left
+  // unclipped it fills the buffer with a grey slab, which is both visibly wrong
+  // and quietly poisonous, because lab/contrast.js then measures the slab
+  // instead of the fighter and reports a contrast WIN. Hence destination-in.
+  tc.setTransform(1, 0, 0, 1, 0, 0);
+  tc.clearRect(0, 0, W, H);
+  tc.globalCompositeOperation = 'source-over';
+  tc.drawImage(_buf, 0, 0);                            // mask: the raw silhouette
+
+  b.save();
+  b.globalCompositeOperation = STYLIZE.SHADE_KEY_MODE;
+  const gk = b.createLinearGradient(0, oy - 178 * SS, 0, oy - 40 * SS);
+  gk.addColorStop(0, `rgba(255,246,224,${STYLIZE.SHADE_KEY})`);
+  gk.addColorStop(1, 'rgba(255,246,224,0)');
+  b.fillStyle = gk; b.fillRect(0, 0, W, H);
+  b.globalCompositeOperation = 'destination-in';       // ...and back inside the lines
+  b.drawImage(_tmp, 0, 0);
+  b.restore();
+
   // ---- rim light: a warm crescent on the upper-key edge of the silhouette ----
   // built as (white silhouette) minus (white silhouette shifted toward shadow),
   // which leaves just the lit contour.
-  const tc = _tmp.getContext('2d');
   tc.setTransform(1, 0, 0, 1, 0, 0);
   tc.clearRect(0, 0, W, H);
   tc.globalCompositeOperation = 'source-over';
@@ -1026,8 +1059,14 @@ function shadeBuffer(b, B) {
   // which cannot happen — this shader does not know what stage it is on.
   // lab/contrast.js now locates the fighter by diffing a with- and a
   // without-fighters render, and is the only thing worth trusting here.
+  //
+  // The key light moved OUT of this gradient (see the key pass above) — it and
+  // the floor want opposite blend modes, and sharing one fill meant the key's
+  // flat lerp was flattening the whole palette. What is left here is the mid
+  // and the floor crush, which genuinely do want to converge toward a colour,
+  // and which were tuned against measurement. Left alone.
   const g = b.createLinearGradient(0, oy - 178 * SS, 0, oy + 8 * SS);
-  g.addColorStop(0, `rgba(255,246,224,${STYLIZE.SHADE_KEY})`);
+  g.addColorStop(0, 'rgba(255,255,255,0)');
   g.addColorStop(0.44, `rgba(255,255,255,${STYLIZE.SHADE_MID})`);
   g.addColorStop(1, `rgba(5,5,16,${STYLIZE.SHADE_FLOOR})`);
   b.fillStyle = g; b.fillRect(0, 0, W, H);
