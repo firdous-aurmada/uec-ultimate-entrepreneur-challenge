@@ -69,6 +69,15 @@ Touch pads appear automatically on phones/tablets (or force them with `?touch=1`
 
 **Parry:** tap block at the instant a hit lands (0.12 s window) — the attacker staggers and you gain energy. Grabs beat parries; parries beat everything else.
 
+## What's new in v3.2 — they stand and swing like different people too
+
+v3.1 made the roster look like nine people. This one makes them *move* like nine people. Same underlying cause both times: a system keyed to something coarser than the character.
+
+- 🧍 **Nine stances instead of five.** Posture was keyed to fighting *style*, and nine fighters shared five of them — Lizbeth, Elo and Scam stood identically, as did Adam and Carl, and Cathie and Jeff. Now Lizbeth is unnaturally still with her hands clasped, Adam sprawls, Steve is permanently mid-presentation, Kim is compact and side-on, Cathie is the only symmetrical one, Carl hunches with both hands already reaching, Elo folds his arms, Jeff puts his hands on his hips, and Scam keeps his in his pockets. Stripped of faces and flattened to black shapes, the cast now spans 67–125px wide and 187–263px tall.
+- 👊 **Nine ways to throw a punch.** Every fighter shared one set of attack animations; the style multipliers changed how *fast* a move came out but never how it looked, so Carl's grab and Kim's jab were the same motion at two speeds. Each fighter now shapes the shared keyframes — how deep they coil, how much weight drops into the hip on contact, how long the follow-through outlives the hit. Carl drops hardest and takes the longest to come back up; Kim's hand is back before you noticed it left; Adam's swing is still travelling when everyone else has reset.
+
+Neither changes the simulation. Reach is measured and unchanged at the moment of contact for all nine — a punch still lands exactly where it always did, no matter how theatrically it gets there.
+
 ## What's new in v3.1 — nine people, not one person in nine jackets
 
 The roster had a sameness no amount of body work was fixing, and it turned out only some of it was design. Two of the three causes were bugs.
