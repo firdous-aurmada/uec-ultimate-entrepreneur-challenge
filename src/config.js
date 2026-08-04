@@ -1,7 +1,7 @@
 // Central tuning for the whole game. All gameplay numbers live here.
 
 // Bump this on every release — it's rendered on the title screen.
-export const VERSION = 'v3.0';
+export const VERSION = 'v3.1';
 
 // Every player fights on identical footing. Your base character is pure
 // cosmetics: it decides how you LOOK, never how hard you hit. Ranked points
@@ -18,7 +18,7 @@ export const STAGE = {
   // Backdrop scrim: how far the arena is pushed down so the fighters read as
   // the subject. Render-only — the sim never sees it. Measured with
   // lab/contrast.js; see the note in render.js drawStageGrade.
-  SCRIM: 0.30,
+  SCRIM: 0.42,
 };
 
 export const PHYS = {
@@ -301,9 +301,9 @@ export const STYLIZE = {
   // 2.0px at 0.5 measured best and looked worst — the cast read as die-cut
   // stickers. The eye wins over the metric here: the line exists to make the
   // edge legible, not to be seen.
-  KEYLINE_PX: 1.5,
+  KEYLINE_PX: 2.0,
   KEYLINE_COL: '#dce6ff',
-  KEYLINE_A: 0.35,
+  KEYLINE_A: 0.62,
   // The fighting face. Every founder used to stand in their idle wearing a
   // gentle closed-mouth smile — six disgraced executives beaming at the person
   // about to hit them. Nothing else on the character said "cartoon" as loudly.

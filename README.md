@@ -69,6 +69,16 @@ Touch pads appear automatically on phones/tablets (or force them with `?touch=1`
 
 **Parry:** tap block at the instant a hit lands (0.12 s window) — the attacker staggers and you gain energy. Grabs beat parries; parries beat everything else.
 
+## What's new in v3.1 — nine people, not one person in nine jackets
+
+The roster had a sameness no amount of body work was fixing, and it turned out only some of it was design. Two of the three causes were bugs.
+
+- 🙂 **Every fighter had the same face.** The expression system — angled brows, a heavy lid, a set mouth — was working perfectly and applying identical values to all nine. Each one now has their own: Carl's eyes are slits under the lowest brow in the game, Lizbeth is the only fighter whose lids are *raised* (she does not blink), Kim has the heaviest lids because contempt is cheaper than anger, and Cathie is the one face here that isn't glaring.
+- 🎨 **Nobody in this game had dark hair.** Six of the nine carry near-black hair, and every one of them rendered as the same warm grey — the key light was a flat wash, and a flat wash pulls every colour toward itself. Measured across the cast, hair went from a 214-wide range down to 112. The light wasn't lighting the palette, it was erasing it. It's now an `overlay` pass, so black hair stays black.
+- 🌈 **And then the palette itself got spread.** With dark finally rendering dark, six characters sharing six shades of near-black became the new problem. Kim is jet black, Adam shaggy brown, Elo auburn, Scam sandy, Steve greying, Carl steel silver, Lizbeth platinum, Cathie white.
+
+Contrast against the stage was rechecked across all six arenas and holds at the level it shipped at — the darker cast is paid for by a stronger key line and a deeper backdrop scrim, not by bleaching the characters again.
+
 ## What's new in v3.0 — the moves that never worked
 
 Three moves in this game played their animation, printed their popup, and did nothing at all. Nobody noticed because the tests checked that a character's numbers were *well-formed* and *correctly priced* — never that pressing the button did anything.

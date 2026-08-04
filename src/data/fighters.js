@@ -103,7 +103,7 @@ export const FIGHTERS = [
     body: { height: 1.04, build: 1.06, reach: 0.96, stride: 1.02, shoulders: 0.88, head: 1.02 },
     stats: { speed: 1.0, power: 1.0, hp: 100 },
     ai: { aggr: 0.55, jump: 0.3, prefRange: 'far' },
-    c: { skin: '#e8b48c', suit: '#5865f2', suit2: '#3d47c9', accent: '#29d9ff', hair: '#cfd6f6', pants: '#23294f', shoe: '#eef1ff' },
+    c: { skin: '#e8b48c', suit: '#5865f2', suit2: '#3d47c9', accent: '#29d9ff', hair: '#e8dcc0', pants: '#23294f', shoe: '#eef1ff' },
     hairStyle: 'ponytail', outfit: 'blazer', accessory: 'visor',
     // The demo that was never real. She presents; swing at her during it and
     // it turns out the machine was doing nothing all along, and it goes back
@@ -129,7 +129,7 @@ export const FIGHTERS = [
     body: { height: 1.16, build: 1.00, reach: 1.02, stride: 1.13, shoulders: 1.25, head: 0.92 },
     stats: { speed: 0.95, power: 1.2, hp: 95 },
     ai: { aggr: 0.85, jump: 0.35, prefRange: 'close' },
-    c: { skin: '#c68a5a', suit: '#ff7a1a', suit2: '#d15505', accent: '#ffd23f', hair: '#2b2b33', pants: '#33241d', shoe: '#f5f5f5' },
+    c: { skin: '#c68a5a', suit: '#ff7a1a', suit2: '#d15505', accent: '#ffd23f', hair: '#3b2a1c', pants: '#33241d', shoe: '#f5f5f5' },
     hairStyle: 'cap', outfit: 'hoodie', accessory: 'stubble',
     // Growth at any cost, in one direction, until the money runs out. A
     // brawler's rush: slow to start and fully committed once it goes, so
@@ -169,7 +169,7 @@ export const FIGHTERS = [
         { t: 1,   joints: { hipY: -66, headX: 0, armF: { x: 30, y: -98 } }, ease: 'inOutCubic' },
       ],
     },
-    c: { skin: '#f0c896', suit: '#1fb9a5', suit2: '#128372', accent: '#eef1ff', hair: '#191a22', pants: '#20263f', shoe: '#dfe4ff' },
+    c: { skin: '#f0c896', suit: '#1fb9a5', suit2: '#128372', accent: '#eef1ff', hair: '#8a8f9c', pants: '#20263f', shoe: '#dfe4ff' },
     hairStyle: 'quiff', outfit: 'turtleneck', accessory: 'glasses',
     // "One more thing" — he leaves the stage mid-sentence and is behind you.
     // On the anti-air slot, because the keynote always ends above your head.
@@ -224,7 +224,7 @@ export const FIGHTERS = [
         { t: 1,    joints: { hipY: -66, headY: -134, armF: { x: 30, y: -98 }, armB: { x: 18, y: -90 } }, ease: 'inQuad' },
       ],
     },
-    c: { skin: '#8a5a3b', suit: '#e332a9', suit2: '#a91277', accent: '#57ff8a', hair: '#1c1424', pants: '#2c1a3d', shoe: '#57ff8a' },
+    c: { skin: '#8a5a3b', suit: '#e332a9', suit2: '#a91277', accent: '#57ff8a', hair: '#0d0a12', pants: '#2c1a3d', shoe: '#57ff8a' },
     hairStyle: 'puffs', outfit: 'bomber', accessory: 'earrings',
   },
   {
@@ -249,7 +249,7 @@ export const FIGHTERS = [
         { t: 1,   joints: { hipY: -66, armF: { x: 30, y: -98 } }, ease: 'inOutCubic' },
       ],
     },
-    c: { skin: '#f2cdb2', suit: '#1c2a5e', suit2: '#111a3d', accent: '#ffd23f', hair: '#efe6d8', pants: '#141d42', shoe: '#1a1a24' },
+    c: { skin: '#f2cdb2', suit: '#1c2a5e', suit2: '#111a3d', accent: '#ffd23f', hair: '#f2ece0', pants: '#141d42', shoe: '#1a1a24' },
     hairStyle: 'bob', outfit: 'suit', accessory: 'brooch',
     // Buying the dip, forever, on the way down. Two rounds of conviction
     // landing on your head — and like her special, it pays her back a little.
@@ -296,7 +296,7 @@ export const FIGHTERS = [
         { t: 1,   joints: { hipY: -66, armF: { x: 30, y: -98 }, armB: { x: 18, y: -90 } }, ease: 'inOutCubic' },
       ],
     },
-    c: { skin: '#d9a06b', suit: '#2c2f3a', suit2: '#191b23', accent: '#ff3d6e', hair: '#101116', pants: '#22242e', shoe: '#101116' },
+    c: { skin: '#d9a06b', suit: '#4a4038', suit2: '#191b23', accent: '#ff3d6e', hair: '#b9bec9', pants: '#22242e', shoe: '#101116' },
     hairStyle: 'slick', outfit: 'pinstripe', accessory: 'shades',
   },
   // ---- cameo tier: 100% parody, 0% affiliation ----
@@ -313,7 +313,7 @@ export const FIGHTERS = [
     body: { height: 1.18, build: 0.96, reach: 1.00, stride: 1.18, shoulders: 0.86, head: 0.90 },
     stats: { speed: 1.05, power: 1.15, hp: 100 },
     ai: { aggr: 0.82, jump: 0.4, prefRange: 'close' },
-    c: { skin: '#eec9a6', suit: '#1a1c24', suit2: '#0e0f15', accent: '#ff3d2e', hair: '#2a2118', pants: '#1a1c24', shoe: '#c9ced9' },
+    c: { skin: '#eec9a6', suit: '#1a1c24', suit2: '#0e0f15', accent: '#ff3d2e', hair: '#5a3a22', pants: '#1a1c24', shoe: '#c9ced9' },
     hairStyle: 'buzz', outfit: 'tee', accessory: null, cameo: true,
     // The rocket that does not make it to orbit. A point-blank blast from a
     // glass cannon: it hurts, and standing there to throw it is the price.
@@ -338,7 +338,7 @@ export const FIGHTERS = [
     body: { height: 0.92, build: 1.14, reach: 0.90, stride: 0.92, shoulders: 1.20, head: 1.12 },
     stats: { speed: 0.9, power: 1.2, hp: 108 },
     ai: { aggr: 0.75, jump: 0.2, prefRange: 'close' },
-    c: { skin: '#e2ab84', suit: '#243447', suit2: '#141f2c', accent: '#ff9d1a', hair: '#101116', pants: '#2c3644', shoe: '#3d4a5c' },
+    c: { skin: '#e2ab84', suit: '#1f4a56', suit2: '#141f2c', accent: '#ff9d1a', hair: '#101116', pants: '#2c3644', shoe: '#3d4a5c' },
     hairStyle: 'bald', outfit: 'vest', accessory: 'shades', cameo: true,
     // Undercutting, in both senses: a low sweep from the man whose whole
     // strategy is going under everyone else's price.
@@ -364,7 +364,7 @@ export const FIGHTERS = [
     body: { height: 0.98, build: 1.14, reach: 0.96, stride: 0.94, shoulders: 1.08, head: 1.08 },
     stats: { speed: 1.1, power: 0.9, hp: 96 },
     ai: { aggr: 0.6, jump: 0.5, prefRange: 'mid' },
-    c: { skin: '#ecc39e', suit: '#6d7382', suit2: '#4a4f5c', accent: '#29d9ff', hair: '#4a3527', pants: '#2c3040', shoe: '#f0f0f0' },
+    c: { skin: '#ecc39e', suit: '#6d7382', suit2: '#4a4f5c', accent: '#29d9ff', hair: '#7a5230', pants: '#2c3040', shoe: '#f0f0f0' },
     hairStyle: 'curly', outfit: 'henley', accessory: null, cameo: true,
     // Safety memos, thrown at speed. He spaces at ~210px, which is why this is
     // tagged for that band rather than for true zoning range — a tag the AI

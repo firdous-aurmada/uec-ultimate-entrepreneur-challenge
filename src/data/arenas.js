@@ -340,13 +340,13 @@ export const ARENAS = [
   // difference was that the skyline sits about 5 luminance brighter behind the
   // body, 26.5 against 20.9. 0.45 closes that gap and costs the night city
   // nothing that matters.
-  { id: 'boardroom', name: 'THE BOARDROOM', tag: 'Quarterly results are in.', draw: drawBoardroom, tempo: 96, root: 0, mood: 'dark', scrim: 0.45 },
+  { id: 'boardroom', name: 'THE BOARDROOM', tag: 'Quarterly results are in.', draw: drawBoardroom, tempo: 96, root: 0, mood: 'dark', scrim: 0.57 },
   { id: 'demoday', name: 'DEMO DAY', tag: 'Live on the main stage.', draw: drawDemoDay, tempo: 118, root: 3, mood: 'hype' },
   // scrim: 32.1% -> 29.2% of the body near-invisible. Stops at 0.45 rather than
   // the 0.52 the metric prefers — this stage is already the dimmest on the
   // roster, and past here the whiteboard, the shelving and the string lights
   // stop reading, which is the entire character of the room.
-  { id: 'garage', name: 'THE STARTUP GARAGE', tag: 'Where it all begins.', draw: drawGarage, tempo: 104, root: 5, mood: 'lofi', scrim: 0.45 },
+  { id: 'garage', name: 'THE STARTUP GARAGE', tag: 'Where it all begins.', draw: drawGarage, tempo: 104, root: 5, mood: 'lofi', scrim: 0.57 },
   { id: 'exchange', name: 'THE STOCK EXCHANGE', tag: 'Buy the dip. Throw the punch.', draw: drawExchange, tempo: 124, root: 7, mood: 'tense' },
   { id: 'unicorn', name: 'THE UNICORN CLUB', tag: 'Members only. Valuations $1B+.', draw: drawUnicornClub, tempo: 122, root: 8, mood: 'party' },
   // scrim: the mountains sit directly behind the fighters at close to their own
@@ -357,7 +357,7 @@ export const ARENAS = [
   // (An earlier revision claimed 41.8% -> 34.9% here. That came from a mask
   // that scored the contact shadow and floor pool as character, and from an
   // unpinned cast. See the note on KEEP in lab/contrast.js.)
-  { id: 'summit', name: 'THE VC SUMMIT', tag: 'The air is thin up here.', draw: drawSummit, tempo: 100, root: 2, mood: 'epic', scrim: 0.50 },
+  { id: 'summit', name: 'THE VC SUMMIT', tag: 'The air is thin up here.', draw: drawSummit, tempo: 100, root: 2, mood: 'epic', scrim: 0.62 },
 ];
 
 export function getArena(id) {
