@@ -173,6 +173,56 @@ function trackedAttackPose(f, atk) {
   }
   // An airborne attack tucks the planted leg — there is no floor to push off.
   if (f.airborne) { pose.legF.y -= 18; pose.legB.y -= 12; }
+  return applyMotion(pose, f.def, t);
+}
+
+// How this character throws a punch, as opposed to which punch they throw.
+//
+// All nine fighters shared one set of attack tracks, so every swing in the game
+// moved identically — the STYLE multipliers changed how FAST a move was, which
+// is simulation, but nothing changed how it looked. Carl's grab and Kim's jab
+// were the same motion at different speeds.
+//
+// Shaping the shared tracks rather than authoring nine copies of each: four
+// basics times nine fighters is thirty-six tracks to write and re-tune every
+// time the rig moves, and the rig has moved three times this month.
+//
+// RENDER-ONLY. It reads `def.motion` and returns a pose; nothing here is
+// visible to hit resolution, which still runs entirely off ATTACKS timing.
+//
+// The one hard rule: `armF.x` is NOT scaled during the active window. Reach is
+// re-scaled just above so a zoner visibly out-ranges a grappler off the same
+// keyframes, and stretching the strike arm for flavour would quietly relitigate
+// that. Wind-up and follow-through are free to exaggerate — nothing is being
+// measured there. The impact window only ever gets ADDITIVE weight.
+function applyMotion(pose, def, t) {
+  const M = def && def.motion;
+  if (!M) return pose;
+
+  if (t < 1 || t >= 2) {                       // coil, and follow-through
+    const k = (t < 1 ? M.windup : M.follow) ?? 1;
+    if (k !== 1) {
+      for (const limb of ['armF', 'armB', 'legF', 'legB']) {
+        pose[limb].x = REST[limb].x + (pose[limb].x - REST[limb].x) * k;
+        pose[limb].y = REST[limb].y + (pose[limb].y - REST[limb].y) * k;
+      }
+      pose.bodyLean *= k;
+      pose.hipY = REST.hipY + (pose.hipY - REST.hipY) * k;
+    }
+  } else {                                     // the hit itself
+    const w = 1 - Math.min(1, Math.abs(t - 1.25) / 0.75);   // peaks on contact
+    if (w > 0) {
+      if (M.drop) pose.hipY += M.drop * w;
+      // sy ONLY. sx scales the body horizontally about the feet, which drags
+      // the strike hand with it — Carl's 0.12 squash would have thrown his fist
+      // 12% past his own hitbox on every hit, which is the exact desync between
+      // what you see and what hits you that the reach re-scale exists to stop.
+      // Vertical compression plus the hip drop already read as weight.
+      if (M.squash) pose.sy *= 1 - M.squash * 0.8 * w;
+      if (M.brace) pose.armB.x -= M.brace * w;   // back arm counter-swings
+      if (M.thrust) pose.headX += M.thrust * w;  // head drives through the shot
+    }
+  }
   return pose;
 }
 
