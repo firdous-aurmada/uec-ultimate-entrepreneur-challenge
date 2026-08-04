@@ -211,9 +211,10 @@ export const FIGHTERS = [
     // FACE (render-only): Bored of you. The heaviest lids in the game, flat brows, a tiny mouth —
     // contempt costs less effort than anger.
     face: { BROW_Y: 7, BROW_TILT: 0.4, BROW_LEN: 5.2, LID_Y: 2.4, PUPIL_R: 2.0, MOUTH_W: 4, MOUTH_CURVE: -0.6 },
-    // STANCE (render-only): The most compact silhouette here — narrow feet, both hands up by the face,
-    // turned side-on. Small target, quick hands.
-    stance: { hip: 4, lean: 0.16, armF: { x: 20, y: -168 }, armB: { x: 6, y: -164 },
+    // STANCE (render-only): The most compact outline here, and now a real peek-a-boo guard — both
+    // fists up BESIDE the head, so the skull is flanked rather than bare. Two
+    // symmetrical bumps at head height is a shape nothing else in the cast makes.
+    stance: { hip: 4, lean: 0.16, armF: { x: 18, y: -182 }, armB: { x: 1, y: -178 },
       legF: { x: 13 }, legB: { x: -12 }, sx: 0.97 },
     // MOTION (render-only): Snap. The shortest wind-up and the fastest reset in the game — the hand is
     // back before you have registered it left.
@@ -414,10 +415,11 @@ export const FIGHTERS = [
     // FACE (render-only): Reasonable. Deliberately the mildest face here — soft brows, neutral
     // eyes, small even mouth. The unreadable one is the point.
     face: { BROW_Y: 8.4, BROW_TILT: 0.6, BROW_LEN: 5.0, LID_Y: 4.4, PUPIL_R: 2.5, MOUTH_W: 5.0, MOUTH_CURVE: 0.2 },
-    // STANCE (render-only): Hands in pockets, arms tight to the sides, weight even. Nothing to see here,
-    // which is exactly the posture of a man who has done this before.
-    stance: { lean: 0.04, armF: { x: 16, y: -110 }, armB: { x: -12, y: -110 },
-      legF: { x: 14 }, legB: { x: -13 } },
+    // STANCE (render-only): One hand stays in the pocket; the other comes up open-palmed at chest
+    // height — the placating gesture of a man explaining why it was fine. That
+    // asymmetric bump is the whole read, and it is the opposite of Kim's guard.
+    stance: { lean: 0.04, headX: 3, shoulder: -2, armF: { x: 30, y: -146 }, armB: { x: -10, y: -104 },
+      legF: { x: 16 }, legB: { x: -12 }, elbowF: -22 },
     // MOTION (render-only): Understated on the way in and lingering on the way out — it reads as less
     // than it was until it has already happened to you.
     motion: { windup: 0.85, follow: 1.05, drop: 2, squash: 0.04, brace: 5, thrust: 2 },
