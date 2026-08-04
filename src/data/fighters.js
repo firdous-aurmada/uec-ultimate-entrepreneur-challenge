@@ -96,6 +96,11 @@ export const FIGHTERS = [
     // and flat, pupils wide, mouth a flat line. Unblinking conviction is the
     // whole parody; a glare would make her look like she knew she was lying.
     face: { BROW_Y: 10.5, BROW_TILT: -1.4, BROW_LEN: 6.2, LID_Y: 6.6, PUPIL_R: 3.6, MOUTH_W: 4.6, MOUTH_CURVE: 0 },
+    // STANCE (render-only): Unnaturally still, and narrow. Hands clasped low and almost touching,
+    // feet close, no sway at all — everyone else in this game shifts their
+    // weight. The stillness IS the read.
+    stance: { lean: 0.00, head: -4, armF: { x: 12, y: -122 }, armB: { x: 2, y: -120 },
+      legF: { x: 10 }, legB: { x: -9 }, sy: 1.02 },
     special: 'pivot', style: 'phantom',
     // An ordinary frame is the point. Slight AND untouchable is the
     // compounding pattern the budget exists to catch — giving her a real body
@@ -124,6 +129,10 @@ export const FIGHTERS = [
     // FACE (render-only): Manic. Brows up and apart, eyes wide, mouth wide and loose — a man
     // enjoying the fire. The only face in the cast with any lift in the mouth.
     face: { BROW_Y: 10, BROW_TILT: -2.6, BROW_LEN: 5, LID_Y: 6, PUPIL_R: 3.2, MOUTH_W: 7, MOUTH_CURVE: 2.6 },
+    // STANCE (render-only): The widest base in the roster, arms hanging well outside the body, slouched
+    // back on the hips. A man who has never once been asked to stand up straight.
+    stance: { hip: 6, lean: 0.12, armF: { x: 46, y: -118 }, armB: { x: -34, y: -120 },
+      legF: { x: 32 }, legB: { x: -31 }, sx: 1.06, swayX: 2.2, swayRate: 1.6 },
     special: 'burnrate', style: 'brawler',
     // Wide as a doorway and built low. Reads as the biggest thing on stage.
     body: { height: 1.16, build: 1.00, reach: 1.02, stride: 1.13, shoulders: 1.25, head: 0.92 },
@@ -154,6 +163,10 @@ export const FIGHTERS = [
     // FACE (render-only): The showman: heavy lids, level brows, a small knowing mouth. Not angry,
     // just certain you will buy it.
     face: { BROW_Y: 7.6, BROW_TILT: 1.2, BROW_LEN: 5.8, LID_Y: 3.2, PUPIL_R: 2.2, MOUTH_W: 5, MOUTH_CURVE: 0.8 },
+    // STANCE (render-only): Mid-presentation: front arm out and high showing you the thing, back hand up
+    // at the chest. Chest open, weight tall. He is not guarding, he is pitching.
+    stance: { lean: -0.10, head: -3, armF: { x: 52, y: -172 }, armB: { x: 6, y: -166 },
+      legF: { x: 14 }, legB: { x: -13 }, sy: 1.02 },
     special: 'pitchdeck', style: 'showman',
     // All leg and no shoulder — the keynote posture, tall and unthreatening
     // right up until it isn't.
@@ -189,6 +202,10 @@ export const FIGHTERS = [
     // FACE (render-only): Bored of you. The heaviest lids in the game, flat brows, a tiny mouth —
     // contempt costs less effort than anger.
     face: { BROW_Y: 7, BROW_TILT: 0.4, BROW_LEN: 5.2, LID_Y: 2.4, PUPIL_R: 2.0, MOUTH_W: 4, MOUTH_CURVE: -0.6 },
+    // STANCE (render-only): The most compact silhouette here — narrow feet, both hands up by the face,
+    // turned side-on. Small target, quick hands.
+    stance: { hip: 4, lean: 0.16, armF: { x: 20, y: -168 }, armB: { x: 6, y: -164 },
+      legF: { x: 13 }, legB: { x: -12 }, sx: 0.97 },
     special: 'growthhack', style: 'rushdown',
     // Small and light with an oversized head — reads young and quick, and
     // the smaller hurtbox is what her budget pays for.
@@ -234,6 +251,10 @@ export const FIGHTERS = [
     // FACE (render-only): Serene. The one face in the cast that is not glaring: soft raised brows,
     // open eyes, a level mouth. Absolute faith reads as calm, not aggression.
     face: { BROW_Y: 9.6, BROW_TILT: -0.8, BROW_LEN: 5.4, LID_Y: 5.4, PUPIL_R: 2.9, MOUTH_W: 5.4, MOUTH_CURVE: 0.4 },
+    // STANCE (render-only): The only symmetrical stance in the game: upright, feet together, both hands
+    // open at the waist, breathing slowly. Serenity reads as verticality.
+    stance: { hip: -4, head: -4, lean: -0.02, armF: { x: 26, y: -134 }, armB: { x: -18, y: -134 },
+      legF: { x: 10 }, legB: { x: -10 }, sy: 1.05, swayY: 1.1, swayRate: 1.3 },
     special: 'fundinground', style: 'zoner',
     // Tall, narrow, and longer in the arm than anyone. The silhouette IS
     // the zoning — you can see the range before she uses it.
@@ -269,6 +290,10 @@ export const FIGHTERS = [
     // FACE (render-only): Predator. Lowest, heaviest brow, eyes down to slits, mouth a thin hard
     // line. He is already valuing the parts of you.
     face: { BROW_Y: 6.2, BROW_TILT: 5.4, BROW_LEN: 6.4, BROW_W: 4.0, LID_Y: 2.0, LID_W: 3.0, PUPIL_R: 1.6, MOUTH_W: 6.4, MOUTH_CURVE: -2.2 },
+    // STANCE (render-only): Hunched forward over a wide low base, shoulders up, chin down, both hands
+    // out in front at chest height — already reaching for the parts of you.
+    stance: { hip: 8, shoulder: 6, head: 10, lean: 0.20, armF: { x: 44, y: -142 }, armB: { x: 26, y: -138 },
+      legF: { x: 28 }, legB: { x: -27 }, sx: 1.04, sy: 0.96 },
     special: 'takeover', style: 'grappler',
     // Squat, enormous across the shoulders, short in the leg. A fireplug —
     // nothing about him says he can reach you, which is the honest advert.
@@ -307,6 +332,10 @@ export const FIGHTERS = [
     // FACE (render-only): Thin-skinned. Brows up in permanent grievance, small mouth, eyes that
     // are certain they are the smartest thing on the stage.
     face: { BROW_Y: 9.2, BROW_TILT: -1.8, BROW_LEN: 4.8, LID_Y: 4.6, PUPIL_R: 2.6, MOUTH_W: 4.4, MOUTH_CURVE: -0.4 },
+    // STANCE (render-only): Arms folded across the chest — the one crossed silhouette in the cast, and
+    // unmistakable at any distance. Chin up, weight back, entirely unimpressed.
+    stance: { lean: -0.06, head: -2, armF: { x: -10, y: -140 }, armB: { x: 16, y: -138 },
+      legF: { x: 14 }, legB: { x: -13 }, elbowF: 30, elbowB: -30 },
     special: 'burnrate', style: 'glass',
     // Tall and ordinary through the middle. GLASS CANNON is already the most
     // over-budget style shipped, so the frame has to be a real target.
@@ -333,6 +362,10 @@ export const FIGHTERS = [
     // FACE (render-only): The winner's face: hard flat brows, narrow eyes, a wide set jaw. Nothing
     // about it is worried, because nothing about it has ever had to be.
     face: { BROW_Y: 7.2, BROW_TILT: 2.8, BROW_LEN: 6.0, BROW_W: 3.6, LID_Y: 2.8, PUPIL_R: 2.1, MOUTH_W: 7.2, MOUTH_CURVE: 1.2 },
+    // STANCE (render-only): Hands on the hips, elbows out wide. The only stance whose outline has holes
+    // in it, which makes it the easiest of all nine to recognise as a shape.
+    stance: { lean: -0.04, shoulder: -3, armF: { x: 34, y: -104 }, armB: { x: -30, y: -104 },
+      legF: { x: 20 }, legB: { x: -19 }, sx: 1.03, elbowF: -34, elbowB: 34 },
     special: 'takeover', style: 'technical',
     // Compact and barrel-chested with short arms — the warehouse build.
     body: { height: 0.92, build: 1.14, reach: 0.90, stride: 0.92, shoulders: 1.20, head: 1.12 },
@@ -357,6 +390,10 @@ export const FIGHTERS = [
     // FACE (render-only): Reasonable. Deliberately the mildest face here — soft brows, neutral
     // eyes, small even mouth. The unreadable one is the point.
     face: { BROW_Y: 8.4, BROW_TILT: 0.6, BROW_LEN: 5.0, LID_Y: 4.4, PUPIL_R: 2.5, MOUTH_W: 5.0, MOUTH_CURVE: 0.2 },
+    // STANCE (render-only): Hands in pockets, arms tight to the sides, weight even. Nothing to see here,
+    // which is exactly the posture of a man who has done this before.
+    stance: { lean: 0.04, armF: { x: 16, y: -110 }, armB: { x: -12, y: -110 },
+      legF: { x: 14 }, legB: { x: -13 } },
     special: 'pivot', style: 'trickster',
     // Soft and unbothered — the man who was fired on Friday and back by
     // Wednesday does not look worried. TRICKSTER is expensive, so the comfort

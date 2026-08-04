@@ -224,6 +224,40 @@ function computePose(f, t) {
       P.armF = { x: 38, y: -176 }; P.armB = { x: -16, y: -142 };
       P.headY -= 2; P.legF = { x: 16, y: 0 }; P.legB = { x: -15, y: 0 };
     }
+
+    // The character's OWN stance, layered over the style's. Five stances were
+    // being shared by nine fighters — Lizbeth, Elo and Scam stood identically,
+    // as did Adam and Carl, and Cathie and Jeff — so the silhouette, which is
+    // the first thing you read at a distance, said almost nothing about who you
+    // had picked. The style stance still sets the base (a rushdown IS coiled);
+    // this makes each fighter a specific person standing in it.
+    //
+    // RENDER-ONLY, same contract as `face`: read here and nowhere else.
+    // Vectors are absolute because the block above writes them absolutely;
+    // hip/head are deltas because the block above adds to them. Mixing those
+    // two conventions silently is what produced the two-skeleton bug, so it is
+    // spelled out rather than inferred.
+    const S = f.def?.stance;
+    if (S) {
+      if (S.hip !== undefined) P.hipY += S.hip;
+      if (S.head !== undefined) P.headY += S.head;
+      if (S.shoulder !== undefined) P.shoulderY += S.shoulder;
+      if (S.headX !== undefined) P.headX = (P.headX || 0) + S.headX;
+      if (S.lean !== undefined) P.bodyLean = S.lean;
+      if (S.sx !== undefined) P.sx = S.sx;
+      if (S.sy !== undefined) P.sy = S.sy;
+      for (const k of ['armF', 'armB', 'legF', 'legB']) {
+        if (S[k]) P[k] = { ...P[k], ...S[k] };
+      }
+      // A character may breathe with its own amplitude and speed — a still
+      // fighter and a swaying one read as different people before either moves
+      // a limb. Applied here so it rides on top of the authored idle loop.
+      if (S.swayX || S.swayY) {
+        const w = t * (S.swayRate || 2.4);
+        if (S.swayX) { P.armF.x += Math.sin(w) * S.swayX; P.armB.x -= Math.sin(w) * S.swayX * 0.6; }
+        if (S.swayY) { P.shoulderY += Math.sin(w * 0.8) * S.swayY; P.headY += Math.sin(w * 0.8) * S.swayY; }
+      }
+    }
     // Breathing comes from an authored loop, layered as a DELTA so it adds to
     // whatever the stance produced instead of overwriting it. This replaces the
     // old hardcoded `bob`, and it is what makes a per-character idle possible
@@ -1173,10 +1207,20 @@ export function drawFighter(ctx, f, t) {
   const [hipFx, hipFy] = socket(8, P.hipY);
   const [hipBx, hipBy] = socket(-8, P.hipY);
 
+  // Elbow bow, per character. One global ELBOW meant both arms bent the same
+  // way, so an arm folded close to the body just fused into the torso and the
+  // silhouette lost it — "hands on hips" and "arms crossed" were invisible.
+  // Splaying them needs OPPOSITE signs, which a single constant cannot express.
+  // jointed() bends by bend*slack and slack rises as the hand nears the
+  // shoulder, so a tucked arm is exactly where this matters most.
+  const stanceEl = f.state === 'idle' ? (f.def?.stance || null) : null;
+  const elbowF = stanceEl?.elbowF ?? STYLIZE.ELBOW;
+  const elbowB = stanceEl?.elbowB ?? STYLIZE.ELBOW;
+
   // back arm, back leg — one shade back so the near side reads in front
   blob(g, () => { g.arc(shBx, shBy, upperArm * 0.9 * STYLIZE.DELTOID * 0.5, 0, 7); }, c.suit2);
   jointed(g, shBx, shBy, P.armB.x, P.armB.y, upperArm * 0.9, foreArm * 0.9,
-          c.suit2, STYLIZE.ELBOW, STYLIZE.ARM_SPAN);
+          c.suit2, elbowB, STYLIZE.ARM_SPAN);
   blob(g, () => { g.arc(P.armB.x, P.armB.y, handB, 0, 7); }, c.skin);
   jointed(g, hipBx, hipBy, P.legB.x, P.legB.y - 6, thigh * 0.92, shin * 0.92,
           c.pants, -STYLIZE.KNEE, STYLIZE.LEG_SPAN);
@@ -1233,7 +1277,7 @@ export function drawFighter(ctx, f, t) {
   // protrudes, and the limb's own outline stays clean.
   blob(g, () => { g.arc(shFx, shFy, upperArm * STYLIZE.DELTOID * 0.5, 0, 7); }, c.suit);
   jointed(g, shFx, shFy, P.armF.x, P.armF.y, upperArm, foreArm,
-          c.suit, STYLIZE.ELBOW, STYLIZE.ARM_SPAN);
+          c.suit, elbowF, STYLIZE.ARM_SPAN);
   blob(g, () => { g.arc(P.armF.x, P.armF.y, handF, 0, 7); }, c.skin);
 
   if (P.briefcase) drawBriefcase(g, 34, -92, c.accent);
