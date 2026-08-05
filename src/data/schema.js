@@ -77,7 +77,27 @@ export function commandCost(cmd) {
     // refunding it for that made a trap cheaper than having no move.
     const p = cmd.params || {};
     const dmgR = (typeof p.dmg === 'number' ? p.dmg : base.dmg) / base.dmg;
-    return cost + C.SCALE * (W.dmg * (dmgR - 1) + commitment) * 100;
+
+    // For these two archetypes the MOVE lives in params, and until now params
+    // carried no price beyond damage. A counter with a 0.05s window and one
+    // with a 60s window cost the same; so did a 78px trap and a 400px one that
+    // could stack twenty deep. Frame data is clamped by CMD.CLAMP, but params
+    // are not validated at all, so this was the one unbounded direction in the
+    // whole budget — the axis to push if you wanted something for nothing.
+    const N = BUDGET.NOMINAL;
+    const rel = (v, nom) => (typeof v === 'number' && v > 0 ? v / nom : 1);
+    let params = 0;
+    if (cmd.archetype === 'counter') {
+      params = W.window * (rel(p.window, N.window) - 1);
+    } else if (cmd.archetype === 'trap') {
+      params =
+          W.trapRadius * (rel(p.radius, N.trapRadius) - 1)
+        + W.trapLife   * (rel(p.lifetime, N.trapLife) - 1)
+        + W.trapCount  * (rel(p.maxActive, N.trapCount) - 1)
+        // arming is inverted: a trap that goes live sooner is the better trap
+        + W.trapArm    * (1 - rel(p.armTime, N.trapArm));
+    }
+    return cost + C.SCALE * (W.dmg * (dmgR - 1) + commitment + params) * 100;
   }
 
   const deltas =

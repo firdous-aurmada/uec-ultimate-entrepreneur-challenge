@@ -293,3 +293,84 @@ test('a command normal missing its display name is rejected', () => {
   c.commandNormals = [cmd({ displayName: '' })];
   assert.equal(validateCharacter(c).ok, false);
 });
+
+// ---------------------------------------------------------------------------
+// The params gap.
+//
+// `counter` and `trap` keep their power in `params`, not in frame data, and
+// for a long time nothing in params was priced except damage. A counter with a
+// 0.05s window and one with a 60s window cost exactly the same. So did a 78px
+// trap and a 400px one that could stack twenty deep.
+//
+// It was the one genuinely unbounded direction in the whole budget: frame data
+// is clamped by BUDGET.CMD.CLAMP, but params are never validated, so the only
+// thing standing between an author and a free five-second parry was that
+// nobody had tried it. These pin the price on, per axis, because the failure
+// mode is silent — the move validates, exports, and quietly beats everything.
+// ---------------------------------------------------------------------------
+
+const COUNTER = {
+  slot: 'fwd+slap', archetype: 'counter', displayName: 'PROBE', tags: ['counter'],
+  frameData: { startup: 0.044, active: 0.06, recovery: 0.21, dmg: 4, reach: 78 },
+  params: { window: BUDGET.NOMINAL.window, dmg: 6, kb: 240 },
+};
+const TRAP = {
+  slot: 'fwd+kick', archetype: 'trap', displayName: 'PROBE', tags: ['trap'],
+  frameData: { startup: 0.115, active: 0.09, recovery: 0.187, dmg: 12, reach: 60 },
+  params: {
+    lifetime: BUDGET.NOMINAL.trapLife, radius: BUDGET.NOMINAL.trapRadius,
+    armTime: BUDGET.NOMINAL.trapArm, maxActive: BUDGET.NOMINAL.trapCount, dmg: 12,
+  },
+};
+const withParams = (m, p) => ({ ...m, params: { ...m.params, ...p } });
+
+test('a longer counter window costs more than a shorter one', () => {
+  const short = commandCost(withParams(COUNTER, { window: 0.09 }));
+  const nominal = commandCost(COUNTER);
+  const long = commandCost(withParams(COUNTER, { window: 0.27 }));
+  assert.ok(short < nominal, `a briefer window must be cheaper: ${short} vs ${nominal}`);
+  assert.ok(long > nominal, `a longer window must cost more: ${long} vs ${nominal}`);
+});
+
+test('an absurd counter window cannot be bought', () => {
+  for (const window of [1, 5, 60]) {
+    const cost = commandCost(withParams(COUNTER, { window }));
+    assert.equal(budgetBand(cost), 'block',
+      `a ${window}s parry priced at ${cost.toFixed(1)} and was not blocked`);
+  }
+});
+
+test('every trap axis is priced, not just its damage', () => {
+  const nominal = commandCost(TRAP);
+  const axes = {
+    radius: [39, 200],        // ground denied
+    lifetime: [2, 16],        // how long for
+    maxActive: [1, 3],        // how many at once
+  };
+  for (const [key, [less, more]] of Object.entries(axes)) {
+    if (key !== 'maxActive') {
+      assert.ok(commandCost(withParams(TRAP, { [key]: less })) < nominal,
+        `less ${key} must cost less`);
+    }
+    assert.ok(commandCost(withParams(TRAP, { [key]: more })) > nominal,
+      `more ${key} must cost more — it was free before`);
+  }
+  // arming is the inverted one: sooner is stronger, so it costs more
+  assert.ok(commandCost(withParams(TRAP, { armTime: 0.1 })) > nominal,
+    'a trap that arms faster must cost more');
+});
+
+test('a stack of traps is priced as the strongest axis', () => {
+  const cost = commandCost(withParams(TRAP, { maxActive: 3 }));
+  assert.equal(budgetBand(cost), 'block',
+    `three simultaneous traps priced at ${cost.toFixed(1)} and was not blocked`);
+});
+
+test('the reference moves sit at zero on every params axis', () => {
+  // NOMINAL is defined as the shipped design, so a move built from it must be
+  // priced purely on archetype, damage and commitment — no params drift.
+  const bare = { ...COUNTER, params: { window: BUDGET.NOMINAL.window, dmg: 6, kb: 240 } };
+  const shifted = withParams(bare, { window: BUDGET.NOMINAL.window * 1.5 });
+  assert.ok(Math.abs(commandCost(shifted) - commandCost(bare)) > 1,
+    'the nominal must actually be a reference point, not an unused constant');
+});

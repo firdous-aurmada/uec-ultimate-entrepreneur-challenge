@@ -375,6 +375,23 @@ export const BUDGET = {
     dmg: 1.0, hp: 1.0, speed: 1.2, reach: 1.0,
     startup: 0.7, recovery: 0.5,
     bodyReach: 0.8, hurtbox: -0.6,
+    // A counter and a trap put their power in `params`, not in frame data, and
+    // for a long time NOTHING in params was priced — a 0.05s counter window and
+    // a 60s one cost exactly the same, as did a 78px trap and a 400px one.
+    // These are the axes that actually make those two archetypes stronger.
+    // Below dmg, because a window is opportunity rather than output; above
+    // recovery, because opportunity on defence is worth more than frames back.
+    window: 0.6,        // counter: how long the turn-back stays open
+    trapRadius: 0.5,    // trap: how much ground it denies
+    trapLife: 0.35,     // trap: how long it denies it for
+    trapArm: 0.3,       // trap: how fast it goes live (INVERTED — sooner is better)
+    trapCount: 0.8,     // trap: how many can be out at once. Stacking is the strong one.
+  },
+  // The reference move for each params axis: the shipped design that is, by
+  // definition, priced at zero. Deviation from these is what costs.
+  NOMINAL: {
+    window: 0.18,       // LAWYERED, the counter a player can actually pick
+    trapRadius: 78, trapLife: 5.5, trapArm: 0.35, trapCount: 1,   // RUG PULL
   },
   WARN: 8,     // |cost| above this warns
   BLOCK: 15,   // |cost| above this blocks export
