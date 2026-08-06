@@ -69,6 +69,15 @@ Touch pads appear automatically on phones/tablets (or force them with `?touch=1`
 
 **Parry:** tap block at the instant a hit lands (0.12 s window) — the attacker staggers and you gain energy. Grabs beat parries; parries beat everything else.
 
+## What's new in v3.3 — the free five-second parry is closed
+
+The power budget prices everything a character can do, so that a custom founder can be strong in one direction only by being weak in another. It had one blind spot, and it was a big one.
+
+- ⚖️ **Counters and traps put their power in numbers the budget wasn't reading.** A counter that stayed open for 0.05 seconds and one that stayed open for a full minute cost exactly the same. So did a trap the size of a doormat and one covering a quarter of the arena, lasting a minute, with twenty of them out at once. Every other number in the creator is bounds-checked; these never were, so the only thing stopping a free five-second parry was that nobody had tried it.
+- 🧮 **Now every axis is priced** — how long a counter stays open, how much ground a trap denies, for how long, how fast it arms, and how many can be out at once. Stacking is the most expensive, because it's the one that actually breaks a match: three simultaneous traps is now a straight rejection rather than a bargain.
+
+Nothing you can already build got more expensive. Two existing moves got *cheaper*, because their numbers sit below the new reference and they'd been quietly overpaying. Fight behaviour is untouched — this is what the creator will let you export, not how anything hits.
+
 ## What's new in v3.2 — they stand and swing like different people too
 
 v3.1 made the roster look like nine people. This one makes them *move* like nine people. Same underlying cause both times: a system keyed to something coarser than the character.
